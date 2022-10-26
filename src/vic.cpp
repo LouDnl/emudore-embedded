@@ -26,6 +26,9 @@ Vic::Vic()
   raster_irq_ = raster_c_ = 0;
   irq_enabled_ = irq_status_ = 0;
   next_raster_at_ = kLineCycles;
+  sprite_sprite_collision_ = 0;
+  sprite_bgnd_collision_ = 0;
+
   /* sprites */
   for(int i = 0 ; i<8 ; i++)
   {
@@ -71,7 +74,8 @@ bool Vic::emulate()
     {
       /* set interrupt origin (raster) */
       irq_status_ |= (1<<0);
-      /* raise interrupt */
+    }
+    if(irq_status_){  /* raise interrupt */
       cpu_->irq();
     }
     if (rstr >= kFirstVisibleLine &&
@@ -202,6 +206,14 @@ uint8_t Vic::read_register(uint8_t r)
   case 0x1d:
     retval = sprite_double_width_;
     break;
+  case 0x1e:
+    retval = sprite_sprite_collision_;
+    sprite_sprite_collision_=0;
+    break;
+  case 0x1f:
+    retval = sprite_bgnd_collision_;
+    sprite_bgnd_collision_=0;
+    break;
   /* border color */
   case 0x20:
     retval = border_color_;
@@ -267,6 +279,7 @@ void Vic::write_register(uint8_t r, uint8_t v)
   case 0xc:
   case 0xe:
     mx_[r >> 1] = v;
+    detect_sprite_sprite_collision(r>>1);
     break;
   /* store Y coord of sprite n */
   case 0x1:
@@ -278,6 +291,7 @@ void Vic::write_register(uint8_t r, uint8_t v)
   case 0xd:
   case 0xf:
     my_[r >> 1] = v;
+    detect_sprite_sprite_collision(r>>1);
     break;
   /* MSBs of X coordinates */
   case 0x10:
@@ -468,6 +482,32 @@ uint16_t Vic::get_sprite_ptr(int n)
   return kSpriteSize * mem_->vic_read_byte(ptraddr);
 }
 
+void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uint8_t c)
+{
+  for(int i=0 ; i < 8 ; i++)
+  {
+    int xoffs = x + 8 - i + horizontal_scroll();
+    /* don't draw outside (due to horizontal scroll) */
+    if(xoffs > kGFirstCol + kGResX)
+      continue;
+
+    /* draw pixel */
+    if(ISSET_BIT(data,i))
+    {
+      io_->screen_update_pixel(xoffs,y,color);
+    }
+    else
+    {
+      if(c >=64 && c <= 127)
+	      io_->screen_update_pixel(xoffs,y,bgcolor_[1]);
+      if(c >=128 && c <= 191)
+	      io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
+      if(c >=192 && c <= 255)
+	      io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
+    }
+  }
+}
+
 // raster drawing  ///////////////////////////////////////////////////////////
 
 void Vic::draw_char(int x, int y, uint8_t data, uint8_t color)
@@ -567,8 +607,8 @@ void Vic::draw_raster_char_mode()
     {
       if(!ISSET_BIT(cr2_,3)) // 38 columns
       {
-	if(column == 0) continue;
-	if(column == kGCols-1) continue;
+        if (column == 0) continue;
+        if (column == kGCols-1 ) continue;
       }
 
       int x = kGFirstCol + column * 8;
@@ -588,6 +628,8 @@ void Vic::draw_raster_char_mode()
 	      draw_char(x,y,data,color);
       else if(graphic_mode_ == kExtBgMode)
 	      draw_ext_backcolor_char(x,y,data,color,c);
+      else
+        draw_char(x,y,data,color);
     }
   }
 }
@@ -616,6 +658,136 @@ void Vic::draw_bitmap(int x, int y, uint8_t data, uint8_t color)
         xoffs,
         y,
         bgc);
+    }
+  }
+}
+
+void Vic::detect_sprite_background_collision(int x, int y, int sprite, int row){
+  int swid = is_double_width_sprite(sprite) ? 2 : 1;
+  uint16_t addr = get_sprite_ptr(sprite);
+  for (int i=0; i < 3 ; i++)
+  {
+    uint8_t  data = mem_->vic_read_byte(addr + row * 3 + i);
+    if(data!=0){
+      for (int j=0; j < 8; j++)
+      {
+        if(ISSET_BIT(data,j))
+        {
+          for(int w=0; w < swid ; w++ )
+          {
+            int new_x = (x+w + (i*8*swid) + ((7-j)*swid)) ;
+            int c1=get_pixel(new_x,y);
+            if(c1){
+              //set collision bit and interrupt
+              if(ISSET_BIT(irq_enabled_,bitMBC) && sprite_bgnd_collision_==0){
+                irq_status_|=(1<<bitMBC);           // set IMMC irq bits
+              }
+              sprite_bgnd_collision_|=(1<<sprite);//set collision bits
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+uint8_t Vic::get_pixel(int x,int y){
+
+  x-= kGFirstCol;
+  //y-=(kGFirstLine-kSpritesFirstLine);
+  int column=x/8;
+  int row = y/8;
+  int bitmap_row = y % 8;
+  int bit = x%8;
+  uint8_t data =0;
+  uint8_t c;
+  /* retrieve bitmap data */
+  switch(graphic_mode_)
+  {
+  case kCharMode:
+  case kMCCharMode:
+    /* retrieve screen character */
+    c = get_screen_char(column,row);
+    /* retrieve character bitmap data */
+    if(c!=32)
+       data = get_char_data(c,bitmap_row); // check on 32 must be removed later because you can load other char sets
+    break;
+  case kBitmapMode:
+  case kMCBitmapMode:
+    data = get_bitmap_data(column,row,bitmap_row);
+    break;
+  default:
+    D("unsupported graphic mode: %d\n",graphic_mode_);
+    return false;
+  }
+  return ((data & (1<<bit))!=0);
+}
+
+void Vic::detect_sprite_sprite_collision(int n){
+ // int dx,dy;
+
+  // todo: 1 do something with is_double_width_sprite
+  //       2 fix area
+
+
+  for(int i=0;i<=7;i++){
+    if((i!=n) && (is_sprite_enabled(i))){
+      int swid1 = is_double_width_sprite(n) ? 48 : 24;
+      int swid2 = is_double_width_sprite(i) ? 48 : 24;
+      int dx1,dx2,overlapx,dy1,dy2,overlapy;
+
+      if(mx_[n]==mx_[i]){
+         dx1=0;
+         dx2=0;
+         overlapx=swid1<swid2?swid1:swid2;
+      } else if(mx_[n]>mx_[i]){
+         dx1=0;
+         dx2=mx_[n]-mx_[i];
+         overlapx=mx_[i]+swid2>=mx_[n]+swid1?swid1:swid2-dx2;
+      } else {
+         dx1=mx_[i]-mx_[n];
+         dx2=0;
+         overlapx=mx_[n]+swid1>=mx_[i]+swid2?swid2:swid1-dx1;
+      }
+      if(my_[n]==my_[i]){
+         dy1=0;
+         dy2=0;
+         overlapy=21; // no double height yet
+      } else if(my_[n]>my_[i]){
+         dy1=0;
+         dy2=my_[n]-my_[i];
+         overlapy=my_[i]+21>=my_[n]+21?21:21-dy2;
+      } else {
+         dy1=my_[i]-my_[n];
+         dy2=0;
+         overlapy=my_[n]+21>=my_[i]+21?21:21-dy1;
+      }
+
+      if(overlapx>0 && overlapy>0){
+        // areas overlap check sprite pixels
+        for(int x=0;x<overlapx;x++){
+          for(int y=0;y<overlapy;y++){
+            // check pixel x,y in sprite n with pixel x+dx,y+dy in sprite i
+            //check x+dy etc does not work with negative numbers
+
+            uint8_t c1=get_sprite_pixel(n,dx1+x,dy1+y);
+            uint8_t c2=get_sprite_pixel(i,dx2+x,dy2+y);
+
+            //in multicolormode color 00 and color 01 are transparant. ie give no collision
+            uint8_t isNontransoarant1=is_multicolor_sprite(n)?c1>1:c1==1;
+            uint8_t isNontransoarant2=is_multicolor_sprite(i)?c2>1:c2==1;
+
+            if(isNontransoarant1 && isNontransoarant2){
+              if(ISSET_BIT(irq_enabled_,bitMMC) && sprite_sprite_collision_==0){
+                irq_status_|=(1<<bitMMC);           // set IMMC irq bits
+              }
+              sprite_sprite_collision_|=(1<<i)+(1<<n);//set collision bits
+              return;
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -757,6 +929,25 @@ void Vic::draw_mcsprite(int x, int y, int sprite, int row)
   }
 }
 
+uint8_t Vic::get_sprite_pixel(int n,int x,int y){
+  int swid = is_double_width_sprite(n) ? 2 : 1;
+  uint16_t addr = get_sprite_ptr(n);
+  if(is_multicolor_sprite(n)){
+
+    int col=x/4;
+    int bit=x%4;
+    uint8_t  data = mem_->vic_read_byte(addr + y * 3 + col);
+
+    return ((data >> bit*2) & 0x3);
+  } else{
+
+    int col=x/8;
+    int bit=x%8;
+    uint8_t  data = mem_->vic_read_byte(addr + y * 3 + col);
+    return ISSET_BIT(data,7-bit);
+  }
+}
+
 void Vic::draw_sprite(int x, int y, int sprite, int row)
 {
   uint8_t swid = is_double_width_sprite(sprite) == true ? 2 : 1;
@@ -790,13 +981,42 @@ void Vic::draw_sprite(int x, int y, int sprite, int row)
 
       for (int j=0; j < 8; j++)
       {
-	if(ISSET_BIT(data,j))
-	{
-	  uint16_t newX = (x+w + (i*8*swid) + (8*swid) - (j*swid)) ;
+        if(ISSET_BIT(data,j))
+        {
+          uint16_t newX = (x+w + (i*8*swid) + (8*swid) - (j*swid)) ;
 
-	  if(newX > minX && y >= minY && newX <= maxX && y < maxY)
-	    io_->screen_update_pixel(newX,y,sprite_colors_[sprite]);
-	}
+          if(newX > minX && y >= minY && newX <= maxX && y < maxY)
+            io_->screen_update_pixel(newX,y,sprite_colors_[sprite]);
+        }
+      //   if(ISSET_BIT(data,j))
+      //   {
+      //     int new_x = (x+w + (i*8*swid) + (8*swid) - (j*swid)) ;
+      //     int color = sprite_colors_[sprite];
+      //     int side_border_offset = 0;
+      //     int top_border_offset  = 0;
+      //     int btm_border_offset  = 0;
+      //     /* check 38 cols mode */
+      //     if(!ISSET_BIT(cr2_,3))
+      //       side_border_offset = 8;
+      //     /* check 24 line mode */
+      //     if(!ISSET_BIT(cr1_,3))
+      //     {
+      //       top_border_offset = 2;
+      //       btm_border_offset = 4;
+      //     }
+      //     /* check bounds */
+      //     if(new_x <= kGFirstCol+side_border_offset ||
+      //        y < kGFirstCol + top_border_offset ||
+      //        new_x > kGResX+kGFirstCol-side_border_offset ||
+      //        y >= kGResY+kGFirstCol - btm_border_offset)
+      //       color = border_color_;
+      //     /* update pixel */
+      //     io_->screen_update_pixel(
+      //       new_x,
+      //       y,
+      //       color);
+      //   }
+      // }
       }
     }
   }
@@ -809,6 +1029,8 @@ void Vic::draw_raster_sprites()
     int rstr = raster_counter();
     int y = rstr - kFirstVisibleLine;
     int sp_y = rstr - kSpritesFirstLine;
+    int y_gfx = rstr - kGFirstLine;
+
     /* loop over sprites reverse order */
     for(int n=7; n >= 0 ; n--)
     {
@@ -824,6 +1046,9 @@ void Vic::draw_raster_sprites()
         {
           row = (sp_y - my_[n])/2;
         }
+        // check sprite background collision
+        detect_sprite_background_collision(x,y_gfx,n,row);
+
         if(is_multicolor_sprite(n))
         {
           draw_mcsprite(x,y,n,row);
