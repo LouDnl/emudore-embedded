@@ -46,6 +46,8 @@ class Vic
     uint8_t sprite_priority_;
     uint8_t sprite_multicolor_;
     uint8_t sprite_double_width_;
+    uint8_t sprite_sprite_collision_;
+    uint8_t sprite_bgnd_collision_;
     uint8_t sprite_double_height_;
     uint8_t sprite_shared_colors_[2];
     uint8_t sprite_colors_[8];
@@ -83,7 +85,10 @@ class Vic
     inline bool is_double_width_sprite(int n);
     inline bool is_double_height_sprite(int n);
     inline bool is_multicolor_sprite(int n);
-    inline int sprite_x(int n);
+    inline int  sprite_x(int n);
+    uint8_t     get_pixel(int x,int y);
+    void        detect_sprite_sprite_collision(int n);
+    void        detect_sprite_background_collision(int x, int y, int sprite, int row);
     /* graphics */
     inline void draw_raster_char_mode();
     inline void draw_raster_bitmap_mode();
@@ -100,6 +105,7 @@ class Vic
     inline uint8_t get_char_data(int chr, int line);
     inline uint8_t get_bitmap_data(int column, int row, int line);
     inline uint16_t get_sprite_ptr(int n);
+    uint8_t get_sprite_pixel(int n,int x,int y);
     inline void set_graphic_mode();
   public:
     Vic();
@@ -122,6 +128,11 @@ class Vic
     static const int kBadLineCycles = 23;
     static constexpr double kRefreshRate = 1 / 50.125; // ~50Hz (PAL)
     static const int kSpritePtrsOffset = 0x3f8;
+    static const int bitRST = 0;
+    static const int bitMBC = 1;
+    static const int bitMMC = 2;
+    static const int bitELP = 3;
+
     /* graphic modes */
     enum kGraphicMode
     {
