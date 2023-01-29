@@ -17,7 +17,6 @@
 
 #ifndef EMUDORE_VIC_H
 #define EMUDORE_VIC_H
-
 #include "io.h"
 #include "cpu.h"
 #include "sid.h"
@@ -64,6 +63,11 @@ class Vic
     /* raster */
     uint8_t raster_c_;
     int raster_irq_;
+
+    // loght pen registers
+    uint8_t lightpen_x_;
+    uint8_t lightpen_y_;
+
     /* interrupt control */
     uint8_t irq_status_;
     uint8_t irq_enabled_;
@@ -74,7 +78,6 @@ class Vic
     uint8_t  mem_pointers_;
     /* helpers */
     inline void raster_counter(int v);
-    inline int raster_counter();
     inline bool is_screen_off();
     inline bool is_bad_line();
     inline bool raster_irq_enabled();
@@ -86,6 +89,7 @@ class Vic
     inline bool is_double_height_sprite(int n);
     inline bool is_multicolor_sprite(int n);
     inline int  sprite_x(int n);
+    inline int  sprite_y(int n);
     uint8_t     get_pixel(int x,int y);
     void        detect_sprite_sprite_collision(int n);
     void        detect_sprite_background_collision(int x, int y, int sprite, int row);
@@ -104,7 +108,6 @@ class Vic
     inline uint8_t get_char_color(int column, int row);
     inline uint8_t get_char_data(int chr, int line);
     inline uint8_t get_bitmap_data(int column, int row, int line);
-    inline uint16_t get_sprite_ptr(int n);
     uint8_t get_sprite_pixel(int n,int x,int y);
     inline void set_graphic_mode();
   public:
@@ -117,6 +120,9 @@ class Vic
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
     unsigned int frames(){return frame_c_;};
+    uint16_t get_sprite_ptr(int n);
+    int raster_counter();
+    void setLightPen(uint8_t x,uint8_t y);
     /* constants */
     static const int kScreenLines = 312;
     static const int kScreenCols  = 504;
