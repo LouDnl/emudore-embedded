@@ -54,8 +54,10 @@ Vic::Vic()
   graphic_mode_ = kCharMode;
 }
 
+// returns true on vertical sync
 bool Vic::emulate()
 {
+  bool verticalSync=false;
   /**
    * if there are unacknowledged interrupts
    * raise an interrupt again
@@ -112,10 +114,13 @@ bool Vic::emulate()
     raster_counter(++rstr);
     if (rstr >= kScreenLines)
     {
+      verticalSync=true;
       io_->screen_refresh();
       sid_->set_cycles(); /* FLUSH */
       frame_c_++;
       raster_counter(0);
+      if(sprite_sprite_collision_) checkInterrupt(1);
+      if(sprite_bgnd_collision_)   checkInterrupt(2);
     }
   }
   return verticalSync;
@@ -445,7 +450,7 @@ uint8_t Vic::get_screen_char(int column, int row)
 }
 
 /**
- * @brief retrives color RAM for given screen coords
+ * @brief retrieves color RAM for given screen coords
  */
 uint8_t Vic::get_char_color(int column, int row)
 {
@@ -461,9 +466,10 @@ uint8_t Vic::get_char_data(int chr, int line)
 
   if(graphic_mode_ == kExtBgMode)
   {
-    if(chr >= 64 && chr <= 127) chr = chr - 64;
-    else if(chr >= 128 && chr <= 191) chr = chr - 128;
-    else if(chr >= 192 && chr <= 255) chr = chr - 192;
+    //if(chr >= 64 && chr <= 127) chr = chr - 64;
+    //else if(chr >= 128 && chr <= 191) chr = chr - 128;
+    //else if(chr >= 192 && chr <= 255) chr = chr - 192;
+    chr&=0x3f;
   }
 
   uint16_t addr = char_mem_ + (chr * 8) + line;
@@ -494,6 +500,7 @@ uint16_t Vic::get_sprite_ptr(int n)
 
 void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uint8_t c)
 {
+  c>>=6;
   for(int i=0 ; i < 8 ; i++)
   {
     int xoffs = x + 7 - i + horizontal_scroll();
@@ -508,12 +515,12 @@ void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uin
     }
     else
     {
-      if(c >=64 && c <= 127)
-	      io_->screen_update_pixel(xoffs,y,bgcolor_[1]);
-      if(c >=128 && c <= 191)
-	      io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
-      if(c >=192 && c <= 255)
-	      io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
+      //if(c >=64 && c <= 127)
+      io_->screen_update_pixel(xoffs,y,bgcolor_[c]);
+      //if(c >=128 && c <= 191)
+	   //  io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
+      //if(c >=192 && c <= 255)
+      //  io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
     }
   }
 }
@@ -717,10 +724,11 @@ uint8_t Vic::get_pixel(int x,int y){
   {
   case kCharMode:
   case kMCCharMode:
+  case kExtBgMode:
     /* retrieve screen character */
     c = get_screen_char(column,row);
     /* retrieve character bitmap data */
-    if(c!=32)
+    //if(c!=32)
        data = get_char_data(c,bitmap_row); // check on 32 must be removed later because you can load other char sets
     break;
   case kBitmapMode:
@@ -858,12 +866,13 @@ void Vic::draw_raster_bitmap_mode()
       uint8_t data = get_bitmap_data(column,row,bitmap_row);
       /* retrieve color data */
       uint8_t scolor = get_screen_char(column,row);
-      uint8_t rcolor = get_char_color(column,row);
       /* draw bitmap */
       if(graphic_mode_ == kBitmapMode)
         draw_bitmap(x,y,data,scolor);
-      else
+      else{
+        uint8_t rcolor = get_char_color(column,row);
         draw_mcbitmap(x,y,data,scolor,rcolor);
+      }
     }
   }
 }
@@ -1194,7 +1203,7 @@ int Vic::sprite_x(int n)
   return x;
 }
 
-void Vic::setLightPen(uint8_t x,uint8_t y){
-   lightpen_x_=x;
+void Vic::setLightPen(uint16_t x,uint8_t y){
+   lightpen_x_=(uint8_t) (x>>1);
    lightpen_y_=y;
 }
