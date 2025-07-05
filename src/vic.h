@@ -82,9 +82,10 @@ class Vic
     inline bool is_double_height_sprite(int n);
     inline bool is_multicolor_sprite(int n);
     inline int sprite_x(int n);
-    /* graphics */ 
+    /* graphics */
     inline void draw_raster_char_mode();
     inline void draw_raster_bitmap_mode();
+    inline void draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uint8_t c);
     inline void draw_raster_sprites();
     inline void draw_sprite(int x, int y, int sprite, int row);
     inline void draw_mcsprite(int x, int y, int sprite, int row);

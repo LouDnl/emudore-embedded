@@ -306,6 +306,8 @@ bool Cpu::emulate()
   case 0xD5: cmp(load_byte(addr_zerox()),4); break;
   /* DEC nn,X */
   case 0xD6: dec(addr_zerox(),6); break;
+  /* DCP ~ Illegal */
+  case 0xD7: dec(addr_zerox(),4); cmp(load_byte(addr_absx()),2); break;
   /* CLD */
   case 0xD8: cld(); break;
   /* CMP nnnn,Y */
