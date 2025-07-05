@@ -54,6 +54,10 @@ bool Cpu::emulate()
   case 0x0: brk(); break;
   /* ORA (nn,X) */
   case 0x1: ora(load_byte(addr_indx()),6); break;
+  /* JAM ~ Illegal */
+  case 0x2: jam(); break;
+  /* NOP ~ Illegal */
+  case 0x4: nop(3); break;
   /* ORA nn */
   case 0x5: ora(load_byte(addr_zero()),3); break;
   /* ASL nn */
@@ -64,6 +68,8 @@ bool Cpu::emulate()
   case 0x9: ora(fetch_op(),2); break;
   /* ASL A */
   case 0xA: asl_a(); break;
+  /* NOP ~ Illegal */
+  case 0xC: nop(4); break;
   /* ORA nnnn */
   case 0xD: ora(load_byte(addr_abs()),4); break;
   /* ASL nnnn */
@@ -72,6 +78,10 @@ bool Cpu::emulate()
   case 0x10: bpl(); break;
   /* ORA (nn,Y) */
   case 0x11: ora(load_byte(addr_indy()),5); break;
+  /* JAM ~ Illegal */
+  case 0x12: jam(); break;
+  /* NOP ~ Illegal */
+  case 0x14: nop(4); break;
   /* ORA nn,X */
   case 0x15: ora(load_byte(addr_zerox()),4); break;
   /* ASL nn,X */
@@ -80,6 +90,10 @@ bool Cpu::emulate()
   case 0x18: clc(); break;
   /* ORA nnnn,Y */
   case 0x19: ora(load_byte(addr_absy()),4); break;
+  /* NOP ~ Illegal */
+  case 0x1A: nop(2); break;
+  /* NOP ~ Illegal */
+  case 0x1C: nop(4); break;
   /* ORA nnnn,X */
   case 0x1D: ora(load_byte(addr_absx()),4); break;
   /* ASL nnnn,X */
@@ -88,6 +102,8 @@ bool Cpu::emulate()
   case 0x20: jsr(); break;
   /* AND (nn,X) */
   case 0x21: _and(load_byte(addr_indx()),6); break;
+  /* JAM ~ Illegal */
+  case 0x22: jam(); break;
   /* BIT nn */
   case 0x24: bit(addr_zero(),3); break;
   /* AND nn */
@@ -95,7 +111,7 @@ bool Cpu::emulate()
   /* ROL nn */
   case 0x26: rol_mem(addr_zero(),5); break;
   /* RLA zp ~ Illegal */
-  case 0x27: rla_mem(load_byte(addr_zero()),5); break;
+  case 0x27: rol_mem(load_byte(addr_zero()), 2); _and(load_byte(addr_zero()),3); break;
   /* PLP */
   case 0x28: plp(); break;
   /* AND #nn */
@@ -112,6 +128,10 @@ bool Cpu::emulate()
   case 0x30: bmi(); break;
   /* AND (nn,Y) */
   case 0x31: _and(load_byte(addr_indy()),5); break;
+  /* JAM ~ Illegal */
+  case 0x32: jam(); break;
+  /* NOP ~ Illegal */
+  case 0x34: nop(4); break;
   /* AND nn,X */
   case 0x35: _and(load_byte(addr_zerox()),4); break;
   /* ROL nn,X */
@@ -120,6 +140,10 @@ bool Cpu::emulate()
   case 0x38: sec(); break;
   /* AND nnnn,Y */
   case 0x39: _and(load_byte(addr_absy()),4); break;
+  /* NOP ~ Illegal */
+  case 0x3A: nop(2); break;
+  /* NOP ~ Illegal */
+  case 0x3C: nop(4); break;
   /* AND nnnn,X */
   case 0x3D: _and(load_byte(addr_absx()),4); break;
   /* ROL nnnn,X */
@@ -128,6 +152,10 @@ bool Cpu::emulate()
   case 0x40: rti(); break;
   /* EOR (nn,X) */
   case 0x41: eor(load_byte(addr_indx()),6); break;
+  /* JAM ~ Illegal */
+  case 0x42: jam(); break;
+  /* NOP ~ Illegal */
+  case 0x44: nop(3); break;
   /* EOR nn */
   case 0x45: eor(load_byte(addr_zero()),3); break;
   /* LSR nn */
@@ -136,8 +164,6 @@ bool Cpu::emulate()
   case 0x48: pha(); break;
   /* EOR #nn */
   case 0x49: eor(fetch_op(),2); break;
-  /* BVC */
-  case 0x50: bvc(); break;
   /* JMP nnnn */
   case 0x4C: jmp(); break;
   /* EOR nnnn */
@@ -146,8 +172,14 @@ bool Cpu::emulate()
   case 0x4A: lsr_a(); break;
   /* LSR nnnn */
   case 0x4E: lsr_mem(addr_abs(),6); break;
+  /* BVC */
+  case 0x50: bvc(); break;
   /* EOR (nn,Y) */
   case 0x51: eor(load_byte(addr_indy()),5); break;
+  /* JAM ~ Illegal */
+  case 0x52: jam(); break;
+  /* NOP ~ Illegal */
+  case 0x54: nop(4); break;
   /* EOR nn,X */
   case 0x55: eor(load_byte(addr_zerox()),4); break;
   /* LSR nn,X */
@@ -156,6 +188,10 @@ bool Cpu::emulate()
   case 0x58: cli(); break;
   /* EOR nnnn,Y */
   case 0x59: eor(load_byte(addr_absy()),4); break;
+  /* NOP ~ Illegal */
+  case 0x5A: nop(2); break;
+  /* NOP ~ Illegal */
+  case 0x5C: nop(4); break;
   /* EOR nnnn,X */
   case 0x5D: eor(load_byte(addr_absx()),4); break;
   /* LSR nnnn,X */
@@ -164,6 +200,11 @@ bool Cpu::emulate()
   case 0x60: rts(); break;
   /* ADC (nn,X) */
   case 0x61: adc(load_byte(addr_indx()),6); break;
+  /* JAM ~ Illegal */
+  // case 0x62: jam(); break; // BUG: BREAKS FANTA IN SPACE
+  case 0x62: nop(2); break;
+  /* NOP ~ Illegal */
+  case 0x64: nop(3); break;
   /* ADC nn */
   case 0x65: adc(load_byte(addr_zero()),3); break;
   /* ROR nn */
@@ -184,6 +225,10 @@ bool Cpu::emulate()
   case 0x70: bvs(); break;
   /* ADC (nn,Y) */
   case 0x71: adc(load_byte(addr_indy()),5); break;
+  /* JAM ~ Illegal */
+  case 0x72: jam(); break;
+  /* NOP ~ Illegal */
+  case 0x74: nop(4); break;
   /* ADC nn,X */
   case 0x75: adc(load_byte(addr_zerox()),4); break;
   /* ROR nn,X */
@@ -192,12 +237,20 @@ bool Cpu::emulate()
   case 0x78: sei(); break;
   /* ADC nnnn,Y */
   case 0x79: adc(load_byte(addr_absy()),4); break;
+  /* NOP ~ Illegal */
+  case 0x7A: nop(2); break;
+  /* NOP ~ Illegal */
+  case 0x7C: nop(4); break;
   /* ADC nnnn,X */
   case 0x7D: adc(load_byte(addr_absx()),4); break;
   /* ROR nnnn,X */
   case 0x7E: ror_mem(addr_absx(),7); break;
+  /* NOP ~ Illegal */
+  case 0x80: nop(2); break;
   /* STA (nn,X) */
   case 0x81: sta(addr_indx(),6); break;
+  /* NOP ~ Illegal */
+  case 0x82: nop(2); break;
   /* STY nn */
   case 0x84: sty(addr_zero(),3); break;
   /* STA nn */
@@ -206,6 +259,8 @@ bool Cpu::emulate()
   case 0x86: stx(addr_zero(),3); break;
   /* DEY */
   case 0x88: dey(); break;
+  /* NOP ~ Illegal */
+  case 0x89: nop(2); break;
   /* TXA */
   case 0x8A: txa(); break;
   /* STY nnnn */
@@ -218,6 +273,8 @@ bool Cpu::emulate()
   case 0x90: bcc(); break;
   /* STA (nn,Y) */
   case 0x91: sta(addr_indy(),6); break;
+  /* JAM ~ Illegal */
+  case 0x92: jam(); break;
   /* STY nn,X */
   case 0x94: sty(addr_zerox(),4); break;
   /* STA nn,X */
@@ -260,6 +317,8 @@ bool Cpu::emulate()
   case 0xB0: bcs(); break;
   /* LDA (nn,Y) */
   case 0xB1: lda(load_byte(addr_indy()),5); break;
+  /* JAM ~ Illegal */
+  case 0xB2: jam(); break;
   /* LDY nn,X */
   case 0xB4: ldy(load_byte(addr_zerox()),3); break;
   /* LDA nn,X */
@@ -282,6 +341,8 @@ bool Cpu::emulate()
   case 0xC0: cpy(fetch_op(),2); break;
   /* CMP (nn,X) */
   case 0xC1: cmp(load_byte(addr_indx()),6); break;
+  /* NOP ~ Illegal */
+  case 0xC2: nop(2); break;
   /* CPY nn */
   case 0xC4: cpy(load_byte(addr_zero()),3); break;
   /* CMP nn */
@@ -304,6 +365,10 @@ bool Cpu::emulate()
   case 0xD0: bne(); break;
   /* CMP (nn,Y) */
   case 0xD1: cmp(load_byte(addr_indy()),5); break;
+  /* JAM ~ Illegal */
+  case 0xD2: jam(); break;
+  /* NOP ~ Illegal */
+  case 0xD4: nop(4); break;
   /* CMP nn,X */
   case 0xD5: cmp(load_byte(addr_zerox()),4); break;
   /* DEC nn,X */
@@ -314,6 +379,10 @@ bool Cpu::emulate()
   case 0xD8: cld(); break;
   /* CMP nnnn,Y */
   case 0xD9: cmp(load_byte(addr_absy()),4); break;
+  /* NOP ~ Illegal */
+  case 0xDA: nop(2); break;
+  /* NOP ~ Illegal */
+  case 0xDC: nop(4); break;
   /* CMP nnnn,X */
   case 0xDD: cmp(load_byte(addr_absx()),4); break;
   /* DEC nnnn,X */
@@ -322,6 +391,8 @@ bool Cpu::emulate()
   case 0xE0: cpx(fetch_op(),2); break;
   /* SBC (nn,X) */
   case 0xE1: sbc(load_byte(addr_indx()),6); break;
+  /* NOP ~ Illegal */
+  case 0xE2: nop(2); break;
   /* CPX nn */
   case 0xE4: cpx(load_byte(addr_zero()),3); break;
   /* SBC nn */
@@ -333,7 +404,7 @@ bool Cpu::emulate()
   /* SBC #nn */
   case 0xE9: sbc(fetch_op(),2); break;
   /* NOP */
-  case 0xEA: nop(); break;
+  case 0xEA: nop(2); break;
   /* CPX nnnn */
   case 0xEC: cpx(load_byte(addr_abs()),4); break;
   /* SBC nnnn */
@@ -344,6 +415,10 @@ bool Cpu::emulate()
   case 0xF0: beq(); break;
   /* SBC (nn,Y) */
   case 0xF1: sbc(load_byte(addr_indy()),5); break;
+  /* JAM ~ Illegal */
+  case 0xF2: jam(); break;
+  /* NOP ~ Illegal */
+  case 0xF4: nop(4); break;
   /* SBC nn,X */
   case 0xF5: sbc(load_byte(addr_zerox()),4); break;
   /* INC nn,X */
@@ -352,6 +427,10 @@ bool Cpu::emulate()
   case 0xF8: sed(); break;
   /* SBC nnnn,Y */
   case 0xF9: sbc(load_byte(addr_absy()),4); break;
+  /* NOP ~ Illegal */
+  case 0xFA: nop(2); break;
+  /* NOP ~ Illegal */
+  case 0xFC: nop(4); break;
   /* SBC nnnn,X */
   case 0xFD: sbc(load_byte(addr_absx()),4); break;
   /* INC nnnn,X */
@@ -1201,9 +1280,9 @@ void Cpu::bvs()
 /**
  * @brief No OPeration
  */
-void Cpu::nop()
+void Cpu::nop(uint8_t cycles)
 {
-  tick(2);
+  tick(cycles);
 }
 
 /**
@@ -1232,16 +1311,22 @@ void Cpu::rti()
 
 // illegals  /////////////////////////////////////////////////////////////////
 
-void Cpu::rla()
+void Cpu::jam()
 {
-
+  printf("JAM! Instr %02X @ %04X\n", load_byte(pc_-1), pc());
+  // for (;;) {};
 }
 
-void Cpu::rla_mem(uint16_t addr, uint8_t cycles)
-{
-  rol_mem(addr, 2);
-  _and(addr, 3);
-}
+// void Cpu::rla()
+// {
+
+// }
+
+// void Cpu::rla_mem(uint16_t addr, uint8_t cycles)
+// {
+//   rol_mem(addr, 2);
+//   _and(addr, 3);
+// }
 
 // interrupts  ///////////////////////////////////////////////////////////////
 
