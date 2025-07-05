@@ -12,3 +12,6 @@
 !src/**
 !assets
 !assets/**
+
+# Yeah let's ignore this again okay?
+assets/sidprgs
