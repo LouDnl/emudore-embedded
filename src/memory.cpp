@@ -21,6 +21,7 @@
 #include "vic.h"
 #include "cia1.h"
 #include "cia2.h"
+#include "sid.h"
 
 Memory::Memory()
 {
@@ -128,6 +129,17 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
     else
       mem_ram_[addr] = v;
   }
+  else if (page == kAddrSIDPage1
+          || page == kAddrSIDPage2
+          || page == kAddrSIDPage3
+          || page == kAddrSIDPage4)
+  {
+    if(banks_[kBankCharen] == kIO)
+      sid_->write_register(addr, v);
+    else
+      mem_ram_[addr] = v;
+  }
+
   /* default */
   else
   {

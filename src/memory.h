@@ -23,6 +23,7 @@
 
 /* forward declarations */
 
+class Cpu;
 class Vic;
 class Cia1;
 class Cia2;
@@ -53,6 +54,7 @@ class Memory
     uint8_t *mem_ram_;
     uint8_t *mem_rom_;
     uint8_t banks_[7];
+    Cpu *cpu_;
     Vic *vic_;
     Cia1 *cia1_;
     Cia2 *cia2_;
@@ -60,9 +62,11 @@ class Memory
   public:
     Memory();
     ~Memory();
+    void cpu(Cpu *v){cpu_ = v;};
     void vic(Vic *v){vic_ = v;};
     void cia1(Cia1 *v){cia1_ = v;};
     void cia2(Cia2 *v){cia2_ = v;};
+    void sid(Sid *v){sid_ = v;};
     /* bank switching */
     enum kBankCfg
     {
@@ -115,6 +119,10 @@ class Memory
     static const uint16_t kAddrZeroPage     = 0x0000;
     static const uint16_t kAddrVicFirstPage = 0xd000;
     static const uint16_t kAddrVicLastPage  = 0xd300;
+    static const uint16_t kAddrSIDPage1  = 0xD400;
+    static const uint16_t kAddrSIDPage2  = 0xD500;
+    static const uint16_t kAddrSIDPage3  = 0xDE00;
+    static const uint16_t kAddrSIDPage4  = 0xDF00;
     static const uint16_t kAddrCIA1Page = 0xdc00;
     static const uint16_t kAddrCIA2Page = 0xdd00;
     static const uint16_t kAddrBasicFirstPage = 0xa000;

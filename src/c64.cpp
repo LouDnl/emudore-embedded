@@ -34,6 +34,7 @@ C64::C64()
   vic_->memory(mem_);
   vic_->cpu(cpu_);
   vic_->io(io_);
+  vic_->sid(sid_);
   /* init cia1 */
   cia1_->cpu(cpu_);
   cia1_->io(io_);
@@ -41,10 +42,20 @@ C64::C64()
   cia2_->cpu(cpu_);
   /* init io */
   io_->cpu(cpu_);
+  /* Init SID */
+  sid_->cpu(cpu_);
+  sid_->mem(mem_);
+  sid_->cia1(cia1_);
+  sid_->cia2(cia2_);
+  sid_->vic(vic_);
+  sid_->io(io_);
+  sid_->set_cycles();
   /* DMA */
+  mem_->cpu(cpu_);
   mem_->vic(vic_);
   mem_->cia1(cia1_);
   mem_->cia2(cia2_);
+  mem_->sid(sid_);
  /* r2 support */
 #ifdef DEBUGGER_SUPPORT
   debugger_ = new Debugger();

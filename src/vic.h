@@ -20,6 +20,7 @@
 
 #include "io.h"
 #include "cpu.h"
+#include "sid.h"
 #include "memory.h"
 
 /**
@@ -35,6 +36,7 @@ class Vic
   private:
     Memory *mem_;
     Cpu    *cpu_;
+    Sid    *sid_;
     IO     *io_;
     /* sprites  */
     uint8_t mx_[8];
@@ -105,6 +107,7 @@ class Vic
     void memory(Memory *v){mem_ = v;};
     void cpu(Cpu *v){cpu_ = v;};
     void io(IO *v){io_ = v;};
+    void sid(Sid *v){sid_ = v;};
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
     unsigned int frames(){return frame_c_;};

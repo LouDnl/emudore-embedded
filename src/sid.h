@@ -17,6 +17,15 @@
 #ifndef EMUDORE_SID_H
 #define EMUDORE_SID_H
 
+#include <cstdint>
+
+#include "cpu.h"
+#include "memory.h"
+#include "cia1.h"
+#include "cia2.h"
+#include "vic.h"
+#include "io.h"
+
 /**
  * @brief MOS 6581 SID (Sound Interface Device)
  *
@@ -26,7 +35,27 @@
 class Sid
 {
   private:
+    Cpu *cpu_;
+    Memory *mem_;
+    Cia1 *cia1_;
+    Cia2 *cia2_;
+    Vic *vic_;
+    IO *io_;
+
+    unsigned int prev_cpu_cycles_;
   public:
+    Sid();
+    // ~Sid();
+    void cpu(Cpu *v){cpu_ = v;};
+    void mem(Memory *v){mem_ = v;};
+    void cia1(Cia1 *v){cia1_ = v;};
+    void cia2(Cia2 *v){cia2_ = v;};
+    void vic(Vic *v){vic_ = v;};
+    void io(IO *v){io_ = v;};
+
+    void set_cycles(void);
+    uint8_t read_register(uint8_t r);
+    void write_register(uint16_t r, uint8_t v);
 };
 
 #endif
