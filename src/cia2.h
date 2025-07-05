@@ -45,7 +45,7 @@ class Cia2
     uint8_t timer_a_input_mode_;
     uint8_t timer_b_input_mode_;
     unsigned int prev_cpu_cycles_;
-    uint8_t pra_, prb_;        
+    uint8_t pra_, prb_;
   public:
     Cia2();
     void cpu(Cpu *v){ cpu_ = v;};
@@ -67,7 +67,7 @@ class Cia2
     {
       kModeRestart,
       kModeOneTime
-    };                        
+    };
 };
 
 #endif

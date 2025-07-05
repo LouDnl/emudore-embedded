@@ -21,7 +21,7 @@
  * @brief Debugger
  *
  * Sponsored by radare2
- * 
+ *
  * https://github.com/radare/radare2
  */
 

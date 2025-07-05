@@ -51,7 +51,7 @@ class Loader
     /* constants */
     static const uint16_t kBasicPrgStart = 0x0801;
     static const uint16_t kBasicTxtTab   = 0x002b;
-    static const uint16_t kBasicVarTab   = 0x002d; 
+    static const uint16_t kBasicVarTab   = 0x002d;
     static const uint16_t kBasicAryTab   = 0x002f;
     static const uint16_t kBasicStrEnd   = 0x0031;
 };

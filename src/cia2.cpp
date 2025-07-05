@@ -66,7 +66,7 @@ void Cia2::write_register(uint8_t r, uint8_t v)
     timer_b_latch_ |= v;
     break;
   /* timer b high byte */
-  case 0x7: 
+  case 0x7:
     timer_b_latch_ &= 0x00ff;
     timer_b_latch_ |= v << 8;
     break;
@@ -88,7 +88,7 @@ void Cia2::write_register(uint8_t r, uint8_t v)
   /* interrupt control and status */
   case 0xd:
     /**
-     * if bit 7 is set, enable selected mask of 
+     * if bit 7 is set, enable selected mask of
      * interrupts, else disable them
      */
     if(ISSET_BIT(v,0)) timer_a_irq_enabled_ = ISSET_BIT(v,7);
@@ -146,7 +146,7 @@ uint8_t Cia2::read_register(uint8_t r)
     retval = (uint8_t)(timer_b_counter_ & 0x00ff);
     break;
   /* timer b high byte */
-  case 0x7: 
+  case 0x7:
     retval = (uint8_t)((timer_b_counter_ & 0xff00) >> 8);
     break;
   /* RTC 1/10s  */
@@ -209,7 +209,7 @@ void Cia2::reset_timer_b()
   case kModeOneTime:
     timer_b_enabled_ = false;
     break;
-  }      
+  }
 }
 
 // VIC banking ///////////////////////////////////////////////////////////////
@@ -242,7 +242,7 @@ bool Cia2::emulate()
       timer_a_counter_ -= cpu_->cycles() - prev_cpu_cycles_;
       if (timer_a_counter_ <= 0)
       {
-        if(timer_a_irq_enabled_) 
+        if(timer_a_irq_enabled_)
         {
           timer_a_irq_triggered_ = true;
           cpu_->nmi();
@@ -269,7 +269,7 @@ bool Cia2::emulate()
           cpu_->nmi();
         }
         reset_timer_b();
-      }   
+      }
       break;
     case kModeCNT:
       break;

@@ -43,7 +43,7 @@ uint16_t Loader::read_short_le()
 
 void Loader::bas(const std::string &f)
 {
-  format_ = kBasic; 
+  format_ = kBasic;
   is_.open(f,std::ios::in);
 }
 
@@ -88,7 +88,7 @@ void Loader::load_prg()
       mem_->write_word_no_io(kBasicVarTab,pbuf);
       mem_->write_word_no_io(kBasicAryTab,pbuf);
       mem_->write_word_no_io(kBasicStrEnd,pbuf);
-      /* exec RUN */ 
+      /* exec RUN */
       for(char &c: std::string("RUN\n"))
         io_->IO::type_character(c);
     }
@@ -96,7 +96,7 @@ void Loader::load_prg()
     else cpu_->pc(addr);
   }
 }
- 
+
 // emulate //////////////////////////////////////////////////////////////////
 
 bool Loader::emulate()
@@ -105,13 +105,13 @@ bool Loader::emulate()
   {
     switch(format_)
     {
-    case kBasic: 
+    case kBasic:
       load_basic();
       break;
     case kPRG:
       load_prg();
       break;
-    default: 
+    default:
       break;
     }
     return false;

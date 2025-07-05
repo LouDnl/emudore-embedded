@@ -32,12 +32,12 @@ void Cpu::reset()
   cycles_ = 6;
 }
 
-/** 
- * @brief emulate instruction 
+/**
+ * @brief emulate instruction
  * @return returns false if something goes wrong (e.g. illegal instruction)
  *
  * Current limitations:
- * 
+ *
  * - Illegal instructions are not implemented
  * - Excess cycles due to page boundary crossing are not calculated
  * - Some known architectural bugs are not emulated
@@ -67,7 +67,7 @@ bool Cpu::emulate()
   /* ORA nnnn */
   case 0xD: ora(load_byte(addr_abs()),4); break;
   /* ASL nnnn */
-  case 0xE: asl_mem(addr_abs(),6); break; 
+  case 0xE: asl_mem(addr_abs(),6); break;
   /* BPL nn */
   case 0x10: bpl(); break;
   /* ORA (nn,Y) */
@@ -109,7 +109,7 @@ bool Cpu::emulate()
   /* BMI nn */
   case 0x30: bmi(); break;
   /* AND (nn,Y) */
-  case 0x31: _and(load_byte(addr_indy()),5); break;               
+  case 0x31: _and(load_byte(addr_indy()),5); break;
   /* AND nn,X */
   case 0x35: _and(load_byte(addr_zerox()),4); break;
   /* ROL nn,X */
@@ -231,7 +231,7 @@ bool Cpu::emulate()
   /* STA nnnn,X */
   case 0x9D: sta(addr_absx(),5); break;
   /* LDY #nn */
-  case 0xA0: ldy(fetch_op(),2); break; 
+  case 0xA0: ldy(fetch_op(),2); break;
   /* LDA (nn,X) */
   case 0xA1: lda(load_byte(addr_indx()),6); break;
   /* LDX #nn */
@@ -355,7 +355,7 @@ bool Cpu::emulate()
   /* Unknown or illegal instruction */
   default:
     D("Unknown instruction: %X at %04x\n", insn,pc());
-    retval = false;
+    // retval = false;
   }
   return retval;
 }
@@ -379,7 +379,7 @@ uint8_t Cpu::pop()
   uint16_t addr = ++sp_+Memory::kBaseAddrStack;
   return load_byte(addr);
 }
- 
+
 uint8_t Cpu::fetch_op()
 {
   return load_byte(pc_++);
@@ -404,7 +404,7 @@ uint16_t Cpu::addr_zerox()
   uint16_t addr = (fetch_op() + x()) & 0xff ;
   return addr;
 }
- 
+
 uint16_t Cpu::addr_zeroy()
 {
   /* wraps around the zeropage */
@@ -427,7 +427,7 @@ uint16_t Cpu::addr_absy()
 uint16_t Cpu::addr_absx()
 {
   uint16_t addr = fetch_opw() + x();
-  return addr;  
+  return addr;
 }
 
 uint16_t Cpu::addr_indx()
@@ -526,7 +526,7 @@ void Cpu::ldy(uint8_t v, uint8_t cycles)
 }
 
 /**
- * @brief Transfer X to Accumulator 
+ * @brief Transfer X to Accumulator
  */
 void Cpu::txa()
 {
@@ -537,7 +537,7 @@ void Cpu::txa()
 }
 
 /**
- * @brief Transfer Accumulator to X 
+ * @brief Transfer Accumulator to X
  */
 void Cpu::tax()
 {
@@ -548,7 +548,7 @@ void Cpu::tax()
 }
 
 /**
- * @brief Transfer Accumulator to Y 
+ * @brief Transfer Accumulator to Y
  */
 void Cpu::tay()
 {
@@ -559,7 +559,7 @@ void Cpu::tay()
 }
 
 /**
- * @brief Transfer Y to Accumulator 
+ * @brief Transfer Y to Accumulator
  */
 void Cpu::tya()
 {
@@ -570,7 +570,7 @@ void Cpu::tya()
 }
 
 /**
- * @brief PusH Accumulator 
+ * @brief PusH Accumulator
  */
 void Cpu::pha()
 {
@@ -579,7 +579,7 @@ void Cpu::pha()
 }
 
 /**
- * @brief PuLl Accumulator 
+ * @brief PuLl Accumulator
  */
 void Cpu::pla()
 {
@@ -588,7 +588,7 @@ void Cpu::pla()
   SET_NF(a());
   tick(4);
 }
- 
+
 // Instructions: logic operations  ///////////////////////////////////////////
 
 /**
@@ -624,7 +624,7 @@ void Cpu::bit(uint16_t addr, uint8_t cycles)
   SET_ZF(t&a());
   tick(cycles);
 }
- 
+
 /**
  * @brief ROtate Left
  */
@@ -637,7 +637,7 @@ uint8_t Cpu::rol(uint8_t v)
   return (uint8_t)t;
 }
 
-/** 
+/**
  * @brief ROL A register
  */
 void Cpu::rol_a()
@@ -647,7 +647,7 @@ void Cpu::rol_a()
 }
 
 /**
- * @brief ROL mem 
+ * @brief ROL mem
  */
 void Cpu::rol_mem(uint16_t addr, uint8_t cycles)
 {
@@ -670,7 +670,7 @@ uint8_t Cpu::ror(uint8_t v)
   return (uint8_t)t;
 }
 
-/** 
+/**
  * @brief ROR A register
  */
 void Cpu::ror_a()
@@ -680,7 +680,7 @@ void Cpu::ror_a()
 }
 
 /**
- * @brief ROR mem 
+ * @brief ROR mem
  */
 void Cpu::ror_mem(uint16_t addr, uint8_t cycles)
 {
@@ -689,7 +689,7 @@ void Cpu::ror_mem(uint16_t addr, uint8_t cycles)
   mem_->write_byte(addr,v);
   mem_->write_byte(addr,ror(v));
   tick(cycles);
-}       
+}
 
 /**
  * @brief Logic Shift Right
@@ -703,7 +703,7 @@ uint8_t Cpu::lsr(uint8_t v)
   return t;
 }
 
-/** 
+/**
  * @brief LSR A
  */
 void Cpu::lsr_a()
@@ -736,7 +736,7 @@ uint8_t Cpu::asl(uint8_t v)
   return t;
 }
 
-/** 
+/**
  * @brief ASL A
  */
 void Cpu::asl_a()
@@ -746,21 +746,21 @@ void Cpu::asl_a()
 }
 
 /**
- * @brief ASL mem 
+ * @brief ASL mem
  *
  * ASL and the other read-modify-write instructions contain a bug (wikipedia):
  *
  * --
- * The 6502's read-modify-write instructions perform one read and two write 
- * cycles. First the unmodified data that was read is written back, and then 
- * the modified data is written. This characteristic may cause issues by 
- * twice accessing hardware that acts on a write. This anomaly continued 
- * through the entire NMOS line, but was fixed in the CMOS derivatives, in 
- * which the processor will do two reads and one write cycle. 
+ * The 6502's read-modify-write instructions perform one read and two write
+ * cycles. First the unmodified data that was read is written back, and then
+ * the modified data is written. This characteristic may cause issues by
+ * twice accessing hardware that acts on a write. This anomaly continued
+ * through the entire NMOS line, but was fixed in the CMOS derivatives, in
+ * which the processor will do two reads and one write cycle.
  * --
  *
  * I have come across code that uses this side-effect as a feature, for
- * instance, the following instruction will acknowledge VIC interrupts 
+ * instance, the following instruction will acknowledge VIC interrupts
  * on the first write cycle:
  *
  * ASL $d019
@@ -770,13 +770,13 @@ void Cpu::asl_a()
 void Cpu::asl_mem(uint16_t addr, uint8_t cycles)
 {
   uint8_t v = load_byte(addr);
-  mem_->write_byte(addr,v); 
+  mem_->write_byte(addr,v);
   mem_->write_byte(addr,asl(v));
   tick(cycles);
-} 
+}
 
 /**
- * @brief Exclusive OR 
+ * @brief Exclusive OR
  */
 void Cpu::eor(uint8_t v, uint8_t cycles)
 {
@@ -785,7 +785,7 @@ void Cpu::eor(uint8_t v, uint8_t cycles)
   SET_NF(a());
   tick(cycles);
 }
- 
+
 // Instructions: arithmetic operations  //////////////////////////////////////
 
 /**
@@ -869,10 +869,10 @@ void Cpu::adc(uint8_t v, uint8_t cycles)
   if(dmf())
   {
     t = (a()&0xf) + (v&0xf) + (cf() ? 1 : 0);
-    if (t > 0x09) 
+    if (t > 0x09)
       t += 0x6;
     t += (a()&0xf0) + (v&0xf0);
-    if((t & 0x1f0) > 0x90) 
+    if((t & 0x1f0) > 0x90)
       t += 0x60;
   }
   else
@@ -914,10 +914,10 @@ void Cpu::sbc(uint8_t v, uint8_t cycles)
   SET_NF(t);
   a((uint8_t)t);
 }
- 
-// Instructions: flag access ///////////////////////////////////////////////// 
 
-/** 
+// Instructions: flag access /////////////////////////////////////////////////
+
+/**
  * @brief SEt Interrupt flag
  */
 void Cpu::sei()
@@ -936,16 +936,16 @@ void Cpu::cli()
 }
 
 /**
- * @brief SEt Carry flag 
+ * @brief SEt Carry flag
  */
 void Cpu::sec()
 {
   cf(true);
   tick(2);
 }
- 
+
 /**
- * @brief CLear Carry flag 
+ * @brief CLear Carry flag
  */
 void Cpu::clc()
 {
@@ -954,16 +954,16 @@ void Cpu::clc()
 }
 
 /**
- * @brief SEt Decimal flag 
+ * @brief SEt Decimal flag
  */
 void Cpu::sed()
 {
   dmf(true);
   tick(2);
 }
- 
+
 /**
- * @brief CLear Decimal flag 
+ * @brief CLear Decimal flag
  */
 void Cpu::cld()
 {
@@ -972,7 +972,7 @@ void Cpu::cld()
 }
 
 /**
- * @brief CLear oVerflow flag 
+ * @brief CLear oVerflow flag
  */
 void Cpu::clv()
 {
@@ -1003,7 +1003,7 @@ void Cpu::flags(uint8_t v)
   idf(ISSET_BIT(v,2));
   dmf(ISSET_BIT(v,3));
   of(ISSET_BIT(v,6));
-  nf(ISSET_BIT(v,7));     
+  nf(ISSET_BIT(v,7));
 }
 
 /**
@@ -1026,9 +1026,9 @@ void Cpu::plp()
 
 /**
  * @brief Jump to SubRoutine
- * 
+ *
  * Note that JSR does not push the address of the next instruction
- * to the stack but the address to the last byte of its own 
+ * to the stack but the address to the last byte of its own
  * instruction.
  */
 void Cpu::jsr()
@@ -1057,9 +1057,9 @@ void Cpu::jmp_ind()
 {
   uint16_t addr = mem_->read_word(addr_abs());
   pc(addr);
-  tick(3);    
+  tick(3);
 }
- 
+
 /**
  * @brief ReTurn from SubRoutine
  */
@@ -1070,7 +1070,7 @@ void Cpu::rts()
   tick(6);
 }
 
-/** 
+/**
  * @brief Branch if Not Equal
  */
 void Cpu::bne()
@@ -1080,7 +1080,7 @@ void Cpu::bne()
   tick(2);
 }
 
-/** 
+/**
  * @brief CoMPare
  */
 void Cpu::cmp(uint8_t v, uint8_t cycles)
@@ -1094,7 +1094,7 @@ void Cpu::cmp(uint8_t v, uint8_t cycles)
   tick(cycles);
 }
 
-/** 
+/**
  * @brief CoMPare X
  */
 void Cpu::cpx(uint8_t v, uint8_t cycles)
@@ -1108,7 +1108,7 @@ void Cpu::cpx(uint8_t v, uint8_t cycles)
   tick(cycles);
 }
 
-/** 
+/**
  * @brief CoMPare Y
  */
 void Cpu::cpy(uint8_t v, uint8_t cycles)
@@ -1121,8 +1121,8 @@ void Cpu::cpy(uint8_t v, uint8_t cycles)
   SET_NF(t);
   tick(cycles);
 }
- 
-/** 
+
+/**
  * @brief Branch if Equal
  */
 void Cpu::beq()
@@ -1132,7 +1132,7 @@ void Cpu::beq()
   tick(2);
 }
 
-/** 
+/**
  * @brief Branch if Carry is Set
  */
 void Cpu::bcs()
@@ -1142,7 +1142,7 @@ void Cpu::bcs()
   tick(2);
 }
 
-/** 
+/**
  * @brief Branch if Carry is Clear
  */
 void Cpu::bcc()
@@ -1151,7 +1151,7 @@ void Cpu::bcc()
   if(!cf()) pc(addr);
   tick(2);
 }
- 
+
 /**
  * @brief, Branch if PLus
  */
@@ -1169,7 +1169,7 @@ void Cpu::bmi()
 {
   uint16_t addr = (int8_t) fetch_op() + pc();
   if(nf()) pc(addr);
-  tick(2);    
+  tick(2);
 }
 
 /**
@@ -1179,7 +1179,7 @@ void Cpu::bvc()
 {
   uint16_t addr = (int8_t) fetch_op() + pc();
   if(!of()) pc(addr);
-  tick(2);    
+  tick(2);
 }
 
 /**
@@ -1189,7 +1189,7 @@ void Cpu::bvs()
 {
   uint16_t addr = (int8_t) fetch_op() + pc();
   if(of()) pc(addr);
-  tick(2);    
+  tick(2);
 }
 
 // misc //////////////////////////////////////////////////////////////////////
@@ -1217,7 +1217,7 @@ void Cpu::brk()
 }
 
 /**
- * @brief ReTurn from Interrupt 
+ * @brief ReTurn from Interrupt
  */
 void Cpu::rti()
 {

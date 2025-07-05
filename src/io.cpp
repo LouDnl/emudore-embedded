@@ -25,8 +25,8 @@ IO::IO()
 {
   SDL_Init(SDL_INIT_VIDEO);
   /**
-   * We create the window double the original pixel size, 
-   * the renderer takes care of upscaling 
+   * We create the window double the original pixel size,
+   * the renderer takes care of upscaling
    */
   window_ = SDL_CreateWindow(
         "emudore",
@@ -47,12 +47,12 @@ IO::IO()
                                 rows_);
   format_ = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
   /**
-   * unfortunately, we need to keep a copy of the rendered frame 
-   * in our own memory, there does not seem to be a way around 
-   * that would allow manipulating pixels straight on the GPU 
+   * unfortunately, we need to keep a copy of the rendered frame
+   * in our own memory, there does not seem to be a way around
+   * that would allow manipulating pixels straight on the GPU
    * memory due to how the image is internally stored, etc..
    *
-   * The rendered frame gets uploaded to the GPU on every 
+   * The rendered frame gets uploaded to the GPU on every
    * screen refresh.
    */
   frame_  = new uint32_t[cols_ * rows_]();
@@ -194,15 +194,15 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_BACKSPACE] = std::make_pair(0,0);
   keymap_[SDL_SCANCODE_MINUS]     = std::make_pair(5,3);
   /* keymap: these are mapped to other keys */
-  keymap_[SDL_SCANCODE_BACKSLASH]    = std::make_pair(5,5); // : 
+  keymap_[SDL_SCANCODE_BACKSLASH]    = std::make_pair(5,5); // :
   keymap_[SDL_SCANCODE_LEFTBRACKET]  = std::make_pair(5,0); // +
   keymap_[SDL_SCANCODE_RIGHTBRACKET] = std::make_pair(6,1); // *
   keymap_[SDL_SCANCODE_APOSTROPHE]   = std::make_pair(5,6); // @
   keymap_[SDL_SCANCODE_LGUI]         = std::make_pair(7,5); // commodore key
 }
 
-/** 
- * @brief init c64 color palette 
+/**
+ * @brief init c64 color palette
  */
 void IO::init_color_palette()
 {
@@ -225,7 +225,7 @@ void IO::init_color_palette()
   color_palette[15]  = SDL_MapRGB(format_, 0xb8, 0xb8, 0xb8);
 }
 
-// emulation /////////////////////////////////////////////////////////////////// 
+// emulation ///////////////////////////////////////////////////////////////////
 
 bool IO::emulate()
 {
@@ -251,7 +251,7 @@ void IO::process_events()
     }
   }
   /* process fake keystrokes if any */
-  if(!key_event_queue_.empty() && 
+  if(!key_event_queue_.empty() &&
      cpu_->cycles() > next_key_event_at_)
   {
     std::pair<kKeyEvent,SDL_Keycode> &ev = key_event_queue_.front();
@@ -269,7 +269,7 @@ void IO::process_events()
   }
 }
 
-// keyboard handling /////////////////////////////////////////////////////////// 
+// keyboard handling ///////////////////////////////////////////////////////////
 
 /**
  * @brief emulate keydown
@@ -294,13 +294,13 @@ void IO::handle_keyup(SDL_Keycode k)
     uint8_t mask = (1 << keymap_.at(k).second);
     keyboard_matrix_[keymap_.at(k).first] |= mask;
   }
-  catch(const std::out_of_range){}  
+  catch(const std::out_of_range){}
 }
 
 /**
  * @brief fake press a key, monkeys love it
  *
- * Characters are added to a queue and processed within 
+ * Characters are added to a queue and processed within
  * the emulation loop.
  */
 void IO::type_character(char c)
@@ -312,7 +312,7 @@ void IO::type_character(char c)
     for(SDL_Keycode &k: charmap_.at(toupper(c)))
       key_event_queue_.push(std::make_pair(kRelease,k));
   }
-  catch(const std::out_of_range){}   
+  catch(const std::out_of_range){}
 }
 
 // screen handling /////////////////////////////////////////////////////////////
@@ -324,16 +324,16 @@ void IO::screen_draw_rect(int x, int y, int n, int color)
     screen_update_pixel(x+i,y,color);
   }
 }
- 
+
 void IO::screen_draw_border(int y, int color)
 {
   screen_draw_rect(0,y,cols_,color);
 }
- 
+
 /**
- * @brief refresh screen 
+ * @brief refresh screen
  *
- * Upload the texture to the GPU 
+ * Upload the texture to the GPU
  */
 void IO::screen_refresh()
 {
@@ -350,17 +350,17 @@ void IO::screen_refresh()
 /**
  * @brief vsync
  *
- * vsync() is called at the end of every frame, if we are ahead 
- * of time compared to a real C64 (very likely) we sleep for a bit, 
- * this way we avoid running at full speed allowing the host CPU to 
+ * vsync() is called at the end of every frame, if we are ahead
+ * of time compared to a real C64 (very likely) we sleep for a bit,
+ * this way we avoid running at full speed allowing the host CPU to
  * take a little nap before getting back to work.
  *
- * This should also help with performance runing on slow computers, 
- * uploading data to the GPU is a relatively slow operation, doing 
+ * This should also help with performance runing on slow computers,
+ * uploading data to the GPU is a relatively slow operation, doing
  * more fps obviously has a performance impact.
  *
- * Also, and more importantly, by doing this we emulate the actual 
- * speed of the C64 so visual effects do not look accelerated and 
+ * Also, and more importantly, by doing this we emulate the actual
+ * speed of the C64 so visual effects do not look accelerated and
  * games become playable :)
  */
 void IO::vsync()
@@ -369,7 +369,7 @@ void IO::vsync()
   auto t = high_resolution_clock::now() - prev_frame_was_at_;
   duration<double> rr(Vic::kRefreshRate);
   /**
-   * Microsoft's chrono is buggy and does not properly handle 
+   * Microsoft's chrono is buggy and does not properly handle
    * doubles, we need to recast to milliseconds.
    */
   auto ttw = duration_cast<milliseconds>(rr - t);

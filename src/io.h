@@ -32,7 +32,7 @@
 /**
  * @brief IO devices
  *
- * This class implements Input/Output devices connected to the 
+ * This class implements Input/Output devices connected to the
  * Commodore 64 such as the screen and keyboard.
  *
  * Current backend is SDL2.

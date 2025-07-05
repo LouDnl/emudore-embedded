@@ -28,7 +28,7 @@ Memory::Memory()
    * 64 kB memory buffers, zeroed.
    *
    * We use two buffers to handle special circumstances, for instance,
-   * any write to a ROM-mapped location will in turn store data on the 
+   * any write to a ROM-mapped location will in turn store data on the
    * hidden RAM, this trickery is used in certain graphic modes.
    */
   mem_ram_ = new uint8_t[kMemSize]();
@@ -66,17 +66,17 @@ void Memory::setup_memory_banks(uint8_t v)
   load_rom("characters.901225-01.bin",kBaseAddrChars);
   load_rom("kernal.901227-03.bin",kBaseAddrKernal);
   /* kernal */
-  if (hiram) 
+  if (hiram)
     banks_[kBankKernal] = kROM;
   /* basic */
-  if (loram && hiram) 
+  if (loram && hiram)
     banks_[kBankBasic] = kROM;
   /* charen */
   if (charen && (loram || hiram))
     banks_[kBankCharen] = kIO;
   else if (charen && !loram && !hiram)
     banks_[kBankCharen] = kRAM;
-  else 
+  else
     banks_[kBankCharen] = kROM;
   /* write the config to the zero page */
   write_byte_no_io(kAddrMemoryLayout, v);
@@ -167,7 +167,7 @@ uint8_t Memory::read_byte(uint16_t addr)
       retval = cia2_->read_register(addr&0x0f);
     else
       retval = mem_ram_[addr];
-  }       
+  }
   /* BASIC or RAM */
   else if (page >= kAddrBasicFirstPage && page <= kAddrBasicLastPage)
   {
@@ -181,7 +181,7 @@ uint8_t Memory::read_byte(uint16_t addr)
   {
     if (banks_[kBankKernal] == kROM)
       retval = mem_rom_[addr];
-    else 
+    else
       retval = mem_ram_[addr];
   }
   /* default */
@@ -217,7 +217,7 @@ uint16_t Memory::read_word_no_io(uint16_t addr)
   return read_byte_no_io(addr) | (read_byte_no_io(addr+1) << 8);
 }
 
-/** 
+/**
  * @brief writes a word performing I/O
  */
 void Memory::write_word(uint16_t addr, uint16_t v)
@@ -226,7 +226,7 @@ void Memory::write_word(uint16_t addr, uint16_t v)
   write_byte(addr+1, (uint8_t)(v>>8));
 }
 
-/** 
+/**
  * @brief writes a word without performing I/O
  */
 void Memory::write_word_no_io(uint16_t addr, uint16_t v)
@@ -238,13 +238,13 @@ void Memory::write_word_no_io(uint16_t addr, uint16_t v)
 /**
  * @brief read byte (from VIC's perspective)
  *
- * The VIC has only 14 address lines so it can only access 
- * 16kB of memory at once, the two missing address bits are 
+ * The VIC has only 14 address lines so it can only access
+ * 16kB of memory at once, the two missing address bits are
  * provided by CIA2.
  *
  * The VIC always reads from RAM ignoring the memory configuration,
- * there's one exception: the character generator ROM. Unless the 
- * Ultimax mode is selected, VIC sees the character generator ROM 
+ * there's one exception: the character generator ROM. Unless the
+ * Ultimax mode is selected, VIC sees the character generator ROM
  * in the memory areas:
  *
  *  1000-1FFF

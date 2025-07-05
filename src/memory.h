@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #ifndef EMUDORE_MEMORY_H
-#define EMUDORE_MEMORY_H 
+#define EMUDORE_MEMORY_H
 
 #include <iostream>
 #include <cstdint>
@@ -39,11 +39,11 @@ class Sid;
  * - @c $0800-$9FFF  Page 8-159    Free BASIC program storage area (38911 bytes)
  * - @c $A000-$BFFF  Page 160-191  Free machine language program storage area (when switched-out with ROM)
  * - @c $C000-$CFFF  Page 192-207  Free machine language program storage area
- * - @c $D000-$D3FF  Page 208-211  
- * - @c $D400-$D4FF  Page 212-215  
- * - @c $D800-$DBFF  Page 216-219  
- * - @c $DC00-$DCFF  Page 220  
- * - @c $DD00-$DDFF  Page 221  
+ * - @c $D000-$D3FF  Page 208-211
+ * - @c $D400-$D4FF  Page 212-215
+ * - @c $D800-$DBFF  Page 216-219
+ * - @c $DC00-$DCFF  Page 220
+ * - @c $DD00-$DDFF  Page 221
  * - @c $DE00-$DFFF  Page 222-223  Reserved for interface extensions
  * - @c $E000-$FFFF  Page 224-255  Free machine language program storage area (when switched-out with ROM)
  */
@@ -117,7 +117,7 @@ class Memory
     static const uint16_t kAddrVicLastPage  = 0xd300;
     static const uint16_t kAddrCIA1Page = 0xdc00;
     static const uint16_t kAddrCIA2Page = 0xdd00;
-    static const uint16_t kAddrBasicFirstPage = 0xa000; 
+    static const uint16_t kAddrBasicFirstPage = 0xa000;
     static const uint16_t kAddrBasicLastPage  = 0xbf00;
     static const uint16_t kAddrKernalFirstPage = 0xe000;
     static const uint16_t kAddrKernalLastPage = 0xff00;

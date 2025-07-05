@@ -31,10 +31,10 @@
 #ifdef DEBUGGER_SUPPORT
 #include "debugger.h"
 #endif
- 
+
 /**
  * @brief Commodore 64
- * 
+ *
  * This class glues together all the different
  * components in a Commodore 64 computer
  */

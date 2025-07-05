@@ -48,7 +48,7 @@ Debugger::Debugger()
     D("Debuggger: Error opening socket\n");
     exit(1);
   }
-  setsockopt(ss_, SOL_SOCKET, SO_REUSEADDR, &e, sizeof(int)); 
+  setsockopt(ss_, SOL_SOCKET, SO_REUSEADDR, &e, sizeof(int));
   bzero((char *) &serv_addr, sizeof(serv_addr));
   /* init socket struct */
   serv_addr.sin_family      = AF_INET;
@@ -71,7 +71,7 @@ Debugger::~Debugger()
 
 std::vector<std::string> Debugger::split_cmd(const std::string &s)
 {
-  const char c = ' '; 
+  const char c = ' ';
   std::string buff{""};
   std::vector<std::string> v;
   for(auto n:s)
@@ -88,7 +88,7 @@ uint16_t Debugger::emu_seek(uint16_t offset, int whence)
   switch(whence)
   {
   case SEEK_SET:
-    offset_ = offset; 
+    offset_ = offset;
     break;
   case SEEK_CUR:
     offset_ = offset + offset_;
@@ -151,7 +151,7 @@ std::string Debugger::emu_handle_cmd(const std::string &s)
 }
 
 bool Debugger::emulate()
-{ 
+{
   int sockfd;
   struct sockaddr_in sa;
   socklen_t sl = sizeof(sa);
@@ -167,7 +167,7 @@ bool Debugger::emulate()
     D("Debugger: client connected\n");
     /* emulation paused while debugger is connected */
     while(1)
-    {    
+    {
       int whence;
       uint8_t *mem;
       uint32_t sz;

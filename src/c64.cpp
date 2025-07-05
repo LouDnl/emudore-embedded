@@ -50,7 +50,7 @@ C64::C64()
   debugger_ = new Debugger();
   debugger_->memory(mem_);
   debugger_->cpu(cpu_);
-#endif   
+#endif
 }
 
 C64::~C64()
@@ -64,7 +64,7 @@ C64::~C64()
   delete io_;
 #ifdef DEBUGGER_SUPPORT
   delete debugger_;
-#endif   
+#endif
 }
 
 void C64::start()
@@ -119,9 +119,9 @@ void C64::emscripten_loop()
     if(callback_) callback_();
   }
 }
- 
+
 /**
- * @brief runs Klaus Dormann's 6502 test suite 
+ * @brief runs Klaus Dormann's 6502 test suite
  *
  * https://github.com/Klaus2m5/6502_65C02_functional_tests
  */

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #ifndef EMUDORE_UTIL_H
 #define EMUDORE_UTIL_H
 
@@ -53,6 +53,6 @@
 # define htonll(x) (x)
 # define ntohll(x) (x)
 #endif
-#endif 
+#endif
 
 #endif

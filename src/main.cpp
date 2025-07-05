@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include <iostream>
 #include <string>
 #include <algorithm>
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
 #else
     c64->callback(loader_cb);
     load_file(argv[1]);
-#endif 
+#endif
   }
 #ifdef EMSCRIPTEN
   emscripten_set_main_loop(emscripten_loop,0,0);
