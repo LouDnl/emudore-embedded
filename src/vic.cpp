@@ -409,8 +409,8 @@ void Vic::set_graphic_mode()
     graphic_mode_ = kMCBitmapMode;
   else if(ecm && !bmm && !mcm)
     graphic_mode_ = kExtBgMode;
-  else 
-    graphic_mode_ = kIllegalMode;
+  else /* TODO: YEAH, WHAT EXACTLY */
+    graphic_mode_ = kMCCharMode/* kIllegalMode */;
 }
 
 /**
