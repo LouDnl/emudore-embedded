@@ -1,0 +1,14 @@
+# Ignore all the shit!
+*
+
+# Not for these pieces of shit though!
+!.gitignore
+!LICENSE
+!README.md
+!CMakeLists.txt
+
+# And these trashcans!
+!src
+!src/**
+!assets
+!assets/**
