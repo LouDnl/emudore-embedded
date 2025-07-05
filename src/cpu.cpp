@@ -94,6 +94,8 @@ bool Cpu::emulate()
   case 0x25: _and(load_byte(addr_zero()),3); break;
   /* ROL nn */
   case 0x26: rol_mem(addr_zero(),5); break;
+  /* RLA zp ~ Illegal */
+  case 0x27: rla_mem(load_byte(addr_zero()),5); break;
   /* PLP */
   case 0x28: plp(); break;
   /* AND #nn */
@@ -1226,6 +1228,19 @@ void Cpu::rti()
   flags(pop());
   pc(pop() + (pop() << 8));
   tick(7);
+}
+
+// illegals  /////////////////////////////////////////////////////////////////
+
+void Cpu::rla()
+{
+
+}
+
+void Cpu::rla_mem(uint16_t addr, uint8_t cycles)
+{
+  rol_mem(addr, 2);
+  _and(addr, 3);
 }
 
 // interrupts  ///////////////////////////////////////////////////////////////

@@ -123,6 +123,9 @@ class Cpu
     inline void nop();
     inline void brk();
     inline void rti();
+    /* Instructions: illegal */
+    inline void rla();
+    inline void rla_mem(uint16_t addr, uint8_t cycles);
   public:
     /* cpu state */
     void reset();
