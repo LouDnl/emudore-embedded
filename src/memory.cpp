@@ -16,6 +16,7 @@
  */
 
 #include <fstream>
+#include <iomanip>
 #include "memory.h"
 #include "util.h"
 #include "vic.h"
@@ -196,6 +197,10 @@ uint8_t Memory::read_byte(uint16_t addr)
     else
       retval = mem_ram_[addr];
   }
+  // else if ((page >= kAddrSIDPage1 && page <= (kAddrSIDPage1 + 0x100))
+  //         || (page >= kAddrSIDPage2 && page <= (kAddrSIDPage2 + 0x100))
+  //         || (page >= kAddrSIDPage3 && page <= (kAddrSIDPage3 + 0x100))
+  //         || (page >= kAddrSIDPage4 && page <= (kAddrSIDPage4 + 0x100)))
   /* default */
   else
   {
@@ -315,6 +320,8 @@ void Memory::dump()
 {
   for(unsigned int p=0 ; p < kMemSize ; p++)
   {
-    std::cout << read_byte(p);
+    if (p % 15 == 0 || p == 0) std::cout << std::setw(5) << std::setfill('0') << (p == 0 ? p : p - 16) << " ";
+    std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(read_byte(p)) << " ";
+    if (p % 15 == 0 && p != 0) std::cout << std::endl;
   }
 }
