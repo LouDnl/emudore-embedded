@@ -54,6 +54,7 @@ class Cpu
     inline uint8_t lsr(uint8_t v);
     inline uint8_t asl(uint8_t v);
     inline void tick(uint8_t v){cycles_+=v;};
+    inline void backtick(uint8_t v){cycles_-=v;};
     inline uint8_t flags();
     inline void flags(uint8_t v);
     /* instructions : data handling and memory operations */
@@ -125,6 +126,10 @@ class Cpu
     inline void rti();
     /* Instructions: illegal */
     inline void jam();
+    inline void slo(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void sax(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void sha(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void tas(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
     // inline void rla();
     // inline void rla_mem(uint16_t addr, uint8_t cycles);
   public:
