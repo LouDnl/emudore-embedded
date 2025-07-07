@@ -21,6 +21,7 @@ set(COMPILE_OPTS PRIVATE
   -Wno-maybe-uninitialized
   -save-temps
   -fverbose-asm
+  -DDEBUGGER_SUPPORT
 )
 
 # Run the project command
