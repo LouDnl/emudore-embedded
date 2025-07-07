@@ -56,48 +56,64 @@ bool Cpu::emulate()
   case 0x1: ora(load_byte(addr_indx()),6); break;
   /* JAM ~ Illegal */
   case 0x2: jam(); break;
+  /* SLO (nn,X) ~ Illegal */
+  case 0x3: break; // TODO: Add
   /* NOP ~ Illegal */
   case 0x4: nop(3); break;
   /* ORA nn */
   case 0x5: ora(load_byte(addr_zero()),3); break;
   /* ASL nn */
   case 0x6: asl_mem(addr_zero(),5); break;
+  /* SLO nn ~ Illegal */
+  case 0x7: break; // TODO: Add
   /* PHP */
   case 0x8: php(); break;
   /* ORA #nn */
   case 0x9: ora(fetch_op(),2); break;
   /* ASL A */
   case 0xA: asl_a(); break;
-  /* NOP ~ Illegal */
+  /* ANC #nn ~ Illegal */
+  case 0xB: break; // TODO: Add
+  /* NOP nnnn  ~ Illegal */
   case 0xC: nop(4); break;
   /* ORA nnnn */
   case 0xD: ora(load_byte(addr_abs()),4); break;
   /* ASL nnnn */
   case 0xE: asl_mem(addr_abs(),6); break;
+  /* SLO nnnn ~ Illegal */
+  case 0xF: break; // TODO: Add
   /* BPL nn */
   case 0x10: bpl(); break;
   /* ORA (nn,Y) */
   case 0x11: ora(load_byte(addr_indy()),5); break;
   /* JAM ~ Illegal */
   case 0x12: jam(); break;
-  /* NOP ~ Illegal */
+  /* SLO (nn,Y) ~ Illegal */
+  case 0x13: break; // TODO: Add
+  /* NOP nn ~ Illegal */
   case 0x14: nop(4); break;
   /* ORA nn,X */
   case 0x15: ora(load_byte(addr_zerox()),4); break;
   /* ASL nn,X */
   case 0x16: asl_mem(addr_zerox(),6); break;
+  /* SLO nn ~ Illegal */
+  case 0x17: break; // TODO: Add
   /* CLC */
   case 0x18: clc(); break;
   /* ORA nnnn,Y */
   case 0x19: ora(load_byte(addr_absy()),4); break;
   /* NOP ~ Illegal */
   case 0x1A: nop(2); break;
-  /* NOP ~ Illegal */
+  /* SLO nnnn,Y ~ Illegal */
+  case 0x1B: break; // TODO: Add
+  /* NOP nnnn,X ~ Illegal */
   case 0x1C: nop(4); break;
   /* ORA nnnn,X */
   case 0x1D: ora(load_byte(addr_absx()),4); break;
   /* ASL nnnn,X */
   case 0x1E: asl_mem(addr_absx(),7); break;
+  /* SLO nnnn,X ~ Illegal */
+  case 0x1F: break; // TODO: Add
   /* JSR */
   case 0x20: jsr(); break;
   /* AND (nn,X) */
@@ -202,7 +218,7 @@ bool Cpu::emulate()
   case 0x61: adc(load_byte(addr_indx()),6); break;
   /* JAM ~ Illegal */
   // case 0x62: jam(); break; // BUG: BREAKS FANTA IN SPACE
-  case 0x62: nop(2); break;
+  // case 0x62: nop(2); break;
   /* NOP ~ Illegal */
   case 0x64: nop(3); break;
   /* ADC nn */
