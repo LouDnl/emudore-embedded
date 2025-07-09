@@ -123,6 +123,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
     else
       mem_ram_[addr] = v;
   }
+  /* CIA2 */
   else if (page == kAddrCIA2Page)
   {
     if(banks_[kBankCharen] == kIO)
@@ -130,11 +131,11 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
     else
       mem_ram_[addr] = v;
   }
-  else if (page == kAddrSIDPage1
-          || page == kAddrSIDPage2
-          || page == kAddrSIDPage3
-          || page == kAddrSIDPage4)
+  /* SID */
+  else if ((page >= kAddrSIDFirstPage && page <= kAddrSIDLastPage)
+          || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
   {
+    // sid_->write_register(addr, v);
     if(banks_[kBankCharen] == kIO)
       sid_->write_register(addr, v);
     else
@@ -197,10 +198,12 @@ uint8_t Memory::read_byte(uint16_t addr)
     else
       retval = mem_ram_[addr];
   }
-  // else if ((page >= kAddrSIDPage1 && page <= (kAddrSIDPage1 + 0x100))
-  //         || (page >= kAddrSIDPage2 && page <= (kAddrSIDPage2 + 0x100))
-  //         || (page >= kAddrSIDPage3 && page <= (kAddrSIDPage3 + 0x100))
-  //         || (page >= kAddrSIDPage4 && page <= (kAddrSIDPage4 + 0x100)))
+  /* SID */
+  else if ((page >= kAddrSIDFirstPage && page <= kAddrSIDLastPage)
+          || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
+  {
+    retval = mem_ram_[addr];
+  }
   /* default */
   else
   {

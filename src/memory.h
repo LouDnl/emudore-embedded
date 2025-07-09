@@ -41,11 +41,12 @@ class Sid;
  * - @c $A000-$BFFF  Page 160-191  Free machine language program storage area (when switched-out with ROM)
  * - @c $C000-$CFFF  Page 192-207  Free machine language program storage area
  * - @c $D000-$D3FF  Page 208-211
- * - @c $D400-$D4FF  Page 212-215
+ * - @c $D400-$D7FF  Page 212-215  SID address space
  * - @c $D800-$DBFF  Page 216-219
  * - @c $DC00-$DCFF  Page 220
  * - @c $DD00-$DDFF  Page 221
- * - @c $DE00-$DFFF  Page 222-223  Reserved for interface extensions
+ * - @c $DE00-$DEFF  Page 222-223  I/O Area 1 Reserved for interface extensions e.g. SID2 or SID3
+ * - @c $DF00-$DFFF  Page 222-223  I/O Area 2 Reserved for interface extensions e.g. SID2 or SID3
  * - @c $E000-$FFFF  Page 224-255  Free machine language program storage area (when switched-out with ROM)
  */
 class Memory
@@ -70,15 +71,15 @@ class Memory
     /* bank switching */
     enum kBankCfg
     {
-      kROM,
-      kRAM,
-      kIO
+      kROM, /* 0 */
+      kRAM, /* 1 */
+      kIO   /* 2 */
     };
     enum Banks
     {
-      kBankBasic =  3,
+      kBankBasic  = 3,
       kBankCharen = 5,
-      kBankKernal =  6,
+      kBankKernal = 6,
     };
     void setup_memory_banks(uint8_t v);
     /* read/write memory */
@@ -102,33 +103,33 @@ class Memory
     /* constants */
     static const size_t kMemSize = 0x10000;
     /* memory addresses  */
-    static const uint16_t kBaseAddrBasic  = 0xa000;
-    static const uint16_t kBaseAddrKernal = 0xe000;
-    static const uint16_t kBaseAddrStack  = 0x0100;
-    static const uint16_t kBaseAddrScreen = 0x0400;
-    static const uint16_t kBaseAddrChars  = 0xd000;
-    static const uint16_t kBaseAddrBitmap = 0x0000;
-    static const uint16_t kBaseAddrColorRAM = 0xd800;
-    static const uint16_t kAddrResetVector = 0xfffc;
-    static const uint16_t kAddrIRQVector = 0xfffe;
-    static const uint16_t kAddrNMIVector = 0xfffa;
+    static const uint16_t kBaseAddrBasic     = 0xa000;
+    static const uint16_t kBaseAddrKernal    = 0xe000;
+    static const uint16_t kBaseAddrStack     = 0x0100;
+    static const uint16_t kBaseAddrScreen    = 0x0400;
+    static const uint16_t kBaseAddrChars     = 0xd000;
+    static const uint16_t kBaseAddrBitmap    = 0x0000;
+    static const uint16_t kBaseAddrColorRAM  = 0xd800;
+    static const uint16_t kAddrResetVector   = 0xfffc;
+    static const uint16_t kAddrIRQVector     = 0xfffe;
+    static const uint16_t kAddrNMIVector     = 0xfffa;
     static const uint16_t kAddrDataDirection = 0x0000;
     static const uint16_t kAddrMemoryLayout  = 0x0001;
-    static const uint16_t kAddrColorRAM = 0xd800;
+    static const uint16_t kAddrColorRAM      = 0xd800;
     /* memory layout */
-    static const uint16_t kAddrZeroPage     = 0x0000;
-    static const uint16_t kAddrVicFirstPage = 0xd000;
-    static const uint16_t kAddrVicLastPage  = 0xd300;
-    static const uint16_t kAddrSIDPage1  = 0xD400;
-    static const uint16_t kAddrSIDPage2  = 0xD500;
-    static const uint16_t kAddrSIDPage3  = 0xDE00;
-    static const uint16_t kAddrSIDPage4  = 0xDF00;
-    static const uint16_t kAddrCIA1Page = 0xdc00;
-    static const uint16_t kAddrCIA2Page = 0xdd00;
-    static const uint16_t kAddrBasicFirstPage = 0xa000;
-    static const uint16_t kAddrBasicLastPage  = 0xbf00;
+    static const uint16_t kAddrZeroPage      = 0x0000;
+    static const uint16_t kAddrVicFirstPage  = 0xd000;
+    static const uint16_t kAddrVicLastPage   = 0xd300;
+    static const uint16_t kAddrSIDFirstPage  = 0xD400;
+    static const uint16_t kAddrSIDLastPage   = 0xD500;
+    static const uint16_t kAddrIOFirstPage   = 0xDE00;
+    static const uint16_t kAddrIOLastPage    = 0xDF00;
+    static const uint16_t kAddrCIA1Page      = 0xdc00;
+    static const uint16_t kAddrCIA2Page      = 0xdd00;
+    static const uint16_t kAddrBasicFirstPage  = 0xa000;
+    static const uint16_t kAddrBasicLastPage   = 0xbf00;
     static const uint16_t kAddrKernalFirstPage = 0xe000;
-    static const uint16_t kAddrKernalLastPage = 0xff00;
+    static const uint16_t kAddrKernalLastPage  = 0xff00;
     /* bank switching */
     static const uint8_t kLORAM  = 1 << 0;
     static const uint8_t kHIRAM  = 1 << 1;
