@@ -11,7 +11,13 @@ Sid::Sid()
 
 void Sid::set_cycles(void)
 {
+  if ((cpu_->cycles() - prev_flush_cpu_cycles_) >= ((1 / 50.125) * 1000000)) {
+    printf("SID Flush called @ %u cycles, last was at %u, diff %u\n",
+      cpu_->cycles(), prev_flush_cpu_cycles_,
+      (cpu_->cycles()- prev_flush_cpu_cycles_));
+  }
   prev_cpu_cycles_ = cpu_->cycles();
+  prev_flush_cpu_cycles_ = cpu_->cycles();
 }
 
 uint8_t Sid::read_register(uint8_t r)

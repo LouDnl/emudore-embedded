@@ -42,6 +42,7 @@ class Sid
     Vic *vic_;
     IO *io_;
 
+    unsigned int prev_flush_cpu_cycles_;
     unsigned int prev_cpu_cycles_;
   public:
     Sid();
