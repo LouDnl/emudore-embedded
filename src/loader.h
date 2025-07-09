@@ -35,6 +35,7 @@ class Loader
     Cpu *cpu_;
     Memory *mem_;
     Vic *vic_;
+    Sid *sid_;
     SidFile *sidfile_;
     std::ifstream is_;
     enum kFormat

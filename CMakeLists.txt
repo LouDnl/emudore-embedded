@@ -9,7 +9,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(PROJECT_NAME adorable)
 
 set(ILLEGAL_LOGGING 0)
-set(DBG_SUPPORT -DDEBUGGER_SUPPORT)
+# set(DBG_SUPPORT -DDEBUGGER_SUPPORT)
+set(DBG_SUPPORT )
 
 ### Compiler flags and options
 set(COMPILE_OPTS PRIVATE
@@ -35,32 +36,40 @@ project(${PROJECT_NAME} C CXX ASM)
 find_package(PkgConfig REQUIRED)
 
 # these calls create special `PkgConfig::<MODULE>` variables
+pkg_check_modules(libusb REQUIRED IMPORTED_TARGET libusb-1.0)
+pkg_check_modules(udev REQUIRED IMPORTED_TARGET libudev)
 
 ### Libraries to link
 pkg_check_modules(sdl REQUIRED IMPORTED_TARGET sdl2)
 set(TARGET_LL
   PkgConfig::sdl
+  PkgConfig::libusb
+  PkgConfig::udev
 )
 
 ### Source files to compile
 set(SOURCEFILES
   ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/loader.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/sidfile.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/cpu.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/sid.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/memory.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/c64.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/cia1.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/cia2.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/io.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/vic.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/cia1.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/sid.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver/USBSID.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/debugger.cpp
 )
 ### Header folders to include
 set(TARGET_INCLUDE_DIRS PRIVATE
   .
   src
+  lib
   ${CMAKE_CURRENT_LIST_DIR}/src
+  ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver
   /usr/local/lib
   /usr/local/include
   /usr/lib

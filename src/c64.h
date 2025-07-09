@@ -62,6 +62,7 @@ class C64
     Memory * memory(){return mem_;};
     IO * io(){return io_;};
     Vic * vic(){return vic_;};
+    Sid * sid(){return sid_;};
     /* test cpu */
     void test_cpu();
 };

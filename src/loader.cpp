@@ -31,6 +31,7 @@ Loader::Loader(C64 *c64)
   cpu_ = c64_->cpu();
   mem_ = c64_->memory();
   vic_ = c64_->vic();
+  sid_ = c64_->sid();
   booted_up_ = false;
   format_ = kNone;
 }
@@ -117,52 +118,64 @@ void Loader::sid(const std::string &f)
 void Loader::load_sid()
 {
   print_sid_info();
-
+  mem_->write_byte(0xD020,2); /* Bordor color to red */
+  mem_->write_byte(0xD021,0); /* Background color to black */
+  /* Turn off screen by wrapping the border color over the whole screen */
+  // mem_->write_byte(0xD011,(mem_->read_byte(0xD011) & 0b11101111));
   uint16_t load = sidfile_->GetLoadAddress();
   uint16_t len = sidfile_->GetDataLength();
   uint8_t *buffer = sidfile_->GetDataPtr();
-  for (unsigned int i = 0; i < len; i++)
-  {
-    mem_->write_byte_no_io((load+i),buffer[i]);
+
+  for (unsigned int i = 0; i < len; i++) {
+    mem_->write_byte((load+i),buffer[i]);
   }
   uint16_t play = sidfile_->GetPlayAddress();
   uint16_t init = sidfile_->GetInitAddress();
 
   int songno = sidfile_->GetFirstSong();
+  // cpu_->reset();
 
   // install reset vector for microplayer (0x0000)
-  mem_->write_byte_no_io(0xFFFD, 0x00);
-  mem_->write_byte_no_io(0xFFFC, 0x00);
+  mem_->write_byte(0xFFFD, 0x00);
+  mem_->write_byte(0xFFFC, 0x00);
 
   // install IRQ vector for play routine launcher (0x0013)
-  mem_->write_byte_no_io(0xFFFF, 0x00);
-  mem_->write_byte_no_io(0xFFFE, 0x13);
+  mem_->write_byte(0xFFFF, 0x00);
+  mem_->write_byte(0xFFFE, 0x13);
+
+  mem_->write_byte(0x0001, 0x35); // clear kernel and basic rom from ram
 
   // install the micro player, 6502 assembly code
+  mem_->write_byte(0x0000, 0xA9);               // 0xA9 LDA imm load A with the song number
+  mem_->write_byte(0x0001, songno);             // 0xNN #NN song number
 
-  mem_->write_byte_no_io(0x0000, 0xA9);               // 0xA9 LDA imm load A with the song number
-  mem_->write_byte_no_io(0x0001, songno);             // 0xNN #NN song number
+  mem_->write_byte(0x0002, 0x20);               // 0x20 JSR abs jump sub to INIT routine
+  mem_->write_byte(0x0003, init & 0xFF);        // 0xxxNN address lo
+  mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
 
-  mem_->write_byte_no_io(0x0002, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  mem_->write_byte_no_io(0x0003, init & 0xFF);        // 0xxxNN address lo
-  mem_->write_byte_no_io(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
+  mem_->write_byte(0x0005, 0x58);               // 0x58 CLI enable interrupt
+  mem_->write_byte(0x0006, 0xEA);               // 0xEA NOP impl
+  mem_->write_byte(0x0007, 0x4C);               // JMP jump to 0x0006
+  mem_->write_byte(0x0008, 0x06);               // 0xxxNN address lo
+  mem_->write_byte(0x0009, 0x00);               // 0xNNxx address hi
 
-  mem_->write_byte_no_io(0x0005, 0x58);               // 0x58 CLI enable interrupt
-  mem_->write_byte_no_io(0x0006, 0xEA);               // 0xEA NOP impl
-  mem_->write_byte_no_io(0x0007, 0x4C);               // JMP jump to 0x0006
-  mem_->write_byte_no_io(0x0008, 0x06);               // 0xxxNN address lo
-  mem_->write_byte_no_io(0x0009, 0x00);               // 0xNNxx address hi
+  mem_->write_byte(0x0013, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
+  mem_->write_byte(0x0014, 0xEA);               // 0xEA NOP // 0x01 #NN
+  mem_->write_byte(0x0015, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
+  mem_->write_byte(0x0016, 0x20);               // 0x20 JSR jump sub to play routine
+  mem_->write_byte(0x0017, play & 0xFF);        // playaddress lo
+  mem_->write_byte(0x0018, (play >> 8) & 0xFF); // playaddress hi
+  mem_->write_byte(0x0019, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
+  mem_->write_byte(0x001A, 0x40);               // 0x40 RTI return from interrupt
+  // vic_->disable(true); /* Disable screen output */    // TODO: FINISH, IS BROKEN NOW
+  sid_->reset_cycles();
+  // cpu_->reset();
+  cpu_->pc(mem_->read_word(Memory::kAddrResetVector));
 
-  mem_->write_byte_no_io(0x0013, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  mem_->write_byte_no_io(0x0014, 0xEA);               // 0xEA NOP // 0x01 #NN
-  mem_->write_byte_no_io(0x0015, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  mem_->write_byte_no_io(0x0016, 0x20);               // 0x20 JSR jump sub to play routine
-  mem_->write_byte_no_io(0x0017, play & 0xFF);        // playaddress lo
-  mem_->write_byte_no_io(0x0018, (play >> 8) & 0xFF); // playaddress hi
-  mem_->write_byte_no_io(0x0019, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  mem_->write_byte_no_io(0x001A, 0x40);               // 0x40 RTI return from interrupt
-  vic_->disable(true); /* Disable screen output */    // TODO: FINISH, IS BROKEN NOW
-  cpu_->reset();
+  // mem_->write_byte(0xD020,0); /* Bordor color to black */
+  // mem_->write_byte(0xD021,0); /* Background color to black */
+  // mem_->write_byte(0xD011,(mem_->read_byte(0xD011) & 0b11101111)); /* Turn off screen by wrapping it with border */
+
 }
 
 void Loader::print_sid_info() /* TODO: THIS MUST GO TO C64 SCREEN */

@@ -135,7 +135,6 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
   else if ((page >= kAddrSIDFirstPage && page <= kAddrSIDLastPage)
           || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
   {
-    // sid_->write_register(addr, v);
     if(banks_[kBankCharen] == kIO)
       sid_->write_register(addr, v);
     else
@@ -202,7 +201,10 @@ uint8_t Memory::read_byte(uint16_t addr)
   else if ((page >= kAddrSIDFirstPage && page <= kAddrSIDLastPage)
           || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
   {
-    retval = mem_ram_[addr];
+    if(banks_[kBankCharen] == kIO)
+      retval = sid_->read_register(addr);
+    else
+      retval = mem_ram_[addr];
   }
   /* default */
   else
@@ -213,7 +215,7 @@ uint8_t Memory::read_byte(uint16_t addr)
 }
 
 /**
- * @brief writes a byte without performing I/O (always to RAM)
+ * @brief reads a byte without performing I/O
  */
 
 uint8_t Memory::read_byte_no_io(uint16_t addr)

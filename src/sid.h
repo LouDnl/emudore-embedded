@@ -19,12 +19,20 @@
 
 #include <cstdint>
 
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <time.h>
+
 #include "cpu.h"
 #include "memory.h"
 #include "cia1.h"
 #include "cia2.h"
 #include "vic.h"
 #include "io.h"
+#include "sidfile.h"
+#include "USBSID.h"
+
 
 /**
  * @brief MOS 6581 SID (Sound Interface Device)
@@ -42,11 +50,18 @@ class Sid
     Vic *vic_;
     IO *io_;
 
-    unsigned int prev_flush_cpu_cycles_;
-    unsigned int prev_cpu_cycles_;
+    USBSID_NS::USBSID_Class *usbsid;
+    bool us_ = false;
+
+    unsigned int prev_flush_cpu_cycles_ = 0;
+    unsigned int prev_cpu_cycles_ = 0;
+
+  // uint_fast64_t cyclefromtimestamp(timestamp_t timestamp);
+  uint_fast64_t wait_ns(unsigned int cycles);
+
   public:
     Sid();
-    // ~Sid();
+    ~Sid();
     void cpu(Cpu *v){cpu_ = v;};
     void mem(Memory *v){mem_ = v;};
     void cia1(Cia1 *v){cia1_ = v;};
@@ -54,8 +69,10 @@ class Sid
     void vic(Vic *v){vic_ = v;};
     void io(IO *v){io_ = v;};
 
+    void reset_cycles(void){prev_cpu_cycles_ = prev_flush_cpu_cycles_ = 0;};
+
     void set_cycles(void);
-    uint8_t read_register(uint8_t r);
+    uint8_t read_register(uint16_t r);
     void write_register(uint16_t r, uint8_t v);
 };
 
