@@ -109,8 +109,8 @@ bool Vic::emulate()
     if (rstr >= kScreenLines)
     {
       io_->screen_refresh();
-      frame_c_++;
       sid_->set_cycles(); /* FLUSH */
+      frame_c_++;
       raster_counter(0);
     }
   }
