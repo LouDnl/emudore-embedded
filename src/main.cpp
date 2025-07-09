@@ -43,8 +43,9 @@ bool emscripten_loader_cb()
   return true;
 }
 
-void load_file(const char *file)
+void load_file(int argc, char **argv) /* TODO: ADD ARGUMENTS FOR SIDFILE PLAY */
 {
+  const char *file = argv[1];
   std::string f(file);
   size_t ext_i = f.find_last_of(".");
   if(ext_i != std::string::npos)
@@ -57,13 +58,16 @@ void load_file(const char *file)
     else if(ext == "prg"){
       loader->prg(f);
     }
+    else if(ext == "sid"){
+      loader->sid(f);
+    }
   }
 }
 
 void wget_cb(const char *f)
 {
   wget_download_finished = true;
-  load_file(f);
+  // load_file(f); //TODO: FIX, THIS BREAKS EMSCRIPTEN FILE LOAD NOW
 }
 
 void emscripten_loop()
@@ -89,7 +93,7 @@ int main(int argc, char **argv)
     }
 #else
     c64->callback(loader_cb);
-    load_file(argv[1]);
+    load_file(argc, argv);
 #endif
   }
 #ifdef EMSCRIPTEN

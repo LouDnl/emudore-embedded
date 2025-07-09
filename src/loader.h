@@ -21,6 +21,8 @@
 #include <fstream>
 #include "c64.h"
 
+class SidFile;
+
 /**
  * @brief Program loader
  */
@@ -32,21 +34,27 @@ class Loader
     IO *io_;
     Cpu *cpu_;
     Memory *mem_;
+    Vic *vic_;
+    SidFile *sidfile_;
     std::ifstream is_;
     enum kFormat
     {
       kNone,
       kBasic,
-      kPRG
+      kPRG,
+      kSID
     };
     kFormat format_;
     void load_basic();
     void load_prg();
+    void load_sid();
+    void print_sid_info(); /* TODO: Print on C64 screen */
     uint16_t read_short_le();
   public:
     Loader(C64 *c64);
     void bas(const std::string &f);
     void prg(const std::string &f);
+    void sid(const std::string &f);
     bool emulate();
     /* constants */
     static const uint16_t kBasicPrgStart = 0x0801;
