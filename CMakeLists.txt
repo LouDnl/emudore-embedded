@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD 17)
 ### Project magic sprinkles
 set(PROJECT_NAME adorable)
 
+set(ILLEGAL_LOGGING 0)
+set(DBG_SUPPORT -DDEBUGGER_SUPPORT)
+
 ### Compiler flags and options
 set(COMPILE_OPTS PRIVATE
   -g3
@@ -21,7 +24,8 @@ set(COMPILE_OPTS PRIVATE
   -Wno-maybe-uninitialized
   -save-temps
   -fverbose-asm
-  -DDEBUGGER_SUPPORT
+  -DLOG_ILLEGALS=${ILLEGAL_LOGGING}
+  ${DBG_SUPPORT}
 )
 
 # Run the project command
