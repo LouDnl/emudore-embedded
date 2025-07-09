@@ -1,0 +1,9 @@
+AS65 Assembler for R6502 [1.42].                                     Page    1
+------------------------- 6502_functional_test.a65.1 -------------------------
+
+6108 lines read, no errors in pass 1.
+No errors in pass 2.
+Wrote binary from address $000a through $ffff.
+Total size 65526 bytes.
+Program start address is at $0400 (1024).
+
