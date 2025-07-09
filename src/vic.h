@@ -122,7 +122,7 @@ class Vic
     unsigned int frames(){return frame_c_;};
     uint16_t get_sprite_ptr(int n);
     int raster_counter();
-    void setLightPen(uint8_t x,uint8_t y);
+    void setLightPen(uint16_t x,uint8_t y);
     /* constants */
     static const int kScreenLines = 312;
     static const int kScreenCols  = 504;

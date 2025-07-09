@@ -119,11 +119,15 @@ bool Vic::emulate()
       sid_->set_cycles(); /* FLUSH */
       frame_c_++;
       raster_counter(0);
-      if(sprite_sprite_collision_) checkInterrupt(1);
-      if(sprite_bgnd_collision_)   checkInterrupt(2);
+      if(sprite_sprite_collision_) ISSET_BIT(irq_enabled_,bitMMC); //checkInterrupt(1);
+      if(sprite_bgnd_collision_)   ISSET_BIT(irq_enabled_,bitMBC); //checkInterrupt(2);
     }
   }
+#ifdef EMSCRIPTEN
   return verticalSync;
+#else
+  return true;
+#endif
 }
 
 // DMA register access  //////////////////////////////////////////////////////
@@ -352,7 +356,7 @@ void Vic::write_register(uint8_t r, uint8_t v)
     break;
   /* interrupt enable register */
   case 0x1a:
-    irq_enabled_= v;
+    irq_enabled_ = v;
     break;
   /* sprite priority register */
   case 0x1b:
@@ -438,6 +442,7 @@ void Vic::set_graphic_mode()
     graphic_mode_ = kExtBgMode;
   else /* TODO: YEAH, WHAT EXACTLY */
     graphic_mode_ = kMCCharMode/* kIllegalMode */;
+    // graphic_mode_ = kIllegalMode;
 }
 
 /**
@@ -463,7 +468,6 @@ uint8_t Vic::get_char_color(int column, int row)
  */
 uint8_t Vic::get_char_data(int chr, int line)
 {
-
   if(graphic_mode_ == kExtBgMode)
   {
     //if(chr >= 64 && chr <= 127) chr = chr - 64;
@@ -471,7 +475,6 @@ uint8_t Vic::get_char_data(int chr, int line)
     //else if(chr >= 192 && chr <= 255) chr = chr - 192;
     chr&=0x3f;
   }
-
   uint16_t addr = char_mem_ + (chr * 8) + line;
   return mem_->vic_read_byte(addr);
 }
@@ -498,33 +501,6 @@ uint16_t Vic::get_sprite_ptr(int n)
   return addr;
 }
 
-void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uint8_t c)
-{
-  c>>=6;
-  for(int i=0 ; i < 8 ; i++)
-  {
-    int xoffs = x + 7 - i + horizontal_scroll();
-    /* don't draw outside (due to horizontal scroll) */
-    if(xoffs > kGFirstCol + kGResX)
-      continue;
-
-    /* draw pixel */
-    if(ISSET_BIT(data,i))
-    {
-      io_->screen_update_pixel(xoffs,y,color);
-    }
-    else
-    {
-      //if(c >=64 && c <= 127)
-      io_->screen_update_pixel(xoffs,y,bgcolor_[c]);
-      //if(c >=128 && c <= 191)
-	   //  io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
-      //if(c >=192 && c <= 255)
-      //  io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
-    }
-  }
-}
-
 // raster drawing  ///////////////////////////////////////////////////////////
 
 void Vic::draw_char(int x, int y, uint8_t data, uint8_t color)
@@ -548,9 +524,10 @@ void Vic::draw_char(int x, int y, uint8_t data, uint8_t color)
 
 void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uint8_t c)
 {
+  c>>=6;
   for(int i=0 ; i < 8 ; i++)
   {
-    int xoffs = x + 8 - i + horizontal_scroll();
+    int xoffs = x + 7 - i + horizontal_scroll();
     /* don't draw outside (due to horizontal scroll) */
     if(xoffs > kGFirstCol + kGResX)
       continue;
@@ -562,15 +539,41 @@ void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uin
     }
     else
     {
-      if(c >=64 && c <= 127)
-	      io_->screen_update_pixel(xoffs,y,bgcolor_[1]);
-      if(c >=128 && c <= 191)
-	      io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
-      if(c >=192 && c <= 255)
-	      io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
+      // if(c >=64 && c <= 127)
+      io_->screen_update_pixel(xoffs,y,bgcolor_[c]);
+      // if(c >=128 && c <= 191)
+	    // io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
+      // if(c >=192 && c <= 255)
+      //  io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
     }
   }
 }
+
+// void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uint8_t c)
+// {
+//   for(int i=0 ; i < 8 ; i++)
+//   {
+//     int xoffs = x + 8 - i + horizontal_scroll();
+//     /* don't draw outside (due to horizontal scroll) */
+//     if(xoffs > kGFirstCol + kGResX)
+//       continue;
+
+//     /* draw pixel */
+//     if(ISSET_BIT(data,i))
+//     {
+//       io_->screen_update_pixel(xoffs,y,color);
+//     }
+//     else
+//     {
+//       if(c >=64 && c <= 127)
+// 	      io_->screen_update_pixel(xoffs,y,bgcolor_[1]);
+//       if(c >=128 && c <= 191)
+// 	      io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
+//       if(c >=192 && c <= 255)
+// 	      io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
+//     }
+//   }
+// }
 
 void Vic::draw_mcchar(int x, int y, uint8_t data, uint8_t color)
 {
@@ -622,12 +625,12 @@ void Vic::draw_raster_char_mode()
     /* draw characters */
     for(int column=0; column < kGCols ; column++)
     {
-      if(!ISSET_BIT(cr2_,3)) // 38 columns
+      /* check 38 cols mode */
+      if(!ISSET_BIT(cr2_,3))
       {
         if (column == 0) continue;
-        if (column == kGCols-1 ) continue;
+        if (column == kGCols -1 ) continue;
       }
-
       int x = kGFirstCol + column * 8;
       int line = rstr - kGFirstLine;
       int row = line/8;
@@ -793,10 +796,10 @@ void Vic::detect_sprite_sprite_collision(int n){
             uint8_t c2=get_sprite_pixel(i,dx2+x,dy2+y);
 
             //in multicolormode color 00 and color 01 are transparant. ie give no collision
-            uint8_t isNontransoarant1=is_multicolor_sprite(n)?c1>1:c1==1;
-            uint8_t isNontransoarant2=is_multicolor_sprite(i)?c2>1:c2==1;
+            uint8_t isNontransparant1=is_multicolor_sprite(n)?c1>1:c1==1;
+            uint8_t isNontransparant2=is_multicolor_sprite(i)?c2>1:c2==1;
 
-            if(isNontransoarant1 && isNontransoarant2){
+            if(isNontransparant1 && isNontransparant2){
               if(ISSET_BIT(irq_enabled_,bitMMC) && sprite_sprite_collision_==0){
                 irq_status_|=(1<<bitMMC);           // set IMMC irq bits
               }
@@ -1035,7 +1038,6 @@ void Vic::draw_sprite(int x, int y, int sprite, int row)
       //       y,
       //       color);
       //   }
-      // }
       }
     }
   }
