@@ -1830,7 +1830,8 @@ void Cpu::jam(uint8_t insn)
   dump_regs();
   // for (;) {};
   // mem_->dump();
-  exit(1);
+  // exit(1);
+  reset();
 }
 
 void Cpu::slo(uint16_t addr,uint8_t cycles_a,uint8_t cycles_b)
