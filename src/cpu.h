@@ -125,13 +125,21 @@ class Cpu
     inline void brk();
     inline void rti();
     /* Instructions: illegal */
-    inline void jam();
+    inline void jam(uint8_t insn);
     inline void slo(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void lxa(uint8_t v, uint8_t cycles);
+    inline void shy(uint16_t addr, uint8_t cycles);
+    inline void shx(uint16_t addr, uint8_t cycles);
+    inline void sha(uint16_t addr, uint8_t cycles);
     inline void sax(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
-    inline void sha(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void sre(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void rla(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void rra(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void dcp(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
     inline void tas(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
-    // inline void rla();
-    // inline void rla_mem(uint16_t addr, uint8_t cycles);
+    inline void sbx(uint8_t v, uint8_t cycles);
+    inline void isc(uint16_t addr, uint8_t cycles);
+    inline void arr();
   public:
     /* cpu state */
     void reset();
@@ -173,7 +181,11 @@ class Cpu
     void irq();
     /* debug */
     void dump_regs();
+    void dump_regs_insn(uint8_t insn);
     void dump_regs_json();
+    void dbg();
+    void dbg_a();
+    void dbg_b();
 };
 
 /* macro helpers */
