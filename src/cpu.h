@@ -34,6 +34,8 @@
 #define SR_ZERO          0x02
 #define SR_CARRY         0x01
 
+#define ANE_MAGIC        0xef
+
 /**
  * @brief MOS 6510 microprocessor
  */
@@ -154,6 +156,7 @@ class Cpu
     inline void sbx(uint8_t v, uint8_t cycles);
     inline void isc(uint16_t addr, uint8_t cycles);
     inline void arr();
+    inline void xaa(uint8_t v);
   public:
     /* cpu state */
     void reset();

@@ -49,7 +49,7 @@ void Cpu::reset()
  * - Some known architectural bugs are not emulated
  */
 bool Cpu::emulate()
-{
+{ /* TODO: Double check cycles! */
   /* fetch instruction */
   uint8_t insn = fetch_op();
   // D("INSN: %02X\n",insn);
@@ -544,8 +544,9 @@ bool Cpu::emulate()
     case 0x8A: /* TXA */
       txa();
       break;
-    case 0x8B: /* XAA #nn */ /* NOTE: Illegal */
-      D("XAA (%X) called at %04x\n",insn,pc()); /* NOTICE: DO NOT USE! */
+    case 0x8B: /* XAA(ANE) #nn */ /* NOTE: Illegal */
+      if (ill) { dump_regs_insn(insn); }
+      xaa(load_byte(addr_zero()));
       break;
     case 0x8C: /* STY nnnn */
       sty(addr_abs(),4);
@@ -1998,6 +1999,15 @@ void Cpu::arr()
     of((tmp & 0x40) ^ ((tmp & 0x20) << 1));
     a(tmp);
   }
+  tick(2);
+}
+
+void Cpu::xaa(uint8_t v)
+{
+  uint8_t t = ((a() | ANE_MAGIC) & x() & ((uint8_t)(v)));
+  a(t);
+  SET_ZF(t);
+  SET_NF(t);
   tick(2);
 }
 
