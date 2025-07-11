@@ -41,6 +41,11 @@ class IO
 {
   private:
     Cpu *cpu_;
+    Cia1 *cia1_;
+    Cia2 *cia2_;
+    Memory *mem_;
+    Vic *vic_;
+    Sid *sid_;
     SDL_Window *window_;
     SDL_Renderer *renderer_;
     SDL_Texture *texture_;
@@ -66,12 +71,22 @@ class IO
     /* vertical refresh sync */
     std::chrono::high_resolution_clock::time_point prev_frame_was_at_;
     void vsync();
+
+    /* Key combination vars */
+    static bool runstop;
+    static bool shiftlock;
   public:
     IO();
     ~IO();
+    void reset(void);
     bool emulate();
     void process_events();
     void cpu(Cpu *v){cpu_=v;};
+    void cia1(Cia1 *v){cia1_=v;};
+    void cia2(Cia2 *v){cia2_=v;};
+    void mem(Memory *v){mem_ = v;};
+    void vic(Vic *v){vic_=v;};
+    void sid(Sid *v){sid_=v;};
     void init_color_palette();
     void init_keyboard();
     void handle_keydown(SDL_Keycode k);

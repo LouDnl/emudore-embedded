@@ -21,6 +21,10 @@
 
 // clas ctor and dtor //////////////////////////////////////////////////////////
 
+/* Key combination vars */
+bool IO::runstop = false;
+bool IO::shiftlock = false;
+
 IO::IO()
 {
   SDL_Init(SDL_INIT_VIDEO);
@@ -69,6 +73,12 @@ IO::~IO()
   SDL_DestroyTexture(texture_);
   SDL_FreeFormat(format_);
   SDL_Quit();
+}
+
+void IO::reset()
+{
+  next_key_event_at_ = 0;
+  prev_frame_was_at_ = std::chrono::high_resolution_clock::now();
 }
 
 // init io devices  ////////////////////////////////////////////////////////////
@@ -198,7 +208,10 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_LEFTBRACKET]  = std::make_pair(5,0); // +
   keymap_[SDL_SCANCODE_RIGHTBRACKET] = std::make_pair(6,1); // *
   keymap_[SDL_SCANCODE_APOSTROPHE]   = std::make_pair(5,6); // @
-  keymap_[SDL_SCANCODE_LGUI]         = std::make_pair(7,5); // commodore key
+  keymap_[SDL_SCANCODE_LGUI]         = std::make_pair(7,5); // (Win/Cmd) CBM / commodore key
+  keymap_[SDL_SCANCODE_LCTRL]        = std::make_pair(7,2); // CTRL
+  keymap_[SDL_SCANCODE_ESCAPE]       = std::make_pair(7,7); // RUN/STOP
+  // keymap_[SDL_SCANCODE_PAGEUP]       = std::make_pair(7,5); // RESTORE
 }
 
 /**
@@ -274,14 +287,54 @@ void IO::process_events()
 /**
  * @brief emulate keydown
  */
+
 void IO::handle_keydown(SDL_Keycode k)
 {
+  // cout << "KEY: " << k;
   try
   {
+    switch (k) { /* Handle special keypress combo's */
+      uint8_t shiftmask;
+      case SDL_SCANCODE_ESCAPE: runstop = true; break;
+      case SDL_SCANCODE_CAPSLOCK: /* (Un)set shiftlock */
+        shiftlock = !shiftlock;
+        if (shiftlock) {
+          shiftmask = ~(1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
+          keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first] &= shiftmask;
+        } else {
+          shiftmask = (1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
+          keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first] |= shiftmask;
+        }
+        break;
+      default: break;
+    }
+    // if (k == SDL_SCANCODE_H && ctrl == true) {
+    //   // deactivate
+    //   mem_->write_byte(0x0291,(mem_->read_byte(0x0291)&~0x80));
+    // }
+    // if (k == SDL_SCANCODE_I && ctrl == true) {
+    //   // activate
+    //   mem_->write_byte(0x0291,(mem_->read_byte(0x0291)|0x80));
+    // }
+    if (k == SDL_SCANCODE_PAGEUP && runstop == true) {
+      /* RUN/STOP RESTORE PRESSED */
+      if(sid_->isSIDplaying()) {
+        // enable kernel and basic rom in ram
+        sid_->set_playing(false);
+        mem_->write_byte(0x0001, 0x37);
+      }
+      cpu_->reset();
+      cia1_->reset();
+      cia2_->reset();
+      vic_->reset();
+      reset(); /* IOD */
+      sid_->reset();
+    };
     uint8_t mask = ~(1 << keymap_.at(k).second);
     keyboard_matrix_[keymap_.at(k).first] &= mask;
+    // cout << " " << keymap_.at(k).first << " " << keymap_.at(k).second << endl;
   }
-  catch(const std::out_of_range){}
+  catch(const std::out_of_range){ cout << endl; }
 }
 
 /**
@@ -291,6 +344,11 @@ void IO::handle_keyup(SDL_Keycode k)
 {
   try
   {
+    switch (k) { /* Handle special keypress combo's */
+      case SDL_SCANCODE_ESCAPE: runstop = false; break;
+      default: break;
+    }
+
     uint8_t mask = (1 << keymap_.at(k).second);
     keyboard_matrix_[keymap_.at(k).first] |= mask;
   }
