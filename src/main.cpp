@@ -92,6 +92,7 @@ int main(int argc, char **argv)
       emscripten_async_wget(argv[1],fname.c_str(),wget_cb,nullptr);
     }
 #else
+    loader->set_args(argc,argv);
     c64->callback(loader_cb);
     load_file(argc, argv);
 #endif
