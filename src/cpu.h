@@ -21,6 +21,19 @@
 #include <cstdint>
 #include "memory.h"
 
+/* These define the position of the status
+   flags in the status (flags) register
+  */
+#define SR_NEGATIVE      0x80
+#define SR_SIGN          0x80
+#define SR_OVERFLOW      0x40
+#define SR_UNUSED        0x20
+#define SR_BREAK         0x10
+#define SR_DECIMAL       0x08
+#define SR_INTERRUPT     0x04
+#define SR_ZERO          0x02
+#define SR_CARRY         0x01
+
 /**
  * @brief MOS 6510 microprocessor
  */
@@ -34,7 +47,7 @@ class Cpu
     bool cf_,zf_,idf_,dmf_,bcf_,of_,nf_;
     /* memory and clock */
     Memory *mem_;
-    unsigned int cycles_;
+    static unsigned int cycles_;
     /* helpers */
     inline uint8_t load_byte(uint16_t addr);
     inline void push(uint8_t);
@@ -128,15 +141,16 @@ class Cpu
     inline void jam(uint8_t insn);
     inline void slo(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
     inline void lxa(uint8_t v, uint8_t cycles);
+    inline void las(uint8_t v);
     inline void shy(uint16_t addr, uint8_t cycles);
     inline void shx(uint16_t addr, uint8_t cycles);
     inline void sha(uint16_t addr, uint8_t cycles);
-    inline void sax(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void sax(uint16_t addr, uint8_t cycles);
     inline void sre(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
     inline void rla(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
     inline void rra(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
     inline void dcp(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
-    inline void tas(uint16_t addr, uint8_t cycles_a, uint8_t cycles_b);
+    inline void tas(uint16_t addr, uint8_t cycles);
     inline void sbx(uint8_t v, uint8_t cycles);
     inline void isc(uint16_t addr, uint8_t cycles);
     inline void arr();
@@ -180,6 +194,8 @@ class Cpu
     void nmi();
     void irq();
     /* debug */
+    void dump_flags();
+    void dump_flags(uint8_t flags);
     void dump_regs();
     void dump_regs_insn(uint8_t insn);
     void dump_regs_json();

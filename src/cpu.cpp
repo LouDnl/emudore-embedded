@@ -20,6 +20,12 @@
 #include <sstream>
 
 /**
+ * @brief Pre define static CPU cycles variable
+ *
+ */
+unsigned int Cpu::cycles_ = 0;
+
+/**
  * @brief Cold reset
  *
  * https://www.c64-wiki.com/index.php/Reset_(Process)
@@ -46,6 +52,7 @@ bool Cpu::emulate()
 {
   /* fetch instruction */
   uint8_t insn = fetch_op();
+  // D("INSN: %02X\n",insn);
   bool retval = true;
   bool ill = (LOG_ILLEGALS == 1); /* set to true for illegal instruction logging */
   /* emulate instruction */
@@ -512,7 +519,7 @@ bool Cpu::emulate()
       break;
     case 0x83: /* SAX (nn,X) */ /* NOTE: Illegal */
       if (ill) { dump_regs_insn(insn); }
-      sax(addr_indx(),3,3);
+      sax(addr_indx(),6);
       break;
     case 0x84: /* STY nn */
       sty(addr_zero(),3);
@@ -525,7 +532,7 @@ bool Cpu::emulate()
       break;
     case 0x87: /* SAX nn */ /* NOTE: Illegal */
       if (ill) { dump_regs_insn(insn); }
-      sax(addr_zero(),1,2);
+      sax(addr_zero(),3);
       break;
     case 0x88: /* DEY */
       dey(); break;
@@ -551,7 +558,7 @@ bool Cpu::emulate()
       break;
     case 0x8F: /* SAX nnnn */ /* NOTE: Illegal */
       if (ill) { dump_regs_insn(insn); }
-      sax(addr_abs(),2,2);
+      sax(addr_abs(),4);
       break;
     case 0x90: /* BCC nn */
       bcc();
@@ -577,7 +584,7 @@ bool Cpu::emulate()
       break;
     case 0x97: /* SAX nn,Y */ /* NOTE: Illegal */
       if (ill) { dump_regs_insn(insn); }
-      sax(addr_zeroy(),2,2);
+      sax(addr_zeroy(),4);
       break;
     case 0x98: /* TYA */
       tya();
@@ -590,6 +597,7 @@ bool Cpu::emulate()
       break;
     case 0x9B: /* TAS (XAS,SHS) nnnn,Y */ /* NOTE: Illegal */ /* NOTICE: UNSTABLE,IGNORED! */
       if (ill) { dump_regs_insn(insn); }
+      tas(addr_absy(),5);
       break;
     case 0x9C: /* SHY nnnn,X */ /* NOTE: Illegal */ /* NOTICE: UNSTABLE! */
       if (ill) { dump_regs_insn(insn); }
@@ -698,13 +706,9 @@ bool Cpu::emulate()
     case 0xBA: /* TSX */
       tsx();
       break;
-    case 0xBB: /* LAS nnnn,Y */ /* NOTE: Illegal */
+    case 0xBB: /* LAS nnnn,Y (4+1) */ /* NOTE: Illegal */
       if (ill) { dump_regs_insn(insn); }
-      /* TODO: FIX AND FINISH */
-      // tsx(); txa(); /* 2 + 2 cycles */
-      // _and(load_byte(addr_absy()),0);
-      // tax(); txs(); /* 2 + 2 cycles */
-      // backtick(3); /* 5 cycles total so reverse 3 */
+      las(load_byte(addr_absy()));
       break;
     case 0xBC: /* LDY nnnn,X */
       ldy(load_byte(addr_absx()),4);
@@ -1645,7 +1649,11 @@ void Cpu::jmp()
  */
 void Cpu::jmp_ind()
 {
-  uint16_t addr = mem_->read_word(addr_abs());
+  uint16_t t = mem_->read_word(pc_);
+  uint16_t abs_ = addr_abs(); /* pc += 2 */
+  uint16_t addr = mem_->read_word(abs_);
+  /* Introduce indirect JMP bug */
+  addr = (((t&0xFF)==0xFF)?((t&0xFF00)|(addr&0xFF)):addr);
   pc(addr);
   tick(3);
 }
@@ -1796,7 +1804,7 @@ void Cpu::nop(uint8_t cycles)
  * @brief BReaKpoint
  */
 void Cpu::brk()
-{
+{ /* ISSUE: BRK BUG DOES NOT WORK YET */
   push(((pc()+1) >> 8) & 0xff);
   push(((pc()+1) & 0xff));
   push(flags());
@@ -1828,9 +1836,6 @@ void Cpu::jam(uint8_t insn)
     sp(),a(),x(),y()
     );
   dump_regs();
-  // for (;) {};
-  // mem_->dump();
-  // exit(1);
   reset();
 }
 
@@ -1850,15 +1855,26 @@ void Cpu::lxa(uint8_t v,uint8_t cycles)
   tick(cycles);
 }
 
-void Cpu::sax(uint16_t addr,uint8_t cycles_a,uint8_t cycles_b)
-{ /* TODO: UNCERTAIN _IF_ THIS ACTUALLY DOES WHAT IT SHOULD! */
-  php();
+void Cpu::las(uint8_t v)
+{ /* 4 + 1 cycles if page boundry is crossed */
+  /* TODO: Does not yet account for extra tick on
+     page boundry crossing */
+  uint8_t t = (v & sp());
+  a(t);
+  x(t);
+  sp(t);
+  SET_NF(t);
+  SET_ZF(t);
+  tick(4);
+}
+
+void Cpu::sax(uint16_t addr,uint8_t cycles)
+{
   uint8_t _a = a();
   uint8_t _x = x();
   uint8_t _r = (_a & _x);
   mem_->write_byte(addr,_r);
-  plp();
-  tick(cycles_a + cycles_b);
+  tick(cycles);
 }
 
 void Cpu::shy(uint16_t addr,uint8_t cycles)
@@ -1914,10 +1930,22 @@ void Cpu::dcp(uint16_t addr,uint8_t cycles_a,uint8_t cycles_b)
   cmp(load_byte(t),cycles_b);
 }
 
-void Cpu::tas(uint16_t addr,uint8_t cycles_a,uint8_t cycles_b)
-{ /* ISSUE: WORKINGS UNKNOWN! */
-  php();
-  sta(mem_->read_byte(0x03),0);
+void Cpu::tas(uint16_t addr,uint8_t cycles)
+{
+  /* and accu, x and (highbyte + 1) of address */
+  uint8_t v = (((a() & x()) & ((addr >> 8) + 1)));
+
+  unsigned int tmp2 = (addr + y());
+  if (((addr & 0xff) + y()) > 0xff) {
+    tmp2 = ((tmp2 & 0xff) | (v << 8));
+    /* write result to address */
+    mem_->write_byte(tmp2, v);
+  } else {
+    /* write result to address */
+    mem_->write_byte(addr, v);
+  }
+  sp(a()&x()); /* write a & x to stackpointer unchanged */
+  tick(cycles);
 }
 
 void Cpu::sbx(uint8_t v,uint8_t cycles)
@@ -1925,16 +1953,13 @@ void Cpu::sbx(uint8_t v,uint8_t cycles)
   uint8_t a_ = a();
   uint8_t x_ = x();
   uint8_t r_ = a_ & x_;
-  // r -= v;
-  /* CMP */
-  uint16_t t;
-  // t = a() - v;
-  t = r_ - v;
+  uint16_t t = r_ - v;
   cf(t<0x100);
   t = t&0xff;
   SET_ZF(t);
   SET_NF(t);
   x(t);
+  tick(cycles);
 }
 
 void Cpu::isc(uint16_t addr,uint8_t cycles)
@@ -1945,22 +1970,35 @@ void Cpu::isc(uint16_t addr,uint8_t cycles)
 }
 
 void Cpu::arr()
-{
-  _and(fetch_op(),0);
-  if (!dmf()) {
-    uint8_t _a_before = a();
-    bool _c_before = cf(); /* bit 0 */
-    ror_a(); /* 2 cycles */
-    cf((_a_before >> 7));
-    of((_a_before >> 7) ^ ((_a_before >> 6) & 1));
-    uint8_t _a_after = a();
-    _a_after |= (_c_before << 7);
-    // _a_after |= (((_a_before >> 6) & 1) << 6); /* NOTE: Is in doc but breaks tests */
-    a(_a_after);
+{ /* Fixed code with courtesy of Vice 6510core.c */
+  unsigned int tmp = (a() & (fetch_op()));
+  if(dmf()) {
+    int tmp2 = tmp;
+    tmp2 |= ((flags() & SR_CARRY) << 8);
+    tmp2 >>= 1;
+    nf(((flags() & SR_CARRY)?0x80:0)); /* set signed on negative flag */
+    SET_ZF(tmp2);
+    of((tmp2 ^ tmp) & 0x40);
+    if (((tmp & 0xf) + (tmp & 0x1)) > 0x5) {
+      tmp2 = (tmp2 & 0xf0) | ((tmp2 + 0x6) & 0xf);
+    }
+    if (((tmp & 0xf0) + (tmp & 0x10)) > 0x50) {
+      tmp2 = (tmp2 & 0x0f) | ((tmp2 + 0x60) & 0xf0);
+      cf(true);
+    } else {
+      cf(false);
+    }
+    a(tmp2);
   } else {
-    // TODO: DUNNO
-    // ror_a(); /* 2 cycles */
+    tmp |= ((flags() & SR_CARRY) << 8);
+    tmp >>= 1;
+    SET_ZF(tmp);
+    SET_NF(tmp);
+    cf((tmp & 0x40));
+    of((tmp & 0x40) ^ ((tmp & 0x20) << 1));
+    a(tmp);
   }
+  tick(2);
 }
 
 // interrupts  ///////////////////////////////////////////////////////////////
@@ -1996,6 +2034,36 @@ void Cpu::nmi()
 }
 
 // debugging /////////////////////////////////////////////////////////////////
+
+void Cpu::dump_flags()
+{
+  D("FLAGS: %02X %d%d%d%d%d%d%d%d\n",
+    flags(),
+    (flags()&SR_NEGATIVE)>>7,
+    (flags()&SR_OVERFLOW)>>6,
+    (flags()&SR_UNUSED)>>5,
+    (flags()&SR_BREAK)>>4,
+    (flags()&SR_DECIMAL)>>3,
+    (flags()&SR_INTERRUPT)>>2,
+    (flags()&SR_ZERO)>>1,
+    (flags()&SR_CARRY)
+  );
+}
+
+void Cpu::dump_flags(uint8_t flags)
+{
+  D("FLAGS: %02X %d%d%d%d%d%d%d%d\n",
+    flags,
+    (flags&SR_NEGATIVE)>>7,
+    (flags&SR_OVERFLOW)>>6,
+    (flags&SR_UNUSED)>>5,
+    (flags&SR_BREAK)>>4,
+    (flags&SR_DECIMAL)>>3,
+    (flags&SR_INTERRUPT)>>2,
+    (flags&SR_ZERO)>>1,
+    (flags&SR_CARRY)
+  );
+}
 
 void Cpu::dump_regs()
 {
@@ -2048,7 +2116,7 @@ void Cpu::dump_regs_json()
 
 void Cpu::dbg()
 {
-  printf("INS %02X: %02X %02X %04X\n",load_byte(pc_-1),load_byte(pc_),load_byte(pc_+1),pc_);
+  D("INS %02X: %02X %02X %04X\n",load_byte(pc_-1),load_byte(pc_),load_byte(pc_+1),pc_);
   // printf("INS-1 %02X: %02X %02X %04X\n",load_byte(pc_-2),load_byte(pc_-1),load_byte(pc_+2),pc_-1);
   // printf("INS-2 %02X: %02X %02X %04X\n",load_byte(pc_-3),load_byte(pc_-2),load_byte(pc_+3),pc_-2);
 }
