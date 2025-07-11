@@ -21,6 +21,7 @@ Sid::Sid()
   } else {
     us_ = true;
   }
+  sid_main_clk = sid_alarm_clk = 0;
 }
 
 Sid::~Sid()
@@ -28,17 +29,27 @@ Sid::~Sid()
   if(us_) {
     usbsid->USBSID_Reset();
     usbsid->USBSID_Close();
+    us_ = false;
   }
 }
 
-uint_fast64_t Sid::wait_ns(unsigned int cycles)
+void Sid::reset()
 {
+  sid_main_clk = sid_alarm_clk = cpu_->cycles();
+  if (us_) usbsid->USBSID_Reset();
+}
+
+uint_fast64_t Sid::wait_ns(unsigned int cycles)
+{ /* TODO: Account for time spent in function calculating */
   timespec_get(&now, TIME_UTC);
   double dur = cycles * us_CPUcycleDuration;  /* duration in nanoseconds */
+  // HAS NEGATIVE CYCLES, OOPS
   // auto target_time = m_LastTime.tv_nsec + dur;  /* ns to wait since m_LastTime (now + duration for actual wait time minus time spent) */
+  // GOOD BUT TOO SLOW FOR DIGI
   auto target_time = now.tv_nsec + dur;  /* ns to wait since m_LastTime (now + duration for actual wait time) */
   duration_t target_delta = (duration_t)(int_fast64_t)(target_time - now.tv_nsec);
   auto wait_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(target_delta);
+  // printf("%ld\n",wait_nsec.count());
   if (wait_nsec.count() > 0) {
     std::this_thread::sleep_for(wait_nsec);
   }
@@ -48,39 +59,63 @@ uint_fast64_t Sid::wait_ns(unsigned int cycles)
 
 }
 
-void Sid::set_cycles()
+void Sid::sid_flush()
+{
+  const unsigned int now = cpu_->cycles();
+  unsigned int cycles = (now - sid_main_clk);
+  // printf("SID Flush called @ %u cycles, last was at %u, diff %u\n",
+    // now, sid_main_clk, cycles);
+  while(cycles >= 19950) { /* TODO: USE ACTUAL HZ AND CIA TIMING  */
+    printf("SID Flush called @ %u cycles, last was at %u, diff %u\n",
+    now, sid_main_clk, cycles);
+    cycles -= 19550;
+    wait_ns(cycles);
+  }
+  sid_main_clk = now;
+  return;
+}
+
+unsigned int Sid::sid_delay()
 {
   unsigned int now = cpu_->cycles();
-  // unsigned int cycles = (now - prev_flush_cpu_cycles_);
-  unsigned int cycles = (now - prev_cpu_cycles_);
-  /* TODO: USE ACTUAL REFRESH RATE */
-  unsigned int fr = 19950; /* ((1 / 50.125) * 1000000) */
-  if (cycles >= fr) {
-    printf("SID Flush called @ %u cycles, last was at %u, diff %u\n",
-      now, prev_cpu_cycles_,
-      cycles);
-      wait_ns(fr);
+  if (now < sid_main_clk) {
+    sid_main_clk = now;
+    return 0;
   }
-  // /* prev_cpu_cycles_ =  */prev_flush_cpu_cycles_ = now;
-  /* prev_cpu_cycles_ =  */prev_cpu_cycles_ = now;
+  unsigned int cycles = (now - sid_main_clk);
+  while (cycles > 0xffff) {
+    // wait_ns(cycles);
+    cycles -= 0xffff;
+  }
+  sid_main_clk = now;
+  wait_ns(cycles);
+  return cycles;
 }
 
 uint8_t Sid::read_register(uint16_t r)
 {
-  return mem_->read_byte_no_io(r);
+  uint8_t v = mem_->read_byte_no_io(r);
+  if (us_) {
+    // printf("[WR] $%04X:%02X %u\n", r, v, cycles);
+  } else {
+    printf("[RD] $%04X:%02X\n", r, v);
+    // printf("[RD] $%04X:%02X %u\n", r, v, cycles);
+  }
+  return v;
 }
 
 void Sid::write_register(uint16_t r, uint8_t v)
 {
-  unsigned int now = cpu_->cycles();
-  unsigned int cycles = (now - prev_cpu_cycles_);
-  printf("[WR] $%04X:%02X %u\n", r, v, cycles);
+  // unsigned int now = cpu_->cycles();
+  // unsigned int cycles = (now - sid_main_clk);
+  unsigned int cycles = sid_delay();
   mem_->write_byte_no_io(r,v); /* Write to memory space */
-  if (cycles) wait_ns(cycles);
+  // if (cycles) wait_ns(cycles);
   if (us_) {
-
     usbsid->USBSID_WriteRingCycled((uint8_t)(r&0xFF), v, cycles);
-    // usbsid->USBSID_WriteCycled((uint8_t)(r&0xFF), v, (uint16_t)cycles);
+    // printf("[WR] $%04X:%02X %u\n", r, v, cycles);
+  } else {
+    printf("[WR] $%04X:%02X %u\n", r, v, cycles);
   }
-  prev_cpu_cycles_ = now;
+  // sid_main_clk = now;
 }

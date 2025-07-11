@@ -53,15 +53,17 @@ class Sid
     USBSID_NS::USBSID_Class *usbsid;
     bool us_ = false;
 
-    unsigned int prev_flush_cpu_cycles_ = 0;
-    unsigned int prev_cpu_cycles_ = 0;
+    unsigned int sid_main_clk = 0;
+    unsigned int sid_alarm_clk = 0;
 
-  // uint_fast64_t cyclefromtimestamp(timestamp_t timestamp);
-  uint_fast64_t wait_ns(unsigned int cycles);
+    bool sid_playing;
+
+    uint_fast64_t wait_ns(unsigned int cycles);
 
   public:
     Sid();
     ~Sid();
+    void reset(void);
     void cpu(Cpu *v){cpu_ = v;};
     void mem(Memory *v){mem_ = v;};
     void cia1(Cia1 *v){cia1_ = v;};
@@ -69,11 +71,14 @@ class Sid
     void vic(Vic *v){vic_ = v;};
     void io(IO *v){io_ = v;};
 
-    void reset_cycles(void){prev_cpu_cycles_ = prev_flush_cpu_cycles_ = 0;};
-
-    void set_cycles(void);
+    unsigned int sid_delay(void);
+    void sid_flush(void);
     uint8_t read_register(uint16_t r);
     void write_register(uint16_t r, uint8_t v);
+
+    /* SID play workaround */
+    void set_playing(bool playing) { sid_playing = playing; };
+    bool isSIDplaying() { return sid_playing; };
 };
 
 #endif
