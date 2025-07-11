@@ -112,6 +112,7 @@ class Vic
     inline void set_graphic_mode();
   public:
     Vic();
+    void reset();
     bool emulate();
     void memory(Memory *v){mem_ = v;};
     void cpu(Cpu *v){cpu_ = v;};
@@ -132,6 +133,7 @@ class Vic
     static const int kLastVisibleLine = 298;
     static const int kLineCycles = 63;
     static const int kBadLineCycles = 23;
+    /* TODO: FIX REFRESH RATE TO SETTING */
     static constexpr double kRefreshRate = 1 / 50.125; // ~50Hz (PAL)
     static const int kSpritePtrsOffset = 0x3f8;
     static const int bitRST = 0;

@@ -54,6 +54,37 @@ Vic::Vic()
   graphic_mode_ = kCharMode;
 }
 
+/* Used on C64/CPU reset */
+void Vic::reset()
+{
+/* raster */
+  raster_irq_ = raster_c_ = 0;
+  irq_enabled_ = irq_status_ = 0;
+  next_raster_at_ = kLineCycles;
+  sprite_sprite_collision_ = 0;
+  sprite_bgnd_collision_ = 0;
+
+  /* sprites */
+  for(int i = 0 ; i<8 ; i++)
+  {
+    mx_[i] = my_[i] = sprite_colors_[i] = 0;
+  }
+  msbx_ = sprite_double_height_ = sprite_double_width_ = 0;
+  sprite_enabled_ = sprite_priority_ = sprite_multicolor_ = 0;
+  sprite_shared_colors_[0] = sprite_shared_colors_[1] = 0;
+  /* colors */
+  border_color_ = 0;
+  bgcolor_[0] = bgcolor_[1] = bgcolor_[2] = bgcolor_[3] = 0;
+  /* control regs */
+  cr1_ = cr2_ = 0;
+  /* frame counter */
+  frame_c_ = 0;
+  /* bit 0 is unused */
+  mem_pointers_ = (1 << 0);
+  /* current graphic mode */
+  graphic_mode_ = kCharMode;
+}
+
 // returns true on vertical sync
 bool Vic::emulate()
 {
@@ -116,7 +147,7 @@ bool Vic::emulate()
     {
       verticalSync=true;
       io_->screen_refresh();
-      sid_->set_cycles(); /* FLUSH */
+      sid_->sid_flush(); /* FLUSH */
       frame_c_++;
       raster_counter(0);
       if(sprite_sprite_collision_) ISSET_BIT(irq_enabled_,bitMMC); //checkInterrupt(1);
