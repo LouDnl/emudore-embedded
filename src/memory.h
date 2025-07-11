@@ -121,7 +121,7 @@ class Memory
     static const uint16_t kAddrVicFirstPage    = 0xd000;
     static const uint16_t kAddrVicLastPage     = 0xd300;
     static const uint16_t kAddrSIDFirstPage    = 0xD400;
-    static const uint16_t kAddrSIDLastPage     = 0xD500;
+    static const uint16_t kAddrSIDLastPage     = 0xD700;
     static const uint16_t kAddrIOFirstPage     = 0xDE00;
     static const uint16_t kAddrIOLastPage      = 0xDF00;
     static const uint16_t kAddrCIA1Page        = 0xdc00;
@@ -134,6 +134,9 @@ class Memory
     static const uint8_t kLORAM  = 1 << 0;
     static const uint8_t kHIRAM  = 1 << 1;
     static const uint8_t kCHAREN = 1 << 2;
+    /* Number of SID vs memory layout configuration */
+    static const uint8_t kSIDNum = 1; /* TODO: use USBSID-Pico SID amount */
+    static const uint16_t kAddrSIDOne = 0xd400;
 };
 
 #endif
