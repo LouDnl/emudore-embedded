@@ -49,6 +49,7 @@ class Cia1
     uint8_t pra_, prb_;
   public:
     Cia1();
+    void reset(void);
     void cpu(Cpu *v){ cpu_ = v;};
     void io(IO *v){ io_ = v;};
     void write_register(uint8_t r, uint8_t v);
