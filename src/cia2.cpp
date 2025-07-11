@@ -30,6 +30,17 @@ Cia2::Cia2()
   prev_cpu_cycles_ = 0;
 }
 
+void Cia2::reset()
+{
+  timer_a_latch_ = timer_b_latch_ = timer_a_counter_ = timer_b_counter_ = 0;
+  timer_a_enabled_ = timer_b_enabled_ = timer_a_irq_enabled_ = timer_b_irq_enabled_ = false;
+  timer_a_irq_triggered_ = timer_b_irq_triggered_ = false;
+  timer_a_input_mode_ = timer_b_input_mode_ = kModeProcessor;
+  timer_a_run_mode_ = timer_b_run_mode_ = kModeRestart;
+  pra_ = prb_ = 0xff;
+  prev_cpu_cycles_ = 0;
+}
+
 // DMA register access  //////////////////////////////////////////////////////
 
 void Cia2::write_register(uint8_t r, uint8_t v)
