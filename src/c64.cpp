@@ -42,6 +42,11 @@ C64::C64()
   cia2_->cpu(cpu_);
   /* init io */
   io_->cpu(cpu_);
+  io_->mem(mem_);
+  io_->cia1(cia1_);
+  io_->cia2(cia2_);
+  io_->vic(vic_);
+  io_->sid(sid_);
   /* Init SID */
   sid_->cpu(cpu_);
   sid_->mem(mem_);
@@ -49,7 +54,6 @@ C64::C64()
   sid_->cia2(cia2_);
   sid_->vic(vic_);
   sid_->io(io_);
-  sid_->set_cycles();
   /* DMA */
   mem_->cpu(cpu_);
   mem_->vic(vic_);
