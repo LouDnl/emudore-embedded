@@ -36,16 +36,9 @@ bool loader_cb()
   return true;
 }
 
-bool emscripten_loader_cb()
+void load_file(const char *file) /* TODO: ADD ARGUMENTS FOR SIDFILE PLAY */
 {
-  if (!loader->emulate() && wget_download_finished)
-    c64->callback(nullptr);
-  return true;
-}
-
-void load_file(int argc, char **argv) /* TODO: ADD ARGUMENTS FOR SIDFILE PLAY */
-{
-  const char *file = argv[1];
+  // const char *file = argv[1];
   std::string f(file);
   size_t ext_i = f.find_last_of(".");
   if(ext_i != std::string::npos)
@@ -64,17 +57,6 @@ void load_file(int argc, char **argv) /* TODO: ADD ARGUMENTS FOR SIDFILE PLAY */
   }
 }
 
-void wget_cb(const char *f)
-{
-  wget_download_finished = true;
-  // load_file(f); //TODO: FIX, THIS BREAKS EMSCRIPTEN FILE LOAD NOW
-}
-
-void emscripten_loop()
-{
-  c64->emscripten_loop();
-}
-
 int main(int argc, char **argv)
 {
   c64 = new C64();
@@ -82,25 +64,13 @@ int main(int argc, char **argv)
   if(argc != 1)
   {
     loader = new Loader(c64);
-#ifdef EMSCRIPTEN
-    std::string f(argv[1]);
-    size_t sp = f.find_last_of("/");
-    if(sp != std::string::npos)
-    {
-      std::string fname(f.substr(sp+1));
-      c64->callback(emscripten_loader_cb);
-      emscripten_async_wget(argv[1],fname.c_str(),wget_cb,nullptr);
-    }
-#else
-    loader->set_args(argc,argv);
+    loader->process_args(argc,argv);
     c64->callback(loader_cb);
-    load_file(argc, argv);
-#endif
+    if (loader->file != NULL) {
+      load_file(loader->file);
+    }
+    // loader->handle_args();
   }
-#ifdef EMSCRIPTEN
-  emscripten_set_main_loop(emscripten_loop,0,0);
-#else
   c64->start();
-#endif
   return 0;
 }
