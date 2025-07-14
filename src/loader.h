@@ -67,26 +67,27 @@ class Loader
     int pl_frame_cycles;
     int pl_refresh_rate;
 
-    int start_argc;
-    char **start_argv;
     bool autorun = true;
     bool lowercase = false;
+    bool sidrwlog = false;
 
     void load_basic();
     void load_prg();
     void load_sid();
     void load_sidplayerA(uint16_t play, uint16_t init, int songno);
     void load_sidplayerB(uint16_t play, uint16_t init, int songno);
+    void load_sidplayerC(uint16_t play, uint16_t init, int songno);
     void print_sid_info(); /* TODO: Print on C64 screen */
-    void handle_args();
     uint16_t read_short_le();
   public:
     Loader(C64 *c64);
     void bas(const std::string &f);
     void prg(const std::string &f);
     void sid(const std::string &f);
-    void set_args(int argc, char **argv) {start_argc=argc;start_argv=argv;};
+    void process_args(int argc, char **argv);
+    void handle_args();
     bool emulate();
+    char *file;
     /* constants */
     static const uint16_t kBasicPrgStart = 0x0801;
     static const uint16_t kBasicTxtTab   = 0x002b;

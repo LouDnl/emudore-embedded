@@ -89,22 +89,24 @@ void Loader::load_prg()
       is_.get(b);
       mem_->write_byte_no_io(pbuf++,b);
     }
+
     /* basic-tokenized prg */
     if(addr == kBasicPrgStart)
     {
-      if(autorun) {
       /* make BASIC happy */
-        mem_->write_word_no_io(kBasicTxtTab,kBasicPrgStart);
-        mem_->write_word_no_io(kBasicVarTab,pbuf);
-        mem_->write_word_no_io(kBasicAryTab,pbuf);
-        mem_->write_word_no_io(kBasicStrEnd,pbuf);
+      mem_->write_word_no_io(kBasicTxtTab,addr);
+      mem_->write_word_no_io(kBasicVarTab,pbuf);
+      mem_->write_word_no_io(kBasicAryTab,pbuf);
+      mem_->write_word_no_io(kBasicStrEnd,pbuf);
+      if(autorun) {
         /* exec RUN */
-          for(char &c: std::string("RUN\n"))
-            io_->IO::type_character(c);
+        for(char &c: std::string("RUN\n"))
+          io_->IO::type_character(c);
       }
     }
     /* ML */
-    else cpu_->pc(addr);
+    else
+      cpu_->pc(addr); /* Else always start, or prg start is broken */
   }
 }
 
@@ -116,7 +118,7 @@ void Loader::sid(const std::string &f)
   sidfile_ = new SidFile();
   sidfile_->Parse(f);
 }
-extern Loader *loader;
+
 void Loader::load_sid()
 {
   pl_songs = sidfile_->GetNumOfSongs();
@@ -152,8 +154,10 @@ void Loader::load_sid()
   printf("load: $%04X play: $%04X init: $%04X\n",
     pl_loadaddr, pl_playaddr, pl_initaddr);
 
+  // if (sidfile_->GetSidType() == "PSID")
   load_sidplayerA(pl_playaddr, pl_initaddr, pl_song_number);
   // load_sidplayerB(pl_playaddr, pl_initaddr, pl_song_number);
+  // load_sidplayerC(pl_playaddr, pl_initaddr, pl_song_number);
 
   sid_->sid_flush();
   sid_->set_playing(true);
@@ -198,42 +202,81 @@ void Loader::load_sidplayerA(uint16_t play, uint16_t init, int songno)
 }
 
 void Loader::load_sidplayerB(uint16_t play, uint16_t init, int songno)
-{ /* BUG: Causes turbo play */
+{ /* BUG: Doesn't work at all! */
   // install reset vector for microplayer (0x0000)
-  mem_->write_byte(0xFFFD, 0x02);
-  mem_->write_byte(0xFFFC, 0xA7);
+  mem_->write_byte(0xFFFD, 0x00);
+  mem_->write_byte(0xFFFC, 0x02);
 
   // install IRQ vector for play routine launcher (0x0813)
-  mem_->write_byte(0xFFFF, 0x02);
-  mem_->write_byte(0xFFFE, 0xB1);
+  mem_->write_byte(0xFFFF, 0xD7);
+  mem_->write_byte(0xFFFE, 0xE0);
 
   // clear kernel and basic rom from ram
-  mem_->write_byte(0x0001, 0x35);
+  // mem_->write_byte(0x0001, 0x35);
 
-  // install the micro player, 6502 assembly code
-  mem_->write_byte(0x02A7, 0xA9);               // 0xA9 LDA imm load A with the song number
-  mem_->write_byte(0x02A8, songno);             // 0xNN #NN song number
+  // install the micro pl`ayer, 6502 assembly code
+  mem_->write_byte(0xD7E0, 0xA9);               // 0xA9 LDA imm load A with the song number
+  mem_->write_byte(0xD7E1, songno);             // 0xNN #NN song number
 
-  mem_->write_byte(0x02A9, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  mem_->write_byte(0x02AA, init & 0xFF);        // 0xxxNN address lo
-  mem_->write_byte(0x02AB, (init >> 8) & 0xFF); // 0xNNxx address hi
+  mem_->write_byte(0xD7E2, 0x20);               // 0x20 JSR abs jump sub to INIT routine
+  mem_->write_byte(0xD7E3, init & 0xFF);        // 0xxxNN address lo
+  mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
 
   // infinite loop?
-  mem_->write_byte(0x02AC, 0x58);               // 0x58 CLI enable interrupt
-  mem_->write_byte(0x02AD, 0xEA);               // 0xEA NOP impl
-  mem_->write_byte(0x02AE, 0x4C);               // JMP jump to 0x0006
-  mem_->write_byte(0x02AF, 0x08);               // 0xxxNN address lo
-  mem_->write_byte(0x02B0, 0x00);               // 0xNNxx address hi
+  mem_->write_byte(0xD7E5, 0x58);               // 0x58 CLI enable interrupt
+  mem_->write_byte(0xD7E6, 0xEA);               // 0xEA NOP impl
+  mem_->write_byte(0xD7E7, 0x4C);               // JMP jump to 0x0006
+  mem_->write_byte(0xD7E8, 0x08);               // 0xxxNN address lo
+  mem_->write_byte(0xD7E9, 0x00);               // 0xNNxx address hi
 
   // install the play routine launcher
-  mem_->write_byte(0x02B1, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  mem_->write_byte(0x02B2, 0xEA);               // 0xEA NOP // 0x01 #NN
-  mem_->write_byte(0x02B3, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  mem_->write_byte(0x02B4, 0x20);               // 0x20 JSR jump sub to play routine
-  mem_->write_byte(0x02B5, play & 0xFF);        // playaddress lo
-  mem_->write_byte(0x02B6, (play >> 8) & 0xFF); // playaddress hi
-  mem_->write_byte(0x02B7, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  mem_->write_byte(0x02B8, 0x40);               // 0x40 RTI return from interrupt
+  mem_->write_byte(0xD7EA, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
+  mem_->write_byte(0xD7EB, 0xEA);               // 0xEA NOP // 0x01 #NN
+  mem_->write_byte(0xD7EC, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
+  mem_->write_byte(0xD7ED, 0x20);               // 0x20 JSR jump sub to play routine
+  mem_->write_byte(0xD7EE, play & 0xFF);        // playaddress lo
+  mem_->write_byte(0xD7EF, (play >> 8) & 0xFF); // playaddress hi
+  mem_->write_byte(0xD7F0, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
+  mem_->write_byte(0xD7F1, 0x40);               // 0x40 RTI return from interrupt
+}
+
+void Loader::load_sidplayerC(uint16_t play, uint16_t init, int songno)
+{ /* BUG: Causes turbo play and other issues, do not use */
+  // install reset vector for microplayer (0x0000)
+  mem_->write_byte(0xFFFD, 0x00);
+  mem_->write_byte(0xFFFC, 0x02);
+
+  // install IRQ vector for play routine launcher (0x0813)
+  mem_->write_byte(0xFFFF, 0x00);
+  mem_->write_byte(0xFFFE, 0x13);
+
+  // clear kernel and basic rom from ram
+  // mem_->write_byte(0x0001, 0x35);
+
+  // install the micro player, 6502 assembly code
+  mem_->write_byte(0x0000, 0xA9);               // 0xA9 LDA imm load A with the song number
+  mem_->write_byte(0x0001, songno);             // 0xNN #NN song number
+
+  mem_->write_byte(0x0002, 0x20);               // 0x20 JSR abs jump sub to INIT routine
+  mem_->write_byte(0x0003, init & 0xFF);        // 0xxxNN address lo
+  mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
+
+  // infinite loop?
+  mem_->write_byte(0x0005, 0x58);               // 0x58 CLI enable interrupt
+  mem_->write_byte(0x0006, 0xEA);               // 0xEA NOP impl
+  mem_->write_byte(0x0007, 0x4C);               // JMP jump to 0x0006
+  mem_->write_byte(0x0008, 0x08);               // 0xxxNN address lo
+  mem_->write_byte(0x0009, 0x00);               // 0xNNxx address hi
+
+  // install the play routine launcher
+  mem_->write_byte(0x0013, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
+  mem_->write_byte(0x0014, 0xEA);               // 0xEA NOP // 0x01 #NN
+  mem_->write_byte(0x0015, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
+  mem_->write_byte(0x0016, 0x20);               // 0x20 JSR jump sub to play routine
+  mem_->write_byte(0x0017, play & 0xFF);        // playaddress lo
+  mem_->write_byte(0x0018, (play >> 8) & 0xFF); // playaddress hi
+  mem_->write_byte(0x0019, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
+  mem_->write_byte(0x001A, 0x40);               // 0x40 RTI return from interrupt
 }
 
 void Loader::print_sid_info() /* TODO: THIS MUST GO TO C64 SCREEN */
@@ -282,16 +325,29 @@ void Loader::print_sid_info() /* TODO: THIS MUST GO TO C64 SCREEN */
 
 // emulate //////////////////////////////////////////////////////////////////
 
-void Loader::handle_args()
+void Loader::process_args(int argc, char **argv)
 {
-  if(start_argc>2) {
-    for(int a = 2; a < start_argc; a++) {
-      if(!strcmp(start_argv[a], "-norun")) autorun = false;
-      if(!strcmp(start_argv[a], "-lowercase")) lowercase = true;
+  if(argc>=1) {
+    for(int a = 1; a < argc; a++) {
+      if((strchr(argv[a], '.') != NULL)) file = argv[a];
+      if(!strcmp(argv[a], "-norun")) autorun = false;
+      if(!strcmp(argv[a], "-lowercase")) lowercase = true;
+      if(!strcmp(argv[a], "-logillegals")) Cpu::logillegals = true;
+      if(!strcmp(argv[a], "-logsidrw")) sidrwlog = true;
     }
   }
   if (lowercase) {
     mem_->write_byte(0xD018,0x17); /* Enable lowercase mode */
+  }
+}
+
+void Loader::handle_args()
+{
+  if (lowercase) {
+    mem_->write_byte(0xD018,0x17); /* Enable lowercase mode */
+  }
+  if (sidrwlog) {
+    sid_->set_sidrwlog(true);
   }
 }
 
