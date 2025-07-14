@@ -54,9 +54,15 @@ class Sid
     bool us_ = false;
 
     unsigned int sid_main_clk = 0;
-    unsigned int sid_alarm_clk = 0;
+    unsigned int sid_flush_clk = 0;
+    unsigned int sid_delay_clk = 0;
+    unsigned int sid_read_clk = 0;
+    unsigned int sid_write_clk = 0;
+    unsigned int sid_write_cycles = 0;
+    /* unsigned int sid_alarm_clk = 0; */
 
-    bool sid_playing;
+    bool sid_playing = false;
+    bool logsidrw = false;
 
     uint_fast64_t wait_ns(unsigned int cycles);
 
@@ -71,14 +77,18 @@ class Sid
     void vic(Vic *v){vic_ = v;};
     void io(IO *v){io_ = v;};
 
-    unsigned int sid_delay(void);
+    unsigned int sid_delay(unsigned int c);
     void sid_flush(void);
-    uint8_t read_register(uint16_t r);
-    void write_register(uint16_t r, uint8_t v);
+    uint8_t read_register(uint8_t r, uint8_t sidno);
+    void write_register(uint8_t r, uint8_t v, uint8_t sidno);
 
     /* SID play workaround */
     void set_playing(bool playing) { sid_playing = playing; };
     bool isSIDplaying() { return sid_playing; };
+
+    /* Utils */
+    void set_sidrwlog(bool v) { logsidrw = v; };
+
 };
 
 #endif
