@@ -29,7 +29,6 @@ C64::C64()
   io_   = new IO();
   /* init cpu */
   cpu_->memory(mem_);
-  cpu_->reset();
   /* init vic-ii */
   vic_->memory(mem_);
   vic_->cpu(cpu_);
@@ -38,8 +37,11 @@ C64::C64()
   /* init cia1 */
   cia1_->cpu(cpu_);
   cia1_->io(io_);
+  cia1_->mem(mem_);
   /* init cia2 */
   cia2_->cpu(cpu_);
+  cia2_->io(io_);
+  cia2_->mem(mem_);
   /* init io */
   io_->cpu(cpu_);
   io_->mem(mem_);
@@ -60,6 +62,12 @@ C64::C64()
   mem_->cia1(cia1_);
   mem_->cia2(cia2_);
   mem_->sid(sid_);
+
+  /* Resets before start */
+  cpu_->reset();
+  cia1_->reset();
+  cia2_->reset();
+
  /* r2 support */
 #ifdef DEBUGGER_SUPPORT
   debugger_ = new Debugger();
