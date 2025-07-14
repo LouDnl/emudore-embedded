@@ -26,6 +26,18 @@
 #define D(...) do {} while (0)
 #endif
 
+#define PBIT(v) D("%X 0b%d%d%d%d%d%d%d%d\n", \
+  v, \
+  (v&0x80)>>7, \
+  (v&0x40)>>6, \
+  (v&0x20)>>5, \
+  (v&0x10)>>4, \
+  (v&0x8)>>3, \
+  (v&0x4)>>2, \
+  (v&0x2)>>1, \
+  (v&0x1) \
+); \
+
 #define ISSET_BIT(v,b)  ((v&(1<<b))!=0)
 
 #if defined(__APPLE__)
