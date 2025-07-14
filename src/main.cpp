@@ -21,9 +21,6 @@
 
 #include "c64.h"
 #include "loader.h"
-#ifdef EMSCRIPTEN
-#include <emscripten.h>
-#endif
 
 C64 *c64;
 Loader *loader;

@@ -129,11 +129,7 @@ bool Vic::emulate()
       if(sprite_bgnd_collision_)   ISSET_BIT(irq_enabled_,bitMBC); //checkInterrupt(2);
     }
   }
-#ifdef EMSCRIPTEN
-  return verticalSync;
-#else
   return true;
-#endif
 }
 
 // DMA register access  //////////////////////////////////////////////////////
