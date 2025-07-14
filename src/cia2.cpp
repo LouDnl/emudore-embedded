@@ -17,38 +17,98 @@
 
 #include "cia2.h"
 
+enum CIA2Registers
+{
+  PRA     = 0x0, /* Keyboard (R/W), Joystick, Lightpen, Paddles */
+  PRB     = 0x1, /* Keyboard (R/W), Joystick, Timer A, Timer B */
+  DDRA    = 0x2, /* Datadirection Port A */
+  DDRB    = 0x3, /* Datadirection Port B */
+  TAL     = 0x4, /* Timer A Low Byte */
+  TAH     = 0x5, /* Timer A High Byte */
+  TBL     = 0x6, /* Timer B Low Byte */
+  TBH     = 0x7, /* Timer A High Byte */
+  TOD_TEN = 0x8, /* RTC 1/10s */
+  TOD_SEC = 0x9, /* RTC sec */
+  TOD_MIN = 0xA, /* RTC min */
+  TOD_HR  = 0xB, /* RTC hr */
+  SDR     = 0xC, /* Serial shift register */
+  ICR     = 0xD, /* Interrupt control register */
+  CRA     = 0xE, /* Control Timer A */
+  CRB     = 0xF, /* Control Timer B */
+};
+
+enum InterruptBitVal
+{ /* (Read or Write operation determines which one:) */
+  INTERRUPT_HAPPENED = 0x80,
+  SET_OR_CLEAR_FLAGS = 0x80,
+  /* flags/masks of interrupt-sources */
+  FLAGn      = 0x10,
+  SERIALPORT = 0x08,
+  ALARM      = 0x04,
+  TIMERB     = 0x02,
+  TIMERA     = 0x01
+};
+
+ enum ControlAbitVal
+ {
+  ENABLE_TIMERA        = 0x01,
+  PORTB6_TIMERA        = 0x02,
+  TOGGLED_PORTB6       = 0x04,
+  ONESHOT_TIMERA       = 0x08,
+  FORCELOADA_STROBE    = 0x10,
+  TIMERA_FROM_CNT      = 0x20,
+  SERIALPORT_IS_OUTPUT = 0x40,
+  TIMEOFDAY_50Hz       = 0x80
+};
+
+enum ControlBbitVal
+{
+  ENABLE_TIMERB              = 0x01,
+  PORTB7_TIMERB              = 0x02,
+  TOGGLED_PORTB7             = 0x04,
+  ONESHOT_TIMERB             = 0x08,
+  FORCELOADB_STROBE          = 0x10,
+  TIMERB_FROM_CPUCLK         = 0x00,
+  TIMERB_FROM_CNT            = 0x20,
+  TIMERB_FROM_TIMERA         = 0x40,
+  TIMERB_FROM_TIMERA_AND_CNT = 0x60,
+  TIMEOFDAY_WRITE_SETS_ALARM = 0x80
+};
+
 // ctor  /////////////////////////////////////////////////////////////////////
 
 Cia2::Cia2()
 {
-  timer_a_latch_ = timer_b_latch_ = timer_a_counter_ = timer_b_counter_ = 0;
-  timer_a_enabled_ = timer_b_enabled_ = timer_a_irq_enabled_ = timer_b_irq_enabled_ = false;
-  timer_a_irq_triggered_ = timer_b_irq_triggered_ = false;
-  timer_a_input_mode_ = timer_b_input_mode_ = kModeProcessor;
-  timer_a_run_mode_ = timer_b_run_mode_ = kModeRestart;
-  pra_ = prb_ = 0xff;
+  /* Base */
   prev_cpu_cycles_ = 0;
 }
 
 void Cia2::reset()
 {
+  /* OLD */
   timer_a_latch_ = timer_b_latch_ = timer_a_counter_ = timer_b_counter_ = 0;
   timer_a_enabled_ = timer_b_enabled_ = timer_a_irq_enabled_ = timer_b_irq_enabled_ = false;
   timer_a_irq_triggered_ = timer_b_irq_triggered_ = false;
-  timer_a_input_mode_ = timer_b_input_mode_ = kModeProcessor;
+  timer_a_input_mode_ = timer_b_input_mode_ = kModePHI2;
   timer_a_run_mode_ = timer_b_run_mode_ = kModeRestart;
   pra_ = prb_ = 0xff;
   prev_cpu_cycles_ = 0;
+  /* NEW */
+  for (uint i = 2; i < 0x10; i++)
+    mem_->write_byte_no_io(mem_->kCIA2Mem[i],0x00);
+  mem_->write_byte_no_io(mem_->kCIA2Mem[PRA],0xFF);
+  mem_->write_byte_no_io(mem_->kCIA2Mem[PRB],0xFF);
 }
 
 // DMA register access  //////////////////////////////////////////////////////
 
 void Cia2::write_register(uint8_t r, uint8_t v)
 {
+  // D("CIA2 WR $%02X: %02X\n",r,v);
   switch(r)
   {
-  /* data port a (PRA) */
-  case 0x0:
+  /* data port a (0x0) */
+  case PRA:
     pra_ = v;
     break;
   /* data port b (PRB) */
@@ -192,6 +252,7 @@ uint8_t Cia2::read_register(uint8_t r)
   case 0xf:
     break;
   }
+  // D("CIA2 RD $%02X: %02X\n",r,retval);
   return retval;
 }
 
@@ -249,7 +310,7 @@ bool Cia2::emulate()
   {
     switch(timer_a_input_mode_)
     {
-    case kModeProcessor:
+    case kModePHI2:
       timer_a_counter_ -= cpu_->cycles() - prev_cpu_cycles_;
       if (timer_a_counter_ <= 0)
       {
@@ -270,7 +331,7 @@ bool Cia2::emulate()
   {
     switch(timer_b_input_mode_)
     {
-    case kModeProcessor:
+    case kModePHI2:
       timer_b_counter_ -= cpu_->cycles() - prev_cpu_cycles_;
       if (timer_b_counter_ <= 0)
       {

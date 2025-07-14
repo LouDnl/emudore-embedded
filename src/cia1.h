@@ -19,6 +19,7 @@
 
 #include "io.h"
 #include "cpu.h"
+#include "memory.h"
 
 /**
  * @brief MOS 6526 Complex Interface Adapter #1
@@ -31,16 +32,20 @@ class Cia1
   private:
     Cpu *cpu_;
     IO *io_;
+    Memory *mem_;
+
     int16_t timer_a_latch_;
     int16_t timer_b_latch_;
     int16_t timer_a_counter_;
     int16_t timer_b_counter_;
+
     bool timer_a_enabled_;
     bool timer_b_enabled_;
     bool timer_a_irq_enabled_;
     bool timer_b_irq_enabled_;
     bool timer_a_irq_triggered_;
     bool timer_b_irq_triggered_;
+
     uint8_t timer_a_run_mode_;
     uint8_t timer_b_run_mode_;
     uint8_t timer_a_input_mode_;
@@ -50,8 +55,9 @@ class Cia1
   public:
     Cia1();
     void reset(void);
-    void cpu(Cpu *v){ cpu_ = v;};
-    void io(IO *v){ io_ = v;};
+    void cpu(Cpu *v){cpu_ = v;};
+    void io(IO *v){io_ = v;};
+    void mem(Memory *v){mem_ = v;};
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
     void reset_timer_a();
@@ -60,7 +66,7 @@ class Cia1
     /* constants */
     enum kInputMode
     {
-      kModeProcessor,
+      kModePHI2,
       kModeCNT,
       kModeTimerA,
       kModeTimerACNT
