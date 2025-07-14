@@ -43,8 +43,8 @@ class Sid;
  * - @c $D000-$D3FF  Page 208-211
  * - @c $D400-$D7FF  Page 212-215  SID address space
  * - @c $D800-$DBFF  Page 216-219
- * - @c $DC00-$DCFF  Page 220
- * - @c $DD00-$DDFF  Page 221
+ * - @c $DC00-$DCFF  Page 220      CIA1 page
+ * - @c $DD00-$DDFF  Page 221      CIA2 page
  * - @c $DE00-$DEFF  Page 222-223  I/O Area 1 Reserved for interface extensions e.g. SID2 or SID3
  * - @c $DF00-$DFFF  Page 222-223  I/O Area 2 Reserved for interface extensions e.g. SID2 or SID3
  * - @c $E000-$FFFF  Page 224-255  Free machine language program storage area (when switched-out with ROM)
@@ -52,14 +52,18 @@ class Sid;
 class Memory
 {
   private:
+    /* ROM & RAM */
     uint8_t *mem_ram_;
     uint8_t *mem_rom_;
     uint8_t banks_[7];
+
+    /* Pointers */
     Cpu *cpu_;
     Vic *vic_;
     Cia1 *cia1_;
     Cia2 *cia2_;
     Sid *sid_;
+
   public:
     Memory();
     ~Memory();
@@ -99,6 +103,7 @@ class Memory
     void load_ram(const std::string &f, uint16_t baseaddr);
     /* debug */
     void dump();
+    void dump(uint16_t start, uint16_t end);
     void print_screen_text();
     /* constants */
     static const size_t kMemSize = 0x10000;
@@ -120,10 +125,10 @@ class Memory
     static const uint16_t kAddrZeroPage        = 0x0000;
     static const uint16_t kAddrVicFirstPage    = 0xd000;
     static const uint16_t kAddrVicLastPage     = 0xd300;
-    static const uint16_t kAddrSIDFirstPage    = 0xD400;
-    static const uint16_t kAddrSIDLastPage     = 0xD700;
-    static const uint16_t kAddrIOFirstPage     = 0xDE00;
-    static const uint16_t kAddrIOLastPage      = 0xDF00;
+    static const uint16_t kAddrSIDFirstPage    = 0xd400;
+    static const uint16_t kAddrSIDLastPage     = 0xd700;
+    static const uint16_t kAddrIOFirstPage     = 0xde00;
+    static const uint16_t kAddrIOLastPage      = 0xdf00;
     static const uint16_t kAddrCIA1Page        = 0xdc00;
     static const uint16_t kAddrCIA2Page        = 0xdd00;
     static const uint16_t kAddrBasicFirstPage  = 0xa000;
@@ -135,8 +140,15 @@ class Memory
     static const uint8_t kHIRAM  = 1 << 1;
     static const uint8_t kCHAREN = 1 << 2;
     /* Number of SID vs memory layout configuration */
-    static const uint8_t kSIDNum = 1; /* TODO: use USBSID-Pico SID amount */
-    static const uint16_t kAddrSIDOne = 0xd400;
+    static const uint8_t kMaxSIDs = 2;
+    uint8_t kSIDNum = 0; /* TODO: use USBSID-Pico SID amount */
+    uint16_t kAddrSIDOne = 0xd400;
+    uint16_t kAddrSIDTwo = 0xd420;
+
+    /* Public pointers */
+    uint8_t *kCIA1Mem; /* 0xdc00 */
+    uint8_t *kCIA2Mem; /* 0xdd00 */
+
 };
 
 #endif

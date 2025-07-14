@@ -35,6 +35,22 @@ Memory::Memory()
    */
   mem_ram_ = new uint8_t[kMemSize]();
   mem_rom_ = new uint8_t[kMemSize]();
+  // memset(mem_ram_, 127, sizeof(mem_ram_)/sizeof(mem_ram_[0]));
+  int chunk_size = 64;
+
+  // for (int i = 0; i < kMemSize; i += chunk_size) {
+  //   memset(mem_ram_ + i, 0x00, chunk_size);
+  //   D("%04X 00\n", i);
+  //   if (i + chunk_size < kMemSize) {
+  //     memset(mem_ram_ + i + chunk_size, 0xFF, chunk_size);
+  //     D("%04X FF\n", i+chunk_size);
+  //   }
+  // }
+
+  /* configure pointers */
+  kCIA1Mem = &mem_ram_[kAddrCIA1Page];
+  kCIA2Mem = &mem_ram_[kAddrCIA2Page];
+
   /* configure memory layout */
   setup_memory_banks(kLORAM|kHIRAM|kCHAREN);
   /* configure data directional bits */
@@ -136,13 +152,27 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
           || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
   {
     if(banks_[kBankCharen] == kIO) {
-      switch(kSIDNum) {
-        case 1:
-          if (page == (kAddrSIDOne&0xff00) && (addr < (kAddrSIDOne+0x20))) sid_->write_register(addr, v);
-        default:
-          mem_ram_[addr] = v;
-          break;
-      }
+      mem_ram_[addr] = v; /* Always save */
+
+      // if (page == (kAddrSIDOne&0xff00)
+      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 0; /* 1 */
+      // if (page == (kAddrSIDTwo&0xff00)
+      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDTwo&0xFF)+0x20))
+      //       && (((uint8_t)addr&0xFF) >= ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 1; /* 2 */
+
+      // switch(kSIDNum) {
+      //   case 0:
+      //   case 1:
+      //     sid_->write_register((uint8_t)(addr&0x1F), v, kSIDNum);
+      //     break;
+      //   default:
+      //     sid_->write_register((uint8_t)(addr&0x1F), v, 1); /* TODO: This should not be fixed */
+      //     break;
+    // }
+    if (page == 0xd400)
+      sid_->write_register((uint8_t)(addr&0x1F), v, 0); /* TODO: This should not be fixed */
+    else
+      mem_ram_[addr] = v;
     }
     else
       mem_ram_[addr] = v;
@@ -209,13 +239,22 @@ uint8_t Memory::read_byte(uint16_t addr)
           || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
   {
     if(banks_[kBankCharen] == kIO) {
-      switch(kSIDNum) {
-        case 1:
-          if (page == (kAddrSIDOne&0xff00)) retval = sid_->read_register(addr);
-        default:
-          retval = mem_ram_[addr];
-          break;
-      }
+      // if (page == (kAddrSIDOne&0xff00)
+      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 0; /* 1 */
+      // if (page == (kAddrSIDTwo&0xff00)
+      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDTwo&0xFF)+0x20))
+      //       && (((uint8_t)addr&0xFF) >= ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 1; /* 2 */
+
+      // switch(kSIDNum) {
+      //   case 0:
+      //   case 1:
+      //     retval = sid_->read_register((uint8_t)(addr&0xFF), kSIDNum);
+      //     break;
+      //   default:
+      //     retval = sid_->read_register((uint8_t)(addr&0xFF), 1); /* TODO: This is now fixed at the last SID */
+      //     break;
+      // }
+      retval = mem_ram_[addr]; /* TODO: TEMPORARY OVERRIDE! */
     }
     else
       retval = mem_ram_[addr];
@@ -340,7 +379,19 @@ void Memory::dump()
   for(unsigned int p=0 ; p < kMemSize ; p++)
   {
     if (p % 15 == 0 || p == 0) std::cout << std::setw(5) << std::setfill('0') << (p == 0 ? p : p - 16) << " ";
-    std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(read_byte(p)) << " ";
+    std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(read_byte_no_io(p)) << " ";
+    if (p % 15 == 0 && p != 0) std::cout << std::endl;
+  }
+}
+/**
+ * @brief dumps memory range as seen by the CPU to stdout
+ */
+void Memory::dump(uint16_t start, uint16_t end)
+{
+  for(unsigned int p=start ; p < (end<=kMemSize?end:kMemSize) ; p++)
+  {
+    if (p % 15 == 0 || p == 0) std::cout << std::setw(5) << std::setfill('0') << (p == 0 ? p : p - 16) << " ";
+    std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(read_byte_no_io(p)) << " ";
     if (p % 15 == 0 && p != 0) std::cout << std::endl;
   }
 }
