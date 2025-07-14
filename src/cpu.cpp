@@ -24,6 +24,7 @@
  *
  */
 unsigned int Cpu::cycles_ = 0;
+bool Cpu::logillegals = false;
 
 /**
  * @brief Cold reset
@@ -37,7 +38,7 @@ void Cpu::reset()
   pc(mem_->read_word(Memory::kAddrResetVector));
   cycles_ = 6;
 }
-
+extern bool nope;
 /**
  * @brief emulate instruction
  * @return returns false if something goes wrong (e.g. illegal instruction)
@@ -52,250 +53,254 @@ bool Cpu::emulate()
 { /* TODO: Double check cycles! */
   /* fetch instruction */
   uint8_t insn = fetch_op();
-  // D("INSN: %02X\n",insn);
+  pb_crossed = false;
+  unsigned int __c = cycles();
+  /* D("START INSN: %02X C1:%u\n",insn,__c); */
   bool retval = true;
-  bool ill = (LOG_ILLEGALS == 1); /* set to true for illegal instruction logging */
+  bool ill = (LOG_ILLEGALS == 1 || logillegals); /* set to true for illegal instruction logging */
   /* emulate instruction */
   switch(insn)
   {
-    case 0x00: /* BRK */
+    case 0x00: /* BRK impl */
       brk();
       break;
-    case 0x01: /* ORA (nn,X) */
+    case 0x01: /* ORA (ind,X) */
       ora(load_byte(addr_indx()),6);
       break;
-    case 0x02: /* JAM */ /* NOTE: Illegal */
+    case 0x02: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x03: /* SLO (nn,X) */ /* NOTE: Illegal */
+    case 0x03: /* SLO (ind,X) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       slo(addr_indx(),5,3);
       break;
-    case 0x04: /* NOP nn */ /* NOTE: Illegal */
+    case 0x04: /* NOP zpg ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zero());
       nop(3);
       break;
-    case 0x05: /* ORA nn */
+    case 0x05: /* ORA zpg */
       ora(load_byte(addr_zero()),3);
       break;
-    case 0x06: /* ASL nn */
+    case 0x06: /* ASL zpg */
       asl_mem(addr_zero(),5);
       break;
-    case 0x07: /* SLO nn */ /* NOTE: Illegal */
+    case 0x07: /* SLO zpg ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       slo(addr_zero(),3,2);
       break;
-    case 0x08: /* PHP */
+    case 0x08: /* PHP impl */
       php();
       break;
-    case 0x09: /* ORA #nn */
+    case 0x09: /* ORA #imm */
       ora(fetch_op(),2);
       break;
     case 0x0A: /* ASL A */
       asl_a();
       break;
-    case 0x0B: /* ANC(AAC) #nn */ /* NOTE: Illegal */
+    case 0x0B: /* ANC(AAC) #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
-      _and(fetch_op(),0);
+      _and(fetch_op(),2);
       if(nf()) cf(true);
       else cf(false);
       break;
-    case 0x0C: /* NOP nnnn  */ /* NOTE: Illegal */
+    case 0x0C: /* NOP abs  ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_abs());
       nop(4);
       break;
-    case 0x0D: /* ORA nnnn */
+    case 0x0D: /* ORA abs */
       ora(load_byte(addr_abs()),4);
       break;
-    case 0x0E: /* ASL nnnn */
+    case 0x0E: /* ASL abs */
       asl_mem(addr_abs(),6);
       break;
-    case 0x0F: /* SLO nnnn */ /* NOTE: Illegal */
+    case 0x0F: /* SLO abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       slo(addr_abs(),3,3);
       break;
-    case 0x10: /* BPL nn */
+    case 0x10: /* BPL rel */
       bpl();
       break;
-    case 0x11: /* ORA (nn,Y) */
+    case 0x11: /* ORA (ind),Y */
       ora(load_byte(addr_indy()),5);
       break;
-    case 0x12: /* JAM */ /* NOTE: Illegal */
+    case 0x12: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x13: /* SLO (nn,Y) */ /* NOTE: Illegal */
+    case 0x13: /* SLO (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       slo(addr_indy(),5,3);
       break;
-    case 0x14: /* NOP nn */ /* NOTE: Illegal */
+    case 0x14: /* NOP zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
-      load_byte(addr_zero());
+      load_byte(addr_zerox());
       nop(4);
       break;
-    case 0x15: /* ORA nn,X */
+    case 0x15: /* ORA zpg,X */
       ora(load_byte(addr_zerox()),4);
       break;
-    case 0x16: /* ASL nn,X */
+    case 0x16: /* ASL zpg,X */
       asl_mem(addr_zerox(),6);
       break;
-    case 0x17: /* SLO nn,X */ /* NOTE: Illegal */
+    case 0x17: /* SLO zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       slo(addr_zerox(),2,3);
       break;
-    case 0x18: /* CLC */
+    case 0x18: /* CLC impl */
       clc();
       break;
-    case 0x19: /* ORA nnnn,Y */
+    case 0x19: /* ORA abs,Y */
       ora(load_byte(addr_absy()),4);
       break;
-    case 0x1A: /* NOP */ /* NOTE: Illegal */
+    case 0x1A: /* NOP impl ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       nop(2);
       break;
-    case 0x1B: /* SLO nnnn,Y */ /* NOTE: Illegal */
+    case 0x1B: /* SLO abs,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       slo(addr_absy(),5,2);
       break;
-    case 0x1C: /* NOP nnnn,X */ /* NOTE: Illegal */
+    case 0x1C: /* NOP abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_absx());
       nop(4);
       break;
-    case 0x1D: /* ORA nnnn,X */
+    case 0x1D: /* ORA abs,X */
       ora(load_byte(addr_absx()),4);
       break;
-    case 0x1E: /* ASL nnnn,X */
+    case 0x1E: /* ASL abs,X */
       asl_mem(addr_absx(),7);
       break;
-    case 0x1F: /* SLO nnnn,X */ /* NOTE: Illegal */
+    case 0x1F: /* SLO abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       slo(addr_absx(),5,2);
       break;
-    case 0x20: /* JSR */
-      jsr(); break;
-    case 0x21: /* AND (nn,X) */
+    case 0x20: /* JSR abs */
+      jsr();
+      break;
+    case 0x21: /* AND (ind,X) */
       _and(load_byte(addr_indx()),6);
       break;
-    case 0x22: /* JAM */ /* NOTE: Illegal */
+    case 0x22: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x23: /* RLA (nn,X) */ /* NOTE: Illegal */
+    case 0x23: /* RLA (ind,X) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rla(addr_indx(),5,3);
       break;
-    case 0x24: /* BIT nn */
+    case 0x24: /* BIT zpg */
       bit(addr_zero(),3);
       break;
-    case 0x25: /* AND nn */
+    case 0x25: /* AND zpg */
       _and(load_byte(addr_zero()),3);
       break;
-    case 0x26: /* ROL nn */
+    case 0x26: /* ROL zpg */
       rol_mem(addr_zero(),5);
       break;
-    case 0x27: /* RLA zp */ /* NOTE: Illegal */
+    case 0x27: /* RLA zp ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rla(addr_zero(),2,3);
       break;
-    case 0x28: /* PLP */
-      plp(); break;
-    case 0x29: /* AND #nn */
+    case 0x28: /* PLP impl */
+      plp();
+      break;
+    case 0x29: /* AND #imm */
       _and(fetch_op(),2);
       break;
     case 0x2A: /* ROL A */
       rol_a();
       break;
-    case 0x2B: /* ANC(AAC) #nn ~ Same as 0x0B */ /* NOTE: Illegal */
+    case 0x2B: /* ANC(AAC) #imm ~ Same as 0x0B ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       _and(fetch_op(),0);
       if(nf()) cf(true);
       else cf(false);
       break;
-    case 0x2C: /* BIT nnnn */
+    case 0x2C: /* BIT abs */
       bit(addr_abs(),4);
       break;
-    case 0x2D: /* AND nnnn */
+    case 0x2D: /* AND abs */
       _and(load_byte(addr_abs()),4);
       break;
-    case 0x2E: /* ROL nnnn */
+    case 0x2E: /* ROL abs */
       rol_mem(addr_abs(),6);
       break;
-    case 0x2F: /* RLA nnnn */ /* NOTE: Illegal */
+    case 0x2F: /* RLA abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rla(addr_abs(),4,2);
       break;
-    case 0x30: /* BMI nn */
+    case 0x30: /* BMI rel */
       bmi();
       break;
-    case 0x31: /* AND (nn,Y) */
+    case 0x31: /* AND (ind),Y */
       _and(load_byte(addr_indy()),5);
       break;
-    case 0x32: /* JAM */ /* NOTE: Illegal */
+    case 0x32: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x33: /* RLA (nn,Y) */ /* NOTE: Illegal */
+    case 0x33: /* RLA (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rla(addr_indy(),5,3);
       break;
-    case 0x34: /* NOP nn,X */ /* NOTE: Illegal */
+    case 0x34: /* NOP zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zerox());
       nop(4);
       break;
-    case 0x35: /* AND nn,X */
+    case 0x35: /* AND zpg,X */
       _and(load_byte(addr_zerox()),4);
       break;
-    case 0x36: /* ROL nn,X */
+    case 0x36: /* ROL zpg,X */
       rol_mem(addr_zerox(),6);
       break;
-    case 0x37: /* RLA nn,X */ /* NOTE: Illegal */
+    case 0x37: /* RLA zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rla(addr_zerox(),3,3);
       break;
-    case 0x38: /* SEC */
+    case 0x38: /* SEC impl */
       sec();
       break;
-    case 0x39: /* AND nnnn,Y */
+    case 0x39: /* AND abs,Y */
       _and(load_byte(addr_absy()),4);
       break;
-    case 0x3A: /* NOP */ /* NOTE: Illegal */
+    case 0x3A: /* NOP impl ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       nop(2);
       break;
-    case 0x3B: /* RLA nnnn,Y */ /* NOTE: Illegal */
+    case 0x3B: /* RLA abs,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rla(addr_absy(),3,3);
       break;
-    case 0x3C: /* NOP nnnn,X */ /* NOTE: Illegal */
+    case 0x3C: /* NOP abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_absx());
       nop(4);
       break;
-    case 0x3D: /* AND nnnn,X */
+    case 0x3D: /* AND abs,X */
       _and(load_byte(addr_absx()),4);
       break;
-    case 0x3E: /* ROL nnnn,X */
+    case 0x3E: /* ROL abs,X */
       rol_mem(addr_absx(),7);
       break;
-    case 0x3F: /* RLA nnnn,X */ /* NOTE: Illegal */
+    case 0x3F: /* RLA abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rla(addr_absx(),5,3);
       break;
-    case 0x40: /* RTI */
+    case 0x40: /* RTI impl (6) */
       rti();
       break;
-    case 0x41: /* EOR (nn,X) */
+    case 0x41: /* EOR (ind,X) */
       eor(load_byte(addr_indx()),6);
       break;
-    case 0x42: /* JAM */ /* NOTE: Illegal */
+    case 0x42: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x43: /* SRE (nn,X) */ /* NOTE: Illegal */
+    case 0x43: /* SRE (ind,X) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sre(addr_indx(),6,2);
       break;
-    case 0x44:  /* NOP nn */ /* NOTE: Illegal */
+    case 0x44:  /* NOP nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zero());
       nop(3);
@@ -306,107 +311,107 @@ bool Cpu::emulate()
     case 0x46: /* LSR nn */
       lsr_mem(addr_zero(),5);
       break;
-    case 0x47: /* SRE nn */ /* NOTE: Illegal */
+    case 0x47: /* SRE nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sre(addr_zero(),3,2);
       break;
     case 0x48: /* PHA */
       pha();
       break;
-    case 0x49: /* EOR #nn */
+    case 0x49: /* EOR #imm */
       eor(fetch_op(),2);
       break;
     case 0x4A: /* LSR A */
       lsr_a();
       break;
-    case 0x4B: /* ALR #nn */ /* NOTE: Illegal */
+    case 0x4B: /* ALR #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       _and(fetch_op(),0);
       lsr_a();
       break;
-    case 0x4C: /* JMP nnnn */
+    case 0x4C: /* JMP abs */
       jmp();
       break;
-    case 0x4D: /* EOR nnnn */
+    case 0x4D: /* EOR abs */
       eor(load_byte(addr_abs()),4);
       break;
-    case 0x4E: /* LSR nnnn */
+    case 0x4E: /* LSR abs */
       lsr_mem(addr_abs(),6);
       break;
-    case 0x4F: /* SRE nnnn */ /* NOTE: Illegal */
+    case 0x4F: /* SRE abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sre(addr_abs(),3,2);
       break;
     case 0x50: /* BVC */
       bvc();
       break;
-    case 0x51: /* EOR (nn,Y) */
+    case 0x51: /* EOR (ind),Y */
       eor(load_byte(addr_indy()),5);
       break;
-    case 0x52: /* JAM */ /* NOTE: Illegal */
+    case 0x52: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x53: /* SRE (nn,Y) */ /* NOTE: Illegal */
+    case 0x53: /* SRE (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sre(addr_indy(),6,2);
       break;
-    case 0x54: /* NOP nn,X */ /* NOTE: Illegal */
+    case 0x54: /* NOP zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zerox());
       nop(4);
       break;
-    case 0x55: /* EOR nn,X */
+    case 0x55: /* EOR zpg,X */
       eor(load_byte(addr_zerox()),4);
       break;
-    case 0x56: /* LSR nn,X */
+    case 0x56: /* LSR zpg,X */
       lsr_mem(addr_zerox(),6);
       break;
-    case 0x57: /* SRE nn,X */ /* NOTE: Illegal */
+    case 0x57: /* SRE zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sre(addr_zerox(),3,2);
       break;
     case 0x58: /* CLI */
       cli();
       break;
-    case 0x59: /* EOR nnnn,Y */
+    case 0x59: /* EOR abs,Y */
       eor(load_byte(addr_absy()),4);
       break;
-    case 0x5A: /* NOP */ /* NOTE: Illegal */
+    case 0x5A: /* NOP ~ Illegal OPCode */
       nop(2);
       break;
-    case 0x5B: /* SRE nnnn,Y */ /* NOTE: Illegal */
+    case 0x5B: /* SRE abs,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sre(addr_absy(),3,2);
       break;
-    case 0x5C: /* NOP nnnn,X */ /* NOTE: Illegal */
+    case 0x5C: /* NOP abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_absx());
       nop(4);
       break;
-    case 0x5D: /* EOR nnnn,X */
+    case 0x5D: /* EOR abs,X */
       eor(load_byte(addr_absx()),4);
       break;
-    case 0x5E: /* LSR nnnn,X */
+    case 0x5E: /* LSR abs,X */
       lsr_mem(addr_absx(),7);
       break;
-    case 0x5F: /* SRE nnnn,X */ /* NOTE: Illegal */
+    case 0x5F: /* SRE abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sre(addr_absx(),3,2);
       break;
     case 0x60: /* RTS */
       rts();
       break;
-    case 0x61: /* ADC (nn,X) */
+    case 0x61: /* ADC (ind,X) */
       adc(load_byte(addr_indx()),6);
       break;
-    case 0x62: /* JAM */ /* NOTE: Illegal */
+    case 0x62: /* JAM ~ Illegal OPCode */
       jam(insn);
       break; // NOTICE: BREAKS FANTA IN SPACE
-    case 0x63: /* RRA (nn,X) */ /* NOTE: Illegal */
+    case 0x63: /* RRA (ind,X) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_indx(),4,4);
       break;
-    case 0x64: /* NOP nn */ /* NOTE: Illegal */
+    case 0x64: /* NOP nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zero());
       nop(3);
@@ -417,107 +422,107 @@ bool Cpu::emulate()
     case 0x66: /* ROR nn */
       ror_mem(addr_zero(),5);
       break;
-    case 0x67: /* RRA nn */ /* NOTE: Illegal */
+    case 0x67: /* RRA nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_zero(),4,4);
       break;
     case 0x68: /* PLA */
       pla();
       break;
-    case 0x69: /* ADC #nn */
+    case 0x69: /* ADC #imm */
       adc(fetch_op(),2);
       break;
     case 0x6A: /* ROR A */
       ror_a();
       break;
-    case 0x6B: /* ARR #nn */ /* NOTE: Illegal */
+    case 0x6B: /* ARR #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       arr();
       break;
     case 0x6C: /* JMP (nnnn) */
       jmp_ind();
       break;
-    case 0x6D: /* ADC nnnn */
+    case 0x6D: /* ADC abs */
       adc(load_byte(addr_abs()),4);
       break;
-    case 0x6E: /* ROR nnnn */
+    case 0x6E: /* ROR abs */
       ror_mem(addr_abs(),6);
       break;
-    case 0x6F: /* RRA nnnn */ /* NOTE: Illegal */
+    case 0x6F: /* RRA abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_abs(),3,3);
       break;
     case 0x70: /* BVS */
       bvs();
       break;
-    case 0x71: /* ADC (nn,Y) */
+    case 0x71: /* ADC (ind),Y */
       adc(load_byte(addr_indy()),5);
       break;
-    case 0x72: /* JAM */ /* NOTE: Illegal */
+    case 0x72: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x73: /* RRA (nn,Y) */ /* NOTE: Illegal */
+    case 0x73: /* RRA (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_indy(),4,4);
       break;
-    case 0x74: /* NOP nn,X */ /* NOTE: Illegal */
+    case 0x74: /* NOP zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zerox());
       nop(4);
       break;
-    case 0x75: /* ADC nn,X */
+    case 0x75: /* ADC zpg,X */
       adc(load_byte(addr_zerox()),4);
       break;
-    case 0x76: /* ROR nn,X */
+    case 0x76: /* ROR zpg,X */
       ror_mem(addr_zerox(),6);
       break;
-    case 0x77: /* RRA nn,X */ /* NOTE: Illegal */
+    case 0x77: /* RRA zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_zerox(),4,4);
       break;
     case 0x78: /* SEI */
       sei();
       break;
-    case 0x79: /* ADC nnnn,Y */
+    case 0x79: /* ADC abs,Y */
       adc(load_byte(addr_absy()),4);
       break;
-    case 0x7A: /* NOP */ /* NOTE: Illegal */
+    case 0x7A: /* NOP ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       nop(2);
       break;
-    case 0x7B: /* RRA nnnn,Y */ /* NOTE: Illegal */
+    case 0x7B: /* RRA abs,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_absy(),4,3);
       break;
-    case 0x7C: /* NOP nnnn,X */ /* NOTE: Illegal */
+    case 0x7C: /* NOP abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_absx());
       nop(4);
       break;
-    case 0x7D: /* ADC nnnn,X */
+    case 0x7D: /* ADC abs,X */
       adc(load_byte(addr_absx()),4);
       break;
-    case 0x7E: /* ROR nnnn,X */
+    case 0x7E: /* ROR abs,X */
       ror_mem(addr_absx(),7);
       break;
-    case 0x7F: /* RRA nnnn,X */ /* NOTE: Illegal */
+    case 0x7F: /* RRA abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_absx(),4,3);
       break;
-    case 0x80: /* NOP #nn */ /* NOTE: Illegal */
+    case 0x80: /* NOP #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       fetch_op();
       nop(2);
       break;
-    case 0x81: /* STA (nn,X) */
+    case 0x81: /* STA (ind,X) */
       sta(addr_indx(),6);
       break;
-    case 0x82: /* NOP #nn */ /* NOTE: Illegal */
+    case 0x82: /* NOP #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       fetch_op();
       nop(2);
       break;
-    case 0x83: /* SAX (nn,X) */ /* NOTE: Illegal */
+    case 0x83: /* SAX (ind,X) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sax(addr_indx(),6);
       break;
@@ -530,13 +535,13 @@ bool Cpu::emulate()
     case 0x86: /* STX nn */
       stx(addr_zero(),3);
       break;
-    case 0x87: /* SAX nn */ /* NOTE: Illegal */
+    case 0x87: /* SAX nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sax(addr_zero(),3);
       break;
     case 0x88: /* DEY */
       dey(); break;
-    case 0x89: /* NOP #nn */ /* NOTE: Illegal */
+    case 0x89: /* NOP #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       fetch_op();
       nop(2);
@@ -544,87 +549,87 @@ bool Cpu::emulate()
     case 0x8A: /* TXA */
       txa();
       break;
-    case 0x8B: /* XAA(ANE) #nn */ /* NOTE: Illegal */
+    case 0x8B: /* XAA(ANE) #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       xaa(load_byte(addr_zero()));
       break;
-    case 0x8C: /* STY nnnn */
+    case 0x8C: /* STY abs */
       sty(addr_abs(),4);
       break;
-    case 0x8D: /* STA nnnn */
+    case 0x8D: /* STA abs */
       sta(addr_abs(),4);
       break;
-    case 0x8E: /* STX nnnn */
+    case 0x8E: /* STX abs */
       stx(addr_abs(),4);
       break;
-    case 0x8F: /* SAX nnnn */ /* NOTE: Illegal */
+    case 0x8F: /* SAX abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sax(addr_abs(),4);
       break;
     case 0x90: /* BCC nn */
       bcc();
       break;
-    case 0x91: /* STA (nn,Y) */
+    case 0x91: /* STA (ind),Y */
       sta(addr_indy(),6);
       break;
-    case 0x92: /* JAM */ /* NOTE: Illegal */
+    case 0x92: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0x93: /* SHA (nn,Y) */ /* NOTE: Illegal */
+    case 0x93: /* SHA (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sha(addr_indy(),6);
       break;
-    case 0x94: /* STY nn,X */
+    case 0x94: /* STY zpg,X */
       sty(addr_zerox(),4);
       break;
-    case 0x95: /* STA nn,X */
+    case 0x95: /* STA zpg,X */
       sta(addr_zerox(),4);
       break;
-    case 0x96: /* STX nn,Y */
+    case 0x96: /* STX zpg,Y */
       stx(addr_zeroy(),4);
       break;
-    case 0x97: /* SAX nn,Y */ /* NOTE: Illegal */
+    case 0x97: /* SAX zpg,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sax(addr_zeroy(),4);
       break;
     case 0x98: /* TYA */
       tya();
       break;
-    case 0x99: /* STA nnnn,Y */
+    case 0x99: /* STA abs,Y */
       sta(addr_absy(),5);
       break;
     case 0x9A: /* TXS */
       txs();
       break;
-    case 0x9B: /* TAS (XAS,SHS) nnnn,Y */ /* NOTE: Illegal */ /* NOTICE: UNSTABLE,IGNORED! */
+    case 0x9B: /* TAS (XAS,SHS) abs,Y ~ Illegal OPCode */ /* NOTICE: UNSTABLE,IGNORED! */
       if (ill) { dump_regs_insn(insn); }
       tas(addr_absy(),5);
       break;
-    case 0x9C: /* SHY nnnn,X */ /* NOTE: Illegal */ /* NOTICE: UNSTABLE! */
+    case 0x9C: /* SHY abs,X ~ Illegal OPCode */ /* NOTICE: UNSTABLE! */
       if (ill) { dump_regs_insn(insn); }
       shy(addr_absx(),5);
       break;
-    case 0x9D: /* STA nnnn,X */
+    case 0x9D: /* STA abs,X */
       sta(addr_absx(),5);
       break;
-    case 0x9E: /* SHX nnnn,Y */ /* NOTE: Illegal */ /* NOTICE: UNSTABLE! */
+    case 0x9E: /* SHX abs,Y ~ Illegal OPCode */ /* NOTICE: UNSTABLE! */
       if (ill) { dump_regs_insn(insn); }
       shx(addr_absy(),5);
       break;
-    case 0x9F: /* SHA nnnn,Y */ /* NOTE: Illegal */ /* NOTICE: UNSTABLE! */
+    case 0x9F: /* SHA abs,Y ~ Illegal OPCode */ /* NOTICE: UNSTABLE! */
       if (ill) { dump_regs_insn(insn); }
       sha(addr_absy(),5);
       break;
-    case 0xA0: /* LDY #nn */
+    case 0xA0: /* LDY #imm */
       ldy(fetch_op(),2);
       break;
-    case 0xA1: /* LDA (nn,X) */
+    case 0xA1: /* LDA (ind,X) */
       lda(load_byte(addr_indx()),6);
       break;
-    case 0xA2: /* LDX #nn */
+    case 0xA2: /* LDX #imm */
       ldx(fetch_op(),2);
       break;
-    case 0xA3: /* LAX (nn,X) */ /* NOTE: Illegal */
+    case 0xA3: /* LAX (ind,X) 6 ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       lda(load_byte(addr_indx()),4);
       tax();
@@ -638,7 +643,7 @@ bool Cpu::emulate()
     case 0xA6: /* LDX nn */
       ldx(load_byte(addr_zero()),3);
       break;
-    case 0xA7: /* LAX nn */ /* NOTE: Illegal */
+    case 0xA7: /* LAX nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       lda(load_byte(addr_zero()),1);
       tax();
@@ -646,26 +651,26 @@ bool Cpu::emulate()
     case 0xA8: /* TAY */
       tay();
       break;
-    case 0xA9: /* LDA #nn */
+    case 0xA9: /* LDA #imm */
       lda(fetch_op(),2);
       break;
     case 0xAA: /* TAX */
       tax();
       break;
-    case 0xAB: /* LXA #nn */ /* NOTE: Illegal */
+    case 0xAB: /* LXA #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       lxa(fetch_op(),2);
       break;
-    case 0xAC: /* LDY nnnn */
+    case 0xAC: /* LDY abs */
       ldy(load_byte(addr_abs()),4);
       break;
-    case 0xAD: /* LDA nnnn */
+    case 0xAD: /* LDA abs */
       lda(load_byte(addr_abs()),4);
       break;
-    case 0xAE: /* LDX nnnn */
+    case 0xAE: /* LDX abs */
       ldx(load_byte(addr_abs()),4);
       break;
-    case 0xAF: /* LAX nnnn */ /* NOTE: Illegal */
+    case 0xAF: /* LAX abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       lda(load_byte(addr_abs()),2);
       tax();
@@ -673,27 +678,27 @@ bool Cpu::emulate()
     case 0xB0: /* BCS nn */
       bcs();
       break;
-    case 0xB1: /* LDA (nn,Y) */
+    case 0xB1: /* LDA (ind),Y */
       lda(load_byte(addr_indy()),5);
       break;
-    case 0xB2: /* JAM */ /* NOTE: Illegal */
+    case 0xB2: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0xB3: /* LAX (nn,Y) */ /* NOTE: Illegal */
+    case 0xB3: /* LAX (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       lda(load_byte(addr_indy()),4);
       tax();
       break;
-    case 0xB4: /* LDY nn,X */
+    case 0xB4: /* LDY zpg,X */
       ldy(load_byte(addr_zerox()),3);
       break;
-    case 0xB5: /* LDA nn,X */
+    case 0xB5: /* LDA zpg,X */
       lda(load_byte(addr_zerox()),3);
       break;
-    case 0xB6: /* LDX nn,Y */
+    case 0xB6: /* LDX zpg,Y */
       ldx(load_byte(addr_zeroy()),3);
       break;
-    case 0xB7: /* LAX nn,Y */ /* NOTE: Illegal */
+    case 0xB7: /* LAX zpg,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       lda(load_byte(addr_zeroy()),2);
       tax();
@@ -701,41 +706,41 @@ bool Cpu::emulate()
     case 0xB8: /* CLV */
       clv();
       break;
-    case 0xB9: /* LDA nnnn,Y */
+    case 0xB9: /* LDA abs,Y */
       lda(load_byte(addr_absy()),4);
       break;
     case 0xBA: /* TSX */
       tsx();
       break;
-    case 0xBB: /* LAS nnnn,Y (4+1) */ /* NOTE: Illegal */
+    case 0xBB: /* LAS abs,Y (4+1) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       las(load_byte(addr_absy()));
       break;
-    case 0xBC: /* LDY nnnn,X */
+    case 0xBC: /* LDY abs,X */
       ldy(load_byte(addr_absx()),4);
       break;
-    case 0xBD: /* LDA nnnn,X */
+    case 0xBD: /* LDA abs,X */
       lda(load_byte(addr_absx()),4);
       break;
-    case 0xBE: /* LDX nnnn,Y */
+    case 0xBE: /* LDX abs,Y */
       ldx(load_byte(addr_absy()),4);
       break;
-    case 0xBF: /* LAX nnnn,Y */ /* NOTE: Illegal */
+    case 0xBF: /* LAX abs,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       lda(load_byte(addr_absy()),3);
       tax(); /* 2 cycles */
       break;
-    case 0xC0: /* CPY #nn */
+    case 0xC0: /* CPY #imm */
       cpy(fetch_op(),2);
       break;
-    case 0xC1: /* CMP (nn,X) */
+    case 0xC1: /* CMP (ind,X) */
       cmp(load_byte(addr_indx()),6);
       break;
-    case 0xC2: /* NOP #nn */ /* NOTE: Illegal */
+    case 0xC2: /* NOP #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       fetch_op();
       nop(2); break;
-    case 0xC3: /* DCP (nn,X) */ /* NOTE: Illegal */
+    case 0xC3: /* DCP (ind,X) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       dcp(addr_indx(),4,4);
       break;
@@ -748,102 +753,102 @@ bool Cpu::emulate()
     case 0xC6: /* DEC nn */
       dec(addr_zero(),5);
       break;
-    case 0xC7: /* DCP nn */ /* NOTE: Illegal */
+    case 0xC7: /* DCP nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       dcp(addr_zero(),4,4);
       break;
     case 0xC8: /* INY */
       iny();
       break;
-    case 0xC9: /* CMP #nn */
+    case 0xC9: /* CMP #imm */
       cmp(fetch_op(),2);
       break;
     case 0xCA: /* DEX */
       dex();
       break;
-    case 0xCB: /* SBX #nn */ /* NOTE: Illegal */
+    case 0xCB: /* SBX #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sbx(fetch_op(),2);
       break;
-    case 0xCC: /* CPY nnnn */
+    case 0xCC: /* CPY abs */
       cpy(load_byte(addr_abs()),4);
       break;
-    case 0xCD: /* CMP nnnn */
+    case 0xCD: /* CMP abs */
       cmp(load_byte(addr_abs()),4);
       break;
-    case 0xCE: /* DEC nnnn */
+    case 0xCE: /* DEC abs */
       dec(addr_abs(),6);
       break;
-    case 0xCF: /* DCP nnnn */ /* NOTE: Illegal */
+    case 0xCF: /* DCP abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       dcp(addr_abs(),3,3);
       break;
     case 0xD0: /* BNE nn */
       bne();
       break;
-    case 0xD1: /* CMP (nn,Y) */
+    case 0xD1: /* CMP (ind),Y */
       cmp(load_byte(addr_indy()),5);
       break;
-    case 0xD2: /* JAM */ /* NOTE: Illegal */
+    case 0xD2: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0xD3: /* DCP (nn,Y) */ /* NOTE: Illegal */
+    case 0xD3: /* DCP (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       dcp(addr_indy(),4,4);
       break;
-    case 0xD4: /* NOP nn,X */ /* NOTE: Illegal */
+    case 0xD4: /* NOP zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zerox());
       nop(4);
       break;
-    case 0xD5: /* CMP nn,X */
+    case 0xD5: /* CMP zpg,X */
       cmp(load_byte(addr_zerox()),4);
       break;
-    case 0xD6: /* DEC nn,X */
+    case 0xD6: /* DEC zpg,X */
       dec(addr_zerox(),6);
       break;
-    case 0xD7: /* DCP */ /* NOTE: Illegal */
+    case 0xD7: /* DCP ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       dcp(addr_zerox(),4,2);
       break;
     case 0xD8: /* CLD */
       cld();
       break;
-    case 0xD9: /* CMP nnnn,Y */
+    case 0xD9: /* CMP abs,Y */
       cmp(load_byte(addr_absy()),4);
       break;
-    case 0xDA: /* NOP */ /* NOTE: Illegal */
+    case 0xDA: /* NOP ~ Illegal OPCode */
       nop(2);
       break;
-    case 0xDB: /* DCP nnnn,Y */ /* NOTE: Illegal */
+    case 0xDB: /* DCP abs,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       dcp(addr_absy(),4,3);
       break;
-    case 0xDC: /* NOP nnnn,X */ /* NOTE: Illegal */
+    case 0xDC: /* NOP abs,X ~ Illegal OPCode */
       load_byte(addr_absx());
       nop(4);
       break;
-    case 0xDD: /* CMP nnnn,X */
+    case 0xDD: /* CMP abs,X */
       cmp(load_byte(addr_absx()),4);
       break;
-    case 0xDE: /* DEC nnnn,X */
+    case 0xDE: /* DEC abs,X */
       dec(addr_absx(),7);
       break;
-    case 0xDF: /* DCP nnnn,X */ /* NOTE: Illegal */
+    case 0xDF: /* DCP abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       dcp(addr_absx(),4,3);
       break;
-    case 0xE0: /* CPX #nn */
+    case 0xE0: /* CPX #imm */
       cpx(fetch_op(),2);
       break;
-    case 0xE1: /* SBC (nn,X) */
+    case 0xE1: /* SBC (ind,X) */
       sbc(load_byte(addr_indx()),6);
       break;
-    case 0xE2: /* NOP #nn */ /* NOTE: Illegal */
+    case 0xE2: /* NOP #imm ~ Illegal OPCode */
       fetch_op();
       nop(2);
       break;
-    case 0xE3: /* ISC (nn,X) */ /* NOTE: Illegal */
+    case 0xE3: /* ISC (ind,X) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       isc(addr_indx(),8);
       break;
@@ -856,88 +861,88 @@ bool Cpu::emulate()
     case 0xE6: /* INC nn */
       inc(addr_zero(),5);
       break;
-    case 0xE7: /* ISC nn */ /* NOTE: Illegal */
+    case 0xE7: /* ISC nn ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       isc(addr_zero(),5);
       break;
     case 0xE8: /* INX */
       inx();
       break;
-    case 0xE9: /* SBC #nn */
+    case 0xE9: /* SBC #imm */
       sbc(fetch_op(),2);
       break;
     case 0xEA: /* NOP */
       nop(2);
       break;
-    case 0xEB: /* USBC #nn */ /* NOTE: Illegal */
+    case 0xEB: /* USBC #imm ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       sbc(fetch_op(),2);
       break;
-    case 0xEC: /* CPX nnnn */
+    case 0xEC: /* CPX abs */
       cpx(load_byte(addr_abs()),4);
       break;
-    case 0xED: /* SBC nnnn */
+    case 0xED: /* SBC abs */
       sbc(load_byte(addr_abs()),4);
       break;
-    case 0xEE: /* INC nnnn */
+    case 0xEE: /* INC abs */
       inc(addr_abs(),6);
       break;
-    case 0xEF: /* ISC nnnn */ /* NOTE: Illegal */
+    case 0xEF: /* ISC abs ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       isc(addr_abs(),6);
       break;
     case 0xF0: /* BEQ nn */
       beq();
       break;
-    case 0xF1: /* SBC (nn,Y) */
+    case 0xF1: /* SBC (ind),Y */
       sbc(load_byte(addr_indy()),5);
       break;
-    case 0xF2: /* JAM */ /* NOTE: Illegal */
+    case 0xF2: /* JAM ~ Illegal OPCode */
       jam(insn);
       break;
-    case 0xF3: /* ISC (nn,Y) */ /* NOTE: Illegal */
+    case 0xF3: /* ISC (ind),Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       isc(addr_indy(),8);
       break;
-    case 0xF4: /* NOP nn,X */ /* NOTE: Illegal */
+    case 0xF4: /* NOP zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_zerox());
       nop(4);
       break;
-    case 0xF5: /* SBC nn,X */
+    case 0xF5: /* SBC zpg,X */
       sbc(load_byte(addr_zerox()),4);
       break;
-    case 0xF6: /* INC nn,X */
+    case 0xF6: /* INC zpg,X */
       inc(addr_zerox(),6);
       break;
-    case 0xF7: /* ISC nn,X */ /* NOTE: Illegal */
+    case 0xF7: /* ISC zpg,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       isc(addr_zerox(),6);
       break;
     case 0xF8: /* SED */
       sed();
       break;
-    case 0xF9: /* SBC nnnn,Y */
+    case 0xF9: /* SBC abs,Y */
       sbc(load_byte(addr_absy()),4);
       break;
-    case 0xFA: /* NOP */ /* NOTE: Illegal */
+    case 0xFA: /* NOP ~ Illegal OPCode */
       nop(2); break;
-    case 0xFB: /* ISC nnnn,y */ /* NOTE: Illegal */
+    case 0xFB: /* ISC abs,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       isc(addr_absy(),7);
       break;
-    case 0xFC: /* NOP nnnn,X */ /* NOTE: Illegal */
+    case 0xFC: /* NOP abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       load_byte(addr_absx());
       nop(4);
       break;
-    case 0xFD: /* SBC nnnn,X */
+    case 0xFD: /* SBC abs,X */
       sbc(load_byte(addr_absx()),4);
       break;
-    case 0xFE: /* INC nnnn,X */
+    case 0xFE: /* INC abs,X */
       inc(addr_absx(),7);
       break;
-    case 0xFF: /* ISC nnnn,X */ /* NOTE: Illegal */
+    case 0xFF: /* ISC abs,X ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       isc(addr_absx(),7);
       break;
@@ -949,8 +954,11 @@ bool Cpu::emulate()
         load_byte(pc_-2),pc_-2
       );
       break;
-    // retval = false;
+    retval = false;
   }
+  /* D("C2:%u DIFF:%u PBC?%d END\n",
+    cycles(),cycles()-__c,pb_crossed); */
+  pb_crossed = false;
   return retval;
 }
 
@@ -1014,13 +1022,19 @@ uint16_t Cpu::addr_abs()
 
 uint16_t Cpu::addr_absy()
 {
-  uint16_t addr = fetch_opw() + y();
+  uint16_t addr = fetch_opw();
+  curr_page = addr&0xff00;
+  addr += y();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
   return addr;
 }
 
 uint16_t Cpu::addr_absx()
 {
-  uint16_t addr = fetch_opw() + x();
+  uint16_t addr = fetch_opw();
+  curr_page = addr&0xff00;
+  addr += x();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
   return addr;
 }
 
@@ -1033,7 +1047,10 @@ uint16_t Cpu::addr_indx()
 
 uint16_t Cpu::addr_indy()
 {
-  uint16_t addr = mem_->read_word(addr_zero()) + y();
+  uint16_t addr = mem_->read_word(addr_zero());
+  curr_page = addr&0xff00;
+  addr += y();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
   return addr;
 }
 
@@ -1094,6 +1111,7 @@ void Cpu::lda(uint8_t v,uint8_t cycles)
   a(v);
   SET_ZF(a());
   SET_NF(a());
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1105,6 +1123,7 @@ void Cpu::ldx(uint8_t v,uint8_t cycles)
   x(v);
   SET_ZF(x());
   SET_NF(x());
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1116,6 +1135,7 @@ void Cpu::ldy(uint8_t v,uint8_t cycles)
   y(v);
   SET_ZF(y());
   SET_NF(y());
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1193,6 +1213,7 @@ void Cpu::ora(uint8_t v,uint8_t cycles)
   a(a()|v);
   SET_ZF(a());
   SET_NF(a());
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1204,6 +1225,7 @@ void Cpu::_and(uint8_t v,uint8_t cycles)
   a(a()&v);
   SET_ZF(a());
   SET_NF(a());
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1377,6 +1399,7 @@ void Cpu::eor(uint8_t v,uint8_t cycles)
   a(a()^v);
   SET_ZF(a());
   SET_NF(a());
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1480,6 +1503,8 @@ void Cpu::adc(uint8_t v,uint8_t cycles)
   SET_ZF(t);
   SET_NF(t);
   a((uint8_t)t);
+  if(pb_crossed)cycles+=1;
+  tick(cycles);
 }
 
 /**
@@ -1508,6 +1533,8 @@ void Cpu::sbc(uint8_t v,uint8_t cycles)
   SET_ZF(t);
   SET_NF(t);
   a((uint8_t)t);
+  if(pb_crossed)cycles+=1;
+  tick(cycles);
 }
 
 // Instructions: flag access /////////////////////////////////////////////////
@@ -1670,16 +1697,6 @@ void Cpu::rts()
 }
 
 /**
- * @brief Branch if Not Equal
- */
-void Cpu::bne()
-{
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(!zf()) pc(addr);
-  tick(2);
-}
-
-/**
  * @brief CoMPare
  */
 void Cpu::cmp(uint8_t v,uint8_t cycles)
@@ -1690,6 +1707,7 @@ void Cpu::cmp(uint8_t v,uint8_t cycles)
   t = t&0xff;
   SET_ZF(t);
   SET_NF(t);
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1722,12 +1740,33 @@ void Cpu::cpy(uint8_t v,uint8_t cycles)
 }
 
 /**
+ * @brief Branch if Not Equal
+ */
+void Cpu::bne()
+{
+  uint16_t addr = (int8_t) fetch_op() + pc();
+  if(!zf()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
+  tick(2);
+}
+
+/**
  * @brief Branch if Equal
  */
 void Cpu::beq()
 {
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(zf()) pc(addr);
+  uint16_t addr = (int8_t) fetch_op();
+  curr_page = addr&0xff00;
+  addr += pc();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
+  if(zf()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
   tick(2);
 }
 
@@ -1736,8 +1775,15 @@ void Cpu::beq()
  */
 void Cpu::bcs()
 {
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(cf()) pc(addr);
+  uint16_t addr = (int8_t) fetch_op();
+  curr_page = addr&0xff00;
+  addr += pc();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
+  if(cf()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
   tick(2);
 }
 
@@ -1746,8 +1792,15 @@ void Cpu::bcs()
  */
 void Cpu::bcc()
 {
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(!cf()) pc(addr);
+  uint16_t addr = (int8_t) fetch_op();
+  curr_page = addr&0xff00;
+  addr += pc();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
+  if(!cf()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
   tick(2);
 }
 
@@ -1756,8 +1809,15 @@ void Cpu::bcc()
  */
 void Cpu::bpl()
 {
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(!nf()) pc(addr);
+  uint16_t addr = (int8_t) fetch_op();
+  curr_page = addr&0xff00;
+  addr += pc();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
+  if(!nf()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
   tick(2);
 }
 
@@ -1766,8 +1826,15 @@ void Cpu::bpl()
  */
 void Cpu::bmi()
 {
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(nf()) pc(addr);
+  uint16_t addr = (int8_t) fetch_op();
+  curr_page = addr&0xff00;
+  addr += pc();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
+  if(nf()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
   tick(2);
 }
 
@@ -1776,8 +1843,15 @@ void Cpu::bmi()
  */
 void Cpu::bvc()
 {
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(!of()) pc(addr);
+  uint16_t addr = (int8_t) fetch_op();
+  curr_page = addr&0xff00;
+  addr += pc();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
+  if(!of()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
   tick(2);
 }
 
@@ -1786,8 +1860,15 @@ void Cpu::bvc()
  */
 void Cpu::bvs()
 {
-  uint16_t addr = (int8_t) fetch_op() + pc();
-  if(of()) pc(addr);
+  uint16_t addr = (int8_t) fetch_op();
+  curr_page = addr&0xff00;
+  addr += pc();
+  if ((addr&0xff00)>curr_page) pb_crossed = true;
+  if(of()) {
+    pc(addr);
+    if(pb_crossed) tick(2);
+    else tick(1);
+  }
   tick(2);
 }
 
@@ -1798,6 +1879,7 @@ void Cpu::bvs()
  */
 void Cpu::nop(uint8_t cycles)
 {
+  if(pb_crossed)cycles+=1;
   tick(cycles);
 }
 
@@ -1822,24 +1904,40 @@ void Cpu::rti()
 {
   flags(pop());
   pc(pop() + (pop() << 8));
-  tick(7);
+  // tick(7); /* 7?? */
+  tick(6);
 }
 
 // illegals  /////////////////////////////////////////////////////////////////
 
+/**
+ * @brief JAM / KILL / HALT
+ *
+ * @param insn
+ */
 void Cpu::jam(uint8_t insn)
 {
-  if (1) return;
-  printf("JAM! INS: %02X PC @ %04X\nInstr %02X @ %04X\nNext Instr %02X @ %04X\nPrev Instr %02X @ %04X\nPrev Instr %02X @ %04X\nSP:%X A:%X X:%X Y:%X\n",
-    insn,pc(),
-    load_byte(pc_-1),pc_,load_byte(pc_),pc_+1,
-    load_byte(pc_-2),pc_-1,load_byte(pc_-3),pc_-2,
-    sp(),a(),x(),y()
-    );
-  dump_regs();
-  reset();
+  // if (1) return;
+  // printf("JAM! INS: %02X PC @ %04X\nInstr %02X @ %04X\nNext Instr %02X @ %04X\nPrev Instr %02X @ %04X\nPrev Instr %02X @ %04X\nSP:%X A:%X X:%X Y:%X\n",
+    // insn,pc(),
+    // load_byte(pc_-1),pc_,load_byte(pc_),pc_+1,
+    // load_byte(pc_-2),pc_-1,load_byte(pc_-3),pc_-2,
+    // sp(),a(),x(),y()
+    // );
+  // dump_regs();
+  // reset();
+  // exit(1);
+  // pc(pc_--);
+  tick(1);
 }
 
+/**
+ * @brief SLO (ASO) ASL oper + ORA oper
+ *
+ * @param addr
+ * @param cycles_a
+ * @param cycles_b
+ */
 void Cpu::slo(uint16_t addr,uint8_t cycles_a,uint8_t cycles_b)
 {
   asl_mem(addr,cycles_a);
@@ -1858,8 +1956,6 @@ void Cpu::lxa(uint8_t v,uint8_t cycles)
 
 void Cpu::las(uint8_t v)
 { /* 4 + 1 cycles if page boundry is crossed */
-  /* TODO: Does not yet account for extra tick on
-     page boundry crossing */
   uint8_t t = (v & sp());
   a(t);
   x(t);
@@ -1867,6 +1963,7 @@ void Cpu::las(uint8_t v)
   SET_NF(t);
   SET_ZF(t);
   tick(4);
+  if(pb_crossed) tick(1);
 }
 
 void Cpu::sax(uint16_t addr,uint8_t cycles)

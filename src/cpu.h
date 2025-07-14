@@ -51,6 +51,8 @@ class Cpu
     Memory *mem_;
     static unsigned int cycles_;
     /* helpers */
+    uint16_t curr_page; /* current page at start of cpu emulation */
+    bool pb_crossed;    /* true if page boundary crossed */
     inline uint8_t load_byte(uint16_t addr);
     inline void push(uint8_t);
     inline uint8_t pop();
@@ -197,6 +199,7 @@ class Cpu
     void nmi();
     void irq();
     /* debug */
+    static bool logillegals;
     void dump_flags();
     void dump_flags(uint8_t flags);
     void dump_regs();
