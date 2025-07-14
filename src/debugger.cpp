@@ -214,6 +214,12 @@ bool Debugger::emulate()
         buff[0] = RAP_RMT_WRITE | RAP_RMT_REPLY;
         send(sockfd,buff,5,0);
         break;
+      case RAP_RMT_CLOSE:
+        D("RAP_RMT_CLOSE\n");
+        break;
+      case RAP_RMT_SYSTEM:
+        D("RAP_RMT_SYSTEM\n");
+        break;
       case RAP_RMT_CMD:
         recv(sockfd,&buff[1],4,0);
         sz = ntohl(*(uint32_t*)&buff[1]);

@@ -53,14 +53,15 @@ class Debugger
     static const int kDbgPort = 9999;
     static const int kMaxCmdLen = 256;
     enum kDbgCommands{
-      RAP_RMT_OPEN = 0x01,
-      RAP_RMT_READ,
-      RAP_RMT_WRITE,
-      RAP_RMT_SEEK,
-      RAP_RMT_CLOSE,
-      RAP_RMT_CMD,
-      RAP_RMT_REPLY = 0x80,
-      RAP_RMT_MAX = 4096
+      RAP_RMT_OPEN   = 0x01,
+      RAP_RMT_READ   = 0x02,
+      RAP_RMT_WRITE  = 0x03,
+      RAP_RMT_SEEK   = 0x04,
+      RAP_RMT_CLOSE  = 0x05,
+      RAP_RMT_SYSTEM = 0x06,
+      RAP_RMT_CMD    = 0x07,
+      RAP_RMT_REPLY  = 0x80,
+      RAP_RMT_MAX    = 4096
     };
 };
 
