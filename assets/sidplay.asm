@@ -2,9 +2,9 @@
 !cpu 6510
 !ct pet
 ; https://www.lemon64.com/forum/viewtopic.php?t=61054
-SIDLoad = $1000          ; found in the 125th/126th byte of the PSID header (7C bytes in)
+SIDLoad = $5000          ; found in the 125th/126th byte of the PSID header (7C bytes in)
 ;!!!NOTE!!! this is a C64 load address and therefore in low/high order.
-SIDInit = $4040          ; found in the 11th/12th byte of the PSID header (10 bytes in)
+SIDInit = $b25f          ; found in the 11th/12th byte of the PSID header (10 bytes in)
 SIDUpdate = $4043        ; found in the 13th/14th byte of the PSID header (12 bytes in)
 PSIDHeaderSize = $7c     ; v2 ie size found at the 8th byte of the PSID header (7 bytes in)
 
@@ -12,10 +12,10 @@ TrackIndex = 0           ; check 15th/16th byte to see how many tracks are
                          ; in the file and hence how high you can
                          ; make this value.
 
-ZPProcessorPortDDR		  = $00
-ProcessorPortDDRDefault	= %101111
-ZPProcessorPort			  = $01
-ProcessorPortAllRAMWithIO = %100101
+ZPProcessorPortDDR		    = $00
+ProcessorPortDDRDefault	  = %00101111
+ZPProcessorPort			      = $01
+ProcessorPortAllRAMWithIO = %00100101
 
 CIA1InterruptControl		= $dc0d
 CIA2InterruptControl		= $dd0d
@@ -112,4 +112,4 @@ IrqTopOfScreen
 	rti
 
 *=SIDLoad-PSIDHeaderSize-2  ;-2 to skip the load address
-!bin "Armalyte_2.sid"
+!bin "assets/Commando.sid"

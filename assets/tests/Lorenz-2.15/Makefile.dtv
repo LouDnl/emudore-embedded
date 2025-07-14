@@ -1,0 +1,400 @@
+# this file is part of the C64 Emulator Test Suite. public domain, no copyright
+
+#.SILENT:
+
+COMMONSRC = \
+	common/target.inc \
+	common/common.asm \
+	common/print.asm \
+	common/printhb.asm \
+	common/showregs.asm \
+	common/startup.asm \
+	common/target.inc \
+	common/waitborder.asm \
+	common/waitkey.asm
+
+DISK1PROGS = \
+	start-dtv.prg \
+	ldab-dtv.prg \
+	ldaz-dtv.prg \
+	ldazx-dtv.prg \
+	ldaa-dtv.prg \
+	ldaax-dtv.prg \
+	ldaay-dtv.prg \
+	ldaix-dtv.prg \
+	ldaiy-dtv.prg \
+	staz-dtv.prg \
+	stazx-dtv.prg \
+	staa-dtv.prg \
+	staax-dtv.prg \
+	staay-dtv.prg \
+	staix-dtv.prg \
+	staiy-dtv.prg \
+	ldxb-dtv.prg \
+	ldxz-dtv.prg \
+	ldxzy-dtv.prg \
+	ldxa-dtv.prg \
+	ldxay-dtv.prg \
+	stxz-dtv.prg \
+	stxzy-dtv.prg \
+	stxa-dtv.prg \
+	ldyb-dtv.prg \
+	ldyz-dtv.prg \
+	ldyzx-dtv.prg \
+	ldya-dtv.prg \
+	ldyax-dtv.prg \
+	styz-dtv.prg \
+	styzx-dtv.prg \
+	stya-dtv.prg \
+	taxn-dtv.prg \
+	tayn-dtv.prg \
+	txan-dtv.prg \
+	tyan-dtv.prg \
+	tsxn-dtv.prg \
+	txsn-dtv.prg \
+	phan-dtv.prg \
+	plan-dtv.prg \
+	phpn-dtv.prg \
+	plpn-dtv.prg \
+	inxn-dtv.prg \
+	inyn-dtv.prg \
+	dexn-dtv.prg \
+	deyn-dtv.prg \
+	incz-dtv.prg \
+	inczx-dtv.prg \
+	inca-dtv.prg \
+	incax-dtv.prg \
+	decz-dtv.prg \
+	deczx-dtv.prg \
+	deca-dtv.prg \
+	decax-dtv.prg \
+	asln-dtv.prg \
+	aslz-dtv.prg \
+	aslzx-dtv.prg \
+	asla-dtv.prg \
+	aslax-dtv.prg \
+	lsrn-dtv.prg \
+	lsrz-dtv.prg \
+	lsrzx-dtv.prg \
+	lsra-dtv.prg \
+	lsrax-dtv.prg \
+	roln-dtv.prg \
+	rolz-dtv.prg \
+	rolzx-dtv.prg \
+	rola-dtv.prg \
+	rolax-dtv.prg \
+	rorn-dtv.prg \
+	rorz-dtv.prg \
+	rorzx-dtv.prg \
+	rora-dtv.prg \
+	rorax-dtv.prg \
+	andb-dtv.prg \
+	andz-dtv.prg \
+	andzx-dtv.prg \
+	anda-dtv.prg \
+	andax-dtv.prg \
+	anday-dtv.prg \
+	andix-dtv.prg \
+	andiy-dtv.prg \
+	orab-dtv.prg \
+	oraz-dtv.prg \
+	orazx-dtv.prg \
+	oraa-dtv.prg \
+	oraax-dtv.prg \
+	oraay-dtv.prg \
+	oraix-dtv.prg \
+	oraiy-dtv.prg \
+	eorb-dtv.prg \
+	eorz-dtv.prg \
+	eorzx-dtv.prg \
+	eora-dtv.prg \
+	eorax-dtv.prg \
+	eoray-dtv.prg \
+	eorix-dtv.prg \
+	eoriy-dtv.prg \
+	clcn-dtv.prg \
+	secn-dtv.prg \
+	cldn-dtv.prg \
+	sedn-dtv.prg \
+	clin-dtv.prg \
+	sein-dtv.prg \
+	clvn-dtv.prg \
+	adcb-dtv.prg \
+	adcz-dtv.prg \
+	adczx-dtv.prg \
+	adca-dtv.prg \
+	adcax-dtv.prg \
+	adcay-dtv.prg \
+	adcix-dtv.prg \
+	adciy-dtv.prg \
+	sbcb-dtv.prg \
+	sbcz-dtv.prg \
+	sbczx-dtv.prg \
+	sbca-dtv.prg \
+	sbcax-dtv.prg \
+	sbcay-dtv.prg \
+	sbcix-dtv.prg \
+	sbciy-dtv.prg \
+	cmpb-dtv.prg \
+	cmpz-dtv.prg \
+	cmpzx-dtv.prg \
+	cmpa-dtv.prg \
+	cmpax-dtv.prg \
+	cmpay-dtv.prg \
+	cmpix-dtv.prg \
+	cmpiy-dtv.prg \
+	cpxb-dtv.prg \
+	cpxz-dtv.prg \
+	cpxa-dtv.prg \
+	cpyb-dtv.prg \
+	cpyz-dtv.prg \
+	cpya-dtv.prg \
+	bitz-dtv.prg \
+	bita-dtv.prg \
+	brkn-dtv.prg \
+	rtin-dtv.prg \
+	jsrw-dtv.prg \
+	rtsn-dtv.prg \
+	jmpw-dtv.prg \
+	jmpi-dtv.prg
+
+DISK1NEXT = beqr-dtv.prg
+
+DISK2PROGS = \
+	beqr-dtv.prg \
+	bner-dtv.prg \
+	bmir-dtv.prg \
+	bplr-dtv.prg \
+	bcsr-dtv.prg \
+	bccr-dtv.prg \
+	bvsr-dtv.prg \
+	bvcr-dtv.prg \
+	nopn-dtv.prg \
+	nopb-dtv.prg \
+	nopz-dtv.prg \
+	nopzx-dtv.prg \
+	nopa-dtv.prg \
+	nopax-dtv.prg \
+	asoz-dtv.prg \
+	asozx-dtv.prg \
+	asoa-dtv.prg \
+	asoax-dtv.prg \
+	asoay-dtv.prg \
+	asoix-dtv.prg \
+	asoiy-dtv.prg \
+	rlaz-dtv.prg \
+	rlazx-dtv.prg \
+	rlaa-dtv.prg \
+	rlaax-dtv.prg \
+	rlaay-dtv.prg \
+	rlaix-dtv.prg \
+	rlaiy-dtv.prg \
+	lsez-dtv.prg \
+	lsezx-dtv.prg \
+	lsea-dtv.prg \
+	lseax-dtv.prg \
+	lseay-dtv.prg \
+	lseix-dtv.prg \
+	lseiy-dtv.prg \
+	rraz-dtv.prg \
+	rrazx-dtv.prg \
+	rraa-dtv.prg \
+	rraax-dtv.prg \
+	rraay-dtv.prg \
+	rraix-dtv.prg \
+	rraiy-dtv.prg \
+	dcmz-dtv.prg \
+	dcmzx-dtv.prg \
+	dcma-dtv.prg \
+	dcmax-dtv.prg \
+	dcmay-dtv.prg \
+	dcmix-dtv.prg \
+	dcmiy-dtv.prg \
+	insz-dtv.prg \
+	inszx-dtv.prg \
+	insa-dtv.prg \
+	insax-dtv.prg \
+	insay-dtv.prg \
+	insix-dtv.prg \
+	insiy-dtv.prg \
+	laxz-dtv.prg \
+	laxzy-dtv.prg \
+	laxa-dtv.prg \
+	laxay-dtv.prg \
+	laxix-dtv.prg \
+	laxiy-dtv.prg \
+	axsz-dtv.prg \
+	axszy-dtv.prg \
+	axsa-dtv.prg \
+	axsix-dtv.prg \
+	alrb-dtv.prg \
+	arrb-dtv.prg \
+	aneb-dtv.prg \
+	lxab-dtv.prg \
+	sbxb-dtv.prg \
+	shaay-dtv.prg \
+	shaiy-dtv.prg \
+	shxay-dtv.prg \
+	shyax-dtv.prg \
+	shsay-dtv.prg \
+	ancb-dtv.prg \
+	lasay-dtv.prg \
+	sbcb-eb-dtv.prg \
+	trap1-dtv.prg \
+	trap2-dtv.prg \
+	trap3-dtv.prg \
+	trap4-dtv.prg \
+	trap5-dtv.prg \
+	trap6-dtv.prg \
+	trap7-dtv.prg \
+	trap8-dtv.prg \
+	trap9-dtv.prg \
+	trap10-dtv.prg \
+	trap11-dtv.prg \
+	trap12-dtv.prg \
+	trap13-dtv.prg \
+	trap14-dtv.prg \
+	trap15-dtv.prg \
+	trap16-dtv.prg \
+	trap17-dtv.prg \
+	branchwrap-dtv.prg \
+	mmufetch-dtv.prg \
+	mmu-dtv.prg \
+	cpuport-dtv.prg \
+	cputiming-dtv.prg
+
+DISK2NEXT = irq-dtv.prg
+
+DISK3PROGSOLD = \
+	  irq-dtv.prg \
+	  nmi-dtv.prg \
+	cia1tb123-dtv.prg \
+	cia2tb123-dtv.prg \
+	cia1pb6-dtv.prg \
+	cia1pb7-dtv.prg \
+	cia2pb6-dtv.prg \
+	\
+	cia2pb7-dtv.prg \
+	  cia1tab-dtv.prg \
+	loadth-dtv.prg \
+	cnto2-dtv.prg \
+	  icr01-dtv.prg \
+	  imr-dtv.prg \
+	flipos-dtv.prg \
+	oneshot-dtv.prg \
+	cntdef-dtv.prg \
+	  cia1ta-dtv.prg \
+	  cia1tb-dtv.prg \
+	  cia2ta-dtv.prg \
+	  cia2tb-dtv.prg \
+	\
+	finish-dtv.prg \
+	\
+	template-dtv.prg
+
+ALLPROGSOLD = $(DISK1PROGS) $(DISK2PROGS) $(DISK3PROGSOLD)
+	
+ALLPROGS = $(DISK1PROGS) $(DISK2PROGS) $(DISK3PROGSOLD)
+ALLDISKS = Disk1DTV.d64 Disk2DTV.d64 Disk3DTV.d64 LorenzDTV.d81
+
+ASFLAGS=--m65dtv02 -C -T -a -q -I ./common -D TARGET=5
+
+all: $(ALLPROGS) $(ALLDISKS)
+
+cpuport-dtv.prg: cpuport.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D ISC128C64=0 -i cpuport.s -o cpuport-dtv.prg
+
+trap1-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=1 -i trap1-15.s -o trap1-dtv.prg
+trap2-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=2 -i trap1-15.s -o trap2-dtv.prg
+trap3-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=3 -i trap1-15.s -o trap3-dtv.prg
+trap4-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=4 -i trap1-15.s -o trap4-dtv.prg
+trap5-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=5 -i trap1-15.s -o trap5-dtv.prg
+trap6-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=6 -i trap1-15.s -o trap6-dtv.prg
+trap7-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=7 -i trap1-15.s -o trap7-dtv.prg
+trap8-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=8 -i trap1-15.s -o trap8-dtv.prg
+trap9-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=9 -i trap1-15.s -o trap9-dtv.prg
+trap10-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=10 -i trap1-15.s -o trap10-dtv.prg
+trap11-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=11 -i trap1-15.s -o trap11-dtv.prg
+trap12-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=12 -i trap1-15.s -o trap12-dtv.prg
+trap13-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=13 -i trap1-15.s -o trap13-dtv.prg
+trap14-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=14 -i trap1-15.s -o trap14-dtv.prg
+trap15-dtv.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=15 -i trap1-15.s -o trap15-dtv.prg
+
+irq-dtv.prg: irq.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i irq.s -o irq-dtv.prg
+irqnew-dtv.prg: irq.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=1 -i irq.s -o irqnew-dtv.prg
+nmi-dtv.prg: nmi.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i nmi.s -o nmi-dtv.prg
+icr01-dtv.prg: icr01.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i icr01.s -o icr01-dtv.prg
+imr-dtv.prg: imr.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i imr.s -o imr-dtv.prg
+cia1tab-dtv.prg: cia1tab.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia1tab.s -o cia1tab-dtv.prg
+cia1ta-dtv.prg: cia1ta.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia1ta.s -o cia1ta-dtv.prg
+cia1tb-dtv.prg: cia1tb.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia1tb.s -o cia1tb-dtv.prg
+cia2ta-dtv.prg: cia2ta.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia2ta.s -o cia2ta-dtv.prg
+cia2tb-dtv.prg: cia2tb.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia2tb.s -o cia2tb-dtv.prg
+	
+nextdisk1-dtv.prg: nextdisk.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEXT=1 -i nextdisk.s -o nextdisk1-dtv.prg
+nextdisk2-dtv.prg: nextdisk.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEXT=2 -i nextdisk.s -o nextdisk2-dtv.prg
+
+%-dtv.prg : %.s $(COMMONSRC)
+	64tass $(ASFLAGS) -i "$*.s" -o "$*-dtv.prg"
+
+Disk1DTV.d64: $(DISK1PROGS) nextdisk1-dtv.prg
+	c1541 -format "test suite 2.15+,#1" d64 Disk1DTV.d64 > /dev/null
+	for I in $(basename $(DISK1PROGS)); do \
+		c1541 Disk1DTV.d64 -write "$$I.prg" `echo "$$I" | sed 's:-dtv::g'` > /dev/null; \
+	done
+	c1541 Disk1DTV.d64 -write "nextdisk1-dtv.prg" `echo "$(basename $(DISK1NEXT))" | sed 's:-dtv::g'` > /dev/null
+#	c1541 Disk1DTV.d64 -list
+Disk2DTV.d64: $(DISK2PROGS) nextdisk2-dtv.prg
+	c1541 -format "test suite 2.15+,#2" d64 Disk2DTV.d64 > /dev/null
+	for I in $(basename $(DISK2PROGS)); do \
+		c1541 Disk2DTV.d64 -write "$$I.prg" `echo "$$I" | sed 's:-dtv::g'` > /dev/null; \
+	done
+	c1541 Disk2DTV.d64 -write "nextdisk2-dtv.prg" `echo "$(basename $(DISK2NEXT))" | sed 's:-dtv::g'` > /dev/null
+#	c1541 Disk2DTV.d64 -list
+Disk3DTV.d64: $(DISK3PROGSOLD)
+	c1541 -format "test suite 2.15+,#3" d64 Disk3DTV.d64 > /dev/null
+	for I in $(basename $(DISK3PROGSOLD)); do \
+		c1541 Disk3DTV.d64 -write "$$I.prg" `echo "$$I" | sed 's:-dtv::g'` > /dev/null; \
+	done
+#	c1541 Disk3DTV.d64 -list
+LorenzDTV.d81: $(ALLPROGSOLD)
+	c1541 -format "test suite 2.15+,#1" d81 LorenzDTV.d81 > /dev/null
+	for I in $(basename $(ALLPROGSOLD)); do \
+		c1541 LorenzDTV.d81 -write "$$I.prg" `echo "$$I" | sed 's:-dtv::g'` > /dev/null; \
+	done
+#	c1541 LorenzDTV.d81 -list
+
+clean:
+	rm -f *~
+
+zap: clean
+	rm -f *.prg
+	rm -f *.d64
+	rm -f *.d81

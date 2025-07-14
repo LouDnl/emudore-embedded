@@ -1,0 +1,381 @@
+# this file is part of the C64 Emulator Test Suite. public domain, no copyright
+
+#.SILENT:
+
+COMMONSRC = \
+	common/target.inc \
+	common/common.asm \
+	common/print.asm \
+	common/printhb.asm \
+	common/showregs.asm \
+	common/startup.asm \
+	common/target.inc \
+	common/waitborder.asm \
+	common/waitkey.asm
+
+DISK1PROGS = \
+	start-plus4.prg \
+	ldab-plus4.prg \
+	ldaz-plus4.prg \
+	ldazx-plus4.prg \
+	ldaa-plus4.prg \
+	ldaax-plus4.prg \
+	ldaay-plus4.prg \
+	ldaix-plus4.prg \
+	ldaiy-plus4.prg \
+	staz-plus4.prg \
+	stazx-plus4.prg \
+	staa-plus4.prg \
+	staax-plus4.prg \
+	staay-plus4.prg \
+	staix-plus4.prg \
+	staiy-plus4.prg \
+	ldxb-plus4.prg \
+	ldxz-plus4.prg \
+	ldxzy-plus4.prg \
+	ldxa-plus4.prg \
+	ldxay-plus4.prg \
+	stxz-plus4.prg \
+	stxzy-plus4.prg \
+	stxa-plus4.prg \
+	ldyb-plus4.prg \
+	ldyz-plus4.prg \
+	ldyzx-plus4.prg \
+	ldya-plus4.prg \
+	ldyax-plus4.prg \
+	styz-plus4.prg \
+	styzx-plus4.prg \
+	stya-plus4.prg \
+	taxn-plus4.prg \
+	tayn-plus4.prg \
+	txan-plus4.prg \
+	tyan-plus4.prg \
+	tsxn-plus4.prg \
+	txsn-plus4.prg \
+	phan-plus4.prg \
+	plan-plus4.prg \
+	phpn-plus4.prg \
+	plpn-plus4.prg \
+	inxn-plus4.prg \
+	inyn-plus4.prg \
+	dexn-plus4.prg \
+	deyn-plus4.prg \
+	incz-plus4.prg \
+	inczx-plus4.prg \
+	inca-plus4.prg \
+	incax-plus4.prg \
+	decz-plus4.prg \
+	deczx-plus4.prg \
+	deca-plus4.prg \
+	decax-plus4.prg \
+	asln-plus4.prg \
+	aslz-plus4.prg \
+	aslzx-plus4.prg \
+	asla-plus4.prg \
+	aslax-plus4.prg \
+	lsrn-plus4.prg \
+	lsrz-plus4.prg \
+	lsrzx-plus4.prg \
+	lsra-plus4.prg \
+	lsrax-plus4.prg \
+	roln-plus4.prg \
+	rolz-plus4.prg \
+	rolzx-plus4.prg \
+	rola-plus4.prg \
+	rolax-plus4.prg \
+	rorn-plus4.prg \
+	rorz-plus4.prg \
+	rorzx-plus4.prg \
+	rora-plus4.prg \
+	rorax-plus4.prg \
+	andb-plus4.prg \
+	andz-plus4.prg \
+	andzx-plus4.prg \
+	anda-plus4.prg \
+	andax-plus4.prg \
+	anday-plus4.prg \
+	andix-plus4.prg \
+	andiy-plus4.prg \
+	orab-plus4.prg \
+	oraz-plus4.prg \
+	orazx-plus4.prg \
+	oraa-plus4.prg \
+	oraax-plus4.prg \
+	oraay-plus4.prg \
+	oraix-plus4.prg \
+	oraiy-plus4.prg \
+	eorb-plus4.prg \
+	eorz-plus4.prg \
+	eorzx-plus4.prg \
+	eora-plus4.prg \
+	eorax-plus4.prg \
+	eoray-plus4.prg \
+	eorix-plus4.prg \
+	eoriy-plus4.prg \
+	clcn-plus4.prg \
+	secn-plus4.prg \
+	cldn-plus4.prg \
+	sedn-plus4.prg \
+	clin-plus4.prg \
+	sein-plus4.prg \
+	clvn-plus4.prg \
+	adcb-plus4.prg \
+	adcz-plus4.prg \
+	adczx-plus4.prg \
+	adca-plus4.prg \
+	adcax-plus4.prg \
+	adcay-plus4.prg \
+	adcix-plus4.prg \
+	adciy-plus4.prg \
+	sbcb-plus4.prg \
+	sbcz-plus4.prg \
+	sbczx-plus4.prg \
+	sbca-plus4.prg \
+	sbcax-plus4.prg \
+	sbcay-plus4.prg \
+	sbcix-plus4.prg \
+	sbciy-plus4.prg \
+	cmpb-plus4.prg \
+	cmpz-plus4.prg \
+	cmpzx-plus4.prg \
+	cmpa-plus4.prg \
+	cmpax-plus4.prg \
+	cmpay-plus4.prg \
+	cmpix-plus4.prg \
+	cmpiy-plus4.prg \
+	cpxb-plus4.prg \
+	cpxz-plus4.prg \
+	cpxa-plus4.prg \
+	cpyb-plus4.prg \
+	cpyz-plus4.prg \
+	cpya-plus4.prg \
+	bitz-plus4.prg \
+	bita-plus4.prg \
+	brkn-plus4.prg \
+	rtin-plus4.prg \
+	jsrw-plus4.prg \
+	rtsn-plus4.prg \
+	jmpw-plus4.prg \
+	jmpi-plus4.prg
+
+DISK1NEXT = beqr-plus4.prg
+
+DISK2PROGS = \
+	beqr-plus4.prg \
+	bner-plus4.prg \
+	bmir-plus4.prg \
+	bplr-plus4.prg \
+	bcsr-plus4.prg \
+	bccr-plus4.prg \
+	bvsr-plus4.prg \
+	bvcr-plus4.prg \
+	nopn-plus4.prg \
+	nopb-plus4.prg \
+	nopz-plus4.prg \
+	nopzx-plus4.prg \
+	nopa-plus4.prg \
+	nopax-plus4.prg \
+	asoz-plus4.prg \
+	asozx-plus4.prg \
+	asoa-plus4.prg \
+	asoax-plus4.prg \
+	asoay-plus4.prg \
+	asoix-plus4.prg \
+	asoiy-plus4.prg \
+	rlaz-plus4.prg \
+	rlazx-plus4.prg \
+	rlaa-plus4.prg \
+	rlaax-plus4.prg \
+	rlaay-plus4.prg \
+	rlaix-plus4.prg \
+	rlaiy-plus4.prg \
+	lsez-plus4.prg \
+	lsezx-plus4.prg \
+	lsea-plus4.prg \
+	lseax-plus4.prg \
+	lseay-plus4.prg \
+	lseix-plus4.prg \
+	lseiy-plus4.prg \
+	rraz-plus4.prg \
+	rrazx-plus4.prg \
+	rraa-plus4.prg \
+	rraax-plus4.prg \
+	rraay-plus4.prg \
+	rraix-plus4.prg \
+	rraiy-plus4.prg \
+	dcmz-plus4.prg \
+	dcmzx-plus4.prg \
+	dcma-plus4.prg \
+	dcmax-plus4.prg \
+	dcmay-plus4.prg \
+	dcmix-plus4.prg \
+	dcmiy-plus4.prg \
+	insz-plus4.prg \
+	inszx-plus4.prg \
+	insa-plus4.prg \
+	insax-plus4.prg \
+	insay-plus4.prg \
+	insix-plus4.prg \
+	insiy-plus4.prg \
+	laxz-plus4.prg \
+	laxzy-plus4.prg \
+	laxa-plus4.prg \
+	laxay-plus4.prg \
+	laxix-plus4.prg \
+	laxiy-plus4.prg \
+	axsz-plus4.prg \
+	axszy-plus4.prg \
+	axsa-plus4.prg \
+	axsix-plus4.prg \
+	alrb-plus4.prg \
+	arrb-plus4.prg \
+	aneb-plus4.prg \
+	lxab-plus4.prg \
+	sbxb-plus4.prg \
+	shaay-plus4.prg \
+	shaiy-plus4.prg \
+	shxay-plus4.prg \
+	shyax-plus4.prg \
+	shsay-plus4.prg \
+	ancb-plus4.prg \
+	lasay-plus4.prg \
+	sbcb-eb-plus4.prg \
+	trap1-plus4.prg \
+	trap2-plus4.prg \
+	trap3-plus4.prg \
+	trap4-plus4.prg \
+	trap5-plus4.prg \
+	trap6-plus4.prg \
+	trap7-plus4.prg \
+	trap8-plus4.prg \
+	trap9-plus4.prg \
+	trap10-plus4.prg \
+	trap11-plus4.prg \
+	trap12-plus4.prg \
+	trap13-plus4.prg \
+	trap14-plus4.prg \
+	trap15-plus4.prg \
+	trap16-plus4.prg \
+	trap17-plus4.prg \
+	branchwrap-plus4.prg \
+	mmufetch-plus4.prg \
+	mmu-plus4.prg \
+	cpuport-plus4.prg \
+	cputiming-plus4.prg
+
+DISK2NEXT = irq-plus4.prg
+
+DISK3PROGSOLD = \
+	  irq-plus4.prg \
+	  nmi-plus4.prg \
+	\
+	finish-plus4.prg \
+	\
+	template-plus4.prg
+
+ALLPROGSOLD = $(DISK1PROGS) $(DISK2PROGS) $(DISK3PROGSOLD)
+	
+ALLPROGS = $(DISK1PROGS) $(DISK2PROGS) $(DISK3PROGSOLD)
+ALLDISKS = Disk1plus4.d64 Disk2plus4.d64 Disk3plus4.d64 LorenzPlus4.d81
+
+ASFLAGS=-C -T -a -q -I ./common -D TARGET=4
+
+all: $(ALLPROGS) $(ALLDISKS)
+
+cpuport-plus4.prg: cpuport.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D ISC128C64=0 -i cpuport.s -o cpuport-plus4.prg
+
+trap1-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=1 -i trap1-15.s -o trap1-plus4.prg
+trap2-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=2 -i trap1-15.s -o trap2-plus4.prg
+trap3-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=3 -i trap1-15.s -o trap3-plus4.prg
+trap4-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=4 -i trap1-15.s -o trap4-plus4.prg
+trap5-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=5 -i trap1-15.s -o trap5-plus4.prg
+trap6-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=6 -i trap1-15.s -o trap6-plus4.prg
+trap7-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=7 -i trap1-15.s -o trap7-plus4.prg
+trap8-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=8 -i trap1-15.s -o trap8-plus4.prg
+trap9-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=9 -i trap1-15.s -o trap9-plus4.prg
+trap10-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=10 -i trap1-15.s -o trap10-plus4.prg
+trap11-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=11 -i trap1-15.s -o trap11-plus4.prg
+trap12-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=12 -i trap1-15.s -o trap12-plus4.prg
+trap13-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=13 -i trap1-15.s -o trap13-plus4.prg
+trap14-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=14 -i trap1-15.s -o trap14-plus4.prg
+trap15-plus4.prg: trap1-15.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D TRAP=15 -i trap1-15.s -o trap15-plus4.prg
+
+irq-plus4.prg: irq.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i irq.s -o irq-plus4.prg
+irqnew-plus4.prg: irq.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=1 -i irq.s -o irqnew-plus4.prg
+nmi-plus4.prg: nmi.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i nmi.s -o nmi-plus4.prg
+icr01-plus4.prg: icr01.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i icr01.s -o icr01-plus4.prg
+imr-plus4.prg: imr.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i imr.s -o imr-plus4.prg
+cia1tab-plus4.prg: cia1tab.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia1tab.s -o cia1tab-plus4.prg
+cia1ta-plus4.prg: cia1ta.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia1ta.s -o cia1ta-plus4.prg
+cia1tb-plus4.prg: cia1tb.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia1tb.s -o cia1tb-plus4.prg
+cia2ta-plus4.prg: cia2ta.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia2ta.s -o cia2ta-plus4.prg
+cia2tb-plus4.prg: cia2tb.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEWCIA=0 -i cia2tb.s -o cia2tb-plus4.prg
+	
+nextdisk1-plus4.prg: nextdisk.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEXT=1 -i nextdisk.s -o nextdisk1-plus4.prg
+nextdisk2-plus4.prg: nextdisk.s $(COMMONSRC)
+	64tass $(ASFLAGS) -D NEXT=2 -i nextdisk.s -o nextdisk2-plus4.prg
+
+%-plus4.prg : %.s $(COMMONSRC)
+	64tass $(ASFLAGS) -i "$*.s" -o "$*-plus4.prg"
+
+Disk1plus4.d64: $(DISK1PROGS) nextdisk1-plus4.prg
+	c1541 -format "test suite 2.15+,#1" d64 Disk1plus4.d64 > /dev/null
+	for I in $(basename $(DISK1PROGS)); do \
+		c1541 Disk1plus4.d64 -write "$$I.prg" `echo "$$I" | sed 's:-plus4::g'` > /dev/null; \
+	done
+	c1541 Disk1plus4.d64 -write "nextdisk1-plus4.prg" `echo "$(basename $(DISK1NEXT))" | sed 's:-plus4::g'` > /dev/null
+#	c1541 Disk1plus4.d64 -list
+Disk2plus4.d64: $(DISK2PROGS) nextdisk2-plus4.prg
+	c1541 -format "test suite 2.15+,#2" d64 Disk2plus4.d64 > /dev/null
+	for I in $(basename $(DISK2PROGS)); do \
+		c1541 Disk2plus4.d64 -write "$$I.prg" `echo "$$I" | sed 's:-plus4::g'` > /dev/null; \
+	done
+	c1541 Disk2plus4.d64 -write "nextdisk2-plus4.prg" `echo "$(basename $(DISK2NEXT))" | sed 's:-plus4::g'` > /dev/null
+#	c1541 Disk2plus4.d64 -list
+Disk3plus4.d64: $(DISK3PROGSOLD)
+	c1541 -format "test suite 2.15+,#3" d64 Disk3plus4.d64 > /dev/null
+	for I in $(basename $(DISK3PROGSOLD)); do \
+		c1541 Disk3plus4.d64 -write "$$I.prg" `echo "$$I" | sed 's:-plus4::g'` > /dev/null; \
+	done
+#	c1541 Disk3plus4.d64 -list
+LorenzPlus4.d81: $(ALLPROGSOLD)
+	c1541 -format "test suite 2.15+,#1" d81 LorenzPlus4.d81 > /dev/null
+	for I in $(basename $(ALLPROGSOLD)); do \
+		c1541 LorenzPlus4.d81 -write "$$I.prg" `echo "$$I" | sed 's:-plus4::g'` > /dev/null; \
+	done
+#	c1541 LorenzPlus4.d81 -list
+
+clean:
+	rm -f *~
+
+zap: clean
+	rm -f *.prg
+	rm -f *.d64
+	rm -f *.d81

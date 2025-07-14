@@ -1,0 +1,21 @@
+AS65 Assembler for R6502 [1.42].                                     Page    1
+--------------------------------- hello.asm ----------------------------------
+
+3:    BYTE $4F,$49,$49,$45,$48
+"assets/hello.asm",3 : Invalid mnemonic.
+6:    JSR            PRINT_MESSAGE
+"assets/hello.asm",6 : Invalid mnemonic.
+8:    RTS
+"assets/hello.asm",8 : Invalid mnemonic.
+10:    LDX #$04        ; initialize x to message length
+"assets/hello.asm",10 : Invalid mnemonic.
+12:    LDA $033C,X     ; grab byte
+"assets/hello.asm",12 : Invalid mnemonic.
+13:    JSR $FFD2       ; render text in A with Subroutine:CLRCHN
+"assets/hello.asm",13 : Invalid mnemonic.
+14:    DEX             ; decrement X
+"assets/hello.asm",14 : Invalid mnemonic.
+15:    BPL GETCHAR     ; loop until X goes negative
+"assets/hello.asm",15 : Invalid mnemonic.
+15 lines read, 8 errors in pass 1.
+

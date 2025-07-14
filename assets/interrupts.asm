@@ -1,4 +1,9 @@
-*=$0810
+*=$c000
+!to "interrupts.prg",cbm
+!cpu 6510
+type = 64
+
+*= $0810
 
   sei
   lda #%01010010
@@ -47,5 +52,5 @@ main:
   sta $d800
 
 ; loop:
-  ; jmp loop
+  jmp loop
   rts
