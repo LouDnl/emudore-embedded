@@ -125,16 +125,16 @@ class Vic
     int raster_counter();
     void setLightPen(uint16_t x,uint8_t y);
     /* constants */
-    static const int kScreenLines = 312;
+    static const int kScreenLines = 312; /* PAL */
     static const int kScreenCols  = 504;
     static const int kVisibleScreenWidth  = 403;
     static const int kVisibleScreenHeight = 284;
     static const int kFirstVisibleLine = 14;
     static const int kLastVisibleLine = 298;
-    static const int kLineCycles = 63;
+    static const int kLineCycles = 63; /* PAL 63*312 ~19656 raster cycles */
     static const int kBadLineCycles = 23;
     /* TODO: FIX REFRESH RATE TO SETTING */
-    static constexpr double kRefreshRate = 1 / 50.125; // ~50Hz (PAL)
+    static constexpr double kRefreshRate = 1 / 50.125; // ~50Hz (PAL) ~19950 cycles
     static const int kSpritePtrsOffset = 0x3f8;
     static const int bitRST = 0;
     static const int bitMBC = 1;

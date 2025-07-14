@@ -22,6 +22,12 @@
 
 Vic::Vic()
 {
+  reset();
+}
+
+/* Used on C64/CPU reset */
+void Vic::reset()
+{
   /* raster */
   raster_irq_ = raster_c_ = 0;
   irq_enabled_ = irq_status_ = 0;
@@ -48,37 +54,6 @@ Vic::Vic()
   screen_mem_ = Memory::kBaseAddrScreen;
   char_mem_   = Memory::kBaseAddrChars;
   bitmap_mem_ = Memory::kBaseAddrBitmap;
-  /* bit 0 is unused */
-  mem_pointers_ = (1 << 0);
-  /* current graphic mode */
-  graphic_mode_ = kCharMode;
-}
-
-/* Used on C64/CPU reset */
-void Vic::reset()
-{
-/* raster */
-  raster_irq_ = raster_c_ = 0;
-  irq_enabled_ = irq_status_ = 0;
-  next_raster_at_ = kLineCycles;
-  sprite_sprite_collision_ = 0;
-  sprite_bgnd_collision_ = 0;
-
-  /* sprites */
-  for(int i = 0 ; i<8 ; i++)
-  {
-    mx_[i] = my_[i] = sprite_colors_[i] = 0;
-  }
-  msbx_ = sprite_double_height_ = sprite_double_width_ = 0;
-  sprite_enabled_ = sprite_priority_ = sprite_multicolor_ = 0;
-  sprite_shared_colors_[0] = sprite_shared_colors_[1] = 0;
-  /* colors */
-  border_color_ = 0;
-  bgcolor_[0] = bgcolor_[1] = bgcolor_[2] = bgcolor_[3] = 0;
-  /* control regs */
-  cr1_ = cr2_ = 0;
-  /* frame counter */
-  frame_c_ = 0;
   /* bit 0 is unused */
   mem_pointers_ = (1 << 0);
   /* current graphic mode */
@@ -144,7 +119,7 @@ bool Vic::emulate()
     /* update raster */
     raster_counter(++rstr);
     if (rstr >= kScreenLines)
-    {
+    { /* BUG: screen refresh is after ~18656 cycles and not 19656? */
       verticalSync=true;
       io_->screen_refresh();
       sid_->sid_flush(); /* FLUSH */
@@ -528,7 +503,7 @@ uint16_t Vic::get_sprite_ptr(int n)
 {
   uint16_t addr;
   uint16_t ptraddr = screen_mem_ + kSpritePtrsOffset + n;
-  addr= kSpriteSize * mem_->vic_read_byte(ptraddr);
+  addr = kSpriteSize * mem_->vic_read_byte(ptraddr);
   return addr;
 }
 
