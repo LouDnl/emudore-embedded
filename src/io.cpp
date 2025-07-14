@@ -203,7 +203,13 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_EQUALS]    = std::make_pair(6,5);
   keymap_[SDL_SCANCODE_BACKSPACE] = std::make_pair(0,0);
   keymap_[SDL_SCANCODE_MINUS]     = std::make_pair(5,3);
+  /* CRSR */
+  keymap_[SDL_SCANCODE_UP]        = std::make_pair(0,7); // needs auto shift
+  keymap_[SDL_SCANCODE_DOWN]      = std::make_pair(0,7);
+  keymap_[SDL_SCANCODE_LEFT]      = std::make_pair(0,2); // needs auto shift
+  keymap_[SDL_SCANCODE_RIGHT]     = std::make_pair(0,2);
   /* keymap: these are mapped to other keys */
+  keymap_[SDL_SCANCODE_HOME]         = std::make_pair(6,3); // CLR
   keymap_[SDL_SCANCODE_BACKSLASH]    = std::make_pair(5,5); // :
   keymap_[SDL_SCANCODE_LEFTBRACKET]  = std::make_pair(5,0); // +
   keymap_[SDL_SCANCODE_RIGHTBRACKET] = std::make_pair(6,1); // *
@@ -299,23 +305,23 @@ void IO::handle_keydown(SDL_Keycode k)
       case SDL_SCANCODE_CAPSLOCK: /* (Un)set shiftlock */
         shiftlock = !shiftlock;
         if (shiftlock) {
+          /* shiftlock off */
           shiftmask = ~(1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
           keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first] &= shiftmask;
         } else {
+          /* shiftlock on */
           shiftmask = (1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
           keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first] |= shiftmask;
         }
         break;
+      case SDL_SCANCODE_UP: /* Let up be up */
+      case SDL_SCANCODE_LEFT: /* And left be left */
+        keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first]
+          &= ~(1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
+        break;
+
       default: break;
     }
-    // if (k == SDL_SCANCODE_H && ctrl == true) {
-    //   // deactivate
-    //   mem_->write_byte(0x0291,(mem_->read_byte(0x0291)&~0x80));
-    // }
-    // if (k == SDL_SCANCODE_I && ctrl == true) {
-    //   // activate
-    //   mem_->write_byte(0x0291,(mem_->read_byte(0x0291)|0x80));
-    // }
     if (k == SDL_SCANCODE_PAGEUP && runstop == true) {
       /* RUN/STOP RESTORE PRESSED */
       if(sid_->isSIDplaying()) {
@@ -346,6 +352,11 @@ void IO::handle_keyup(SDL_Keycode k)
   {
     switch (k) { /* Handle special keypress combo's */
       case SDL_SCANCODE_ESCAPE: runstop = false; break;
+      case SDL_SCANCODE_UP: /* depress shift on release */
+      case SDL_SCANCODE_LEFT:
+        keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first]
+          |= (1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
+        break;
       default: break;
     }
 
