@@ -1,0 +1,15 @@
+Usage is simple: Start a "game" and wait for one minute. If you wish, you can name and save the measured score to disk.
+The measurement takes exactly one minute (which is 1504 frames at PAL and 1795 frames at NTSC). During this time, cave scan cycles are counted, which in contrast to the real game, is not speed limited. The non-interactive cave is designed lifely in order to simulate realistic conditions. Joysticks and keyboard are scanned, but partially ignored to prevent any interaction. Nevertheless, it is recommended not to push anything while the measuring takes place.
+
+The following scores are already in the list and were measured on real hardware:
+CHA64 PAL 8539: This is the Chameleon with core beta6 and the default 72 Hz VGA.
+SUPER64CPU 7430: Thanks to Oliver W. for his score, which I included for comparison.
+DTV PAL CL 1009: CL stands for classic. F7 is one of those fire buttons. Unfortunately nonfunctional on a PS/2 keyboard.
+DTV PAL EN 773: EN stands for enhanced. In this mode, the full color palette is available and amoeba has its own color, like seen in Atari Boulder Dash. The coloring takes some additional raster time.
+C64 PAL 313: My C64 with no extensions.
+
+Since the standalone mode of the Chameleon has no way to save yet, I post those here:
+Standalone PAL 8399
+Standalone NTSC 8293
+
+Feel free to post your NTSC scores and/or other turbo boards.

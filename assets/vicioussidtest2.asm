@@ -1,0 +1,32 @@
+*= 1000
+IRQ STA $FF
+
+LDA $DC04
+EOR #$07
+AND #$07
+STA *+4
+BPL *
+CMP #$C9
+CMP #$C9
+CMP #$24
+NOP
+
+LDA #$11 ;step 1
+STA $D412
+
+LDA #$09 ;step 2 & 3
+STA $D412
+
+IRQ1 LDA $1000 ;step 4
+STA $D40F
+
+LDA #$01 ;step 5
+STA $D412
+
+INC IRQ1+1
+BNE IRQ2
+INC IRQ1+2
+
+IRQ2 LDA $DC0D
+LDA $FF
+RTI
