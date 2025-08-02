@@ -77,7 +77,7 @@ class Sid
     void vic(Vic *v){vic_ = v;};
     void io(IO *v){io_ = v;};
 
-    unsigned int sid_delay(unsigned int c);
+    unsigned int sid_delay();
     void sid_flush(void);
     uint8_t read_register(uint8_t r, uint8_t sidno);
     void write_register(uint8_t r, uint8_t v, uint8_t sidno);
