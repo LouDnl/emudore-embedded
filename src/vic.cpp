@@ -31,7 +31,7 @@ void Vic::reset()
   /* raster */
   raster_irq_ = raster_c_ = 0;
   irq_enabled_ = irq_status_ = 0;
-  next_raster_at_ = kLineCycles;
+  prev_next_raster_at_ = next_raster_at_ = kLineCycles;
   sprite_sprite_collision_ = 0;
   sprite_bgnd_collision_ = 0;
 
