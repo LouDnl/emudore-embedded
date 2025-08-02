@@ -312,6 +312,7 @@ void IO::process_events()
 
 void IO::handle_keydown(SDL_Keycode k)
 {
+  try
   {
     uint8_t mask = ~(1 << keymap_.at(k).second); /* PRB */
     switch (k) { /* Handle special keypress combo's */
@@ -360,7 +361,7 @@ void IO::handle_keydown(SDL_Keycode k)
     mem_->kCIA1MemWr[0x00] |= (1<<keymap_.at(k).first);  /* PRA ~ ROW */
     mem_->kCIA1MemWr[0x01] |= (1<<keymap_.at(k).second); /* PRB ~ COL */
   }
-  catch(const std::out_of_range){ cout << endl; }
+  catch(const std::out_of_range){}
 }
 
 /**
