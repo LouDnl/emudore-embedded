@@ -5,7 +5,7 @@
 #include "util.h"
 
 #define NANO 1000000000L
-struct timespec m_StartTime, m_LastTime, now;
+struct timespec m_StartTime, m_LastTime, timenow;
 static double us_CPUcycleDuration               = NANO / (float)cycles_per_sec;          /* CPU cycle duration in nanoseconds */
 static double us_InvCPUcycleDurationNanoSeconds = 1.0 / (NANO / (float)cycles_per_sec);  /* Inverted CPU cycle duration in nanoseconds */
 typedef std::chrono::nanoseconds duration_t;   /* Duration in nanoseconds */
@@ -46,7 +46,7 @@ void Sid::reset()
 
 uint_fast64_t Sid::wait_ns(unsigned int cycles)
 { /* TODO: Account for time spent in function calculating */
-  timespec_get(&now, TIME_UTC);
+  timespec_get(&timenow, TIME_UTC);
   long int dur = cycles * us_CPUcycleDuration;  /* duration in nanoseconds */
   int_fast64_t wait_nano = (dur - (m_test2.tv_nsec-m_test1.tv_nsec));
   struct timespec rem;
@@ -59,8 +59,8 @@ uint_fast64_t Sid::wait_ns(unsigned int cycles)
   // HAS NEGATIVE CYCLES, OOPS
   // auto target_time = m_LastTime.tv_nsec + dur;  /* ns to wait since m_LastTime (now + duration for actual wait time minus time spent) */
   // GOOD BUT TOO SLOW FOR DIGI
-  auto target_time = now.tv_nsec + dur;  /* ns to wait since m_LastTime (now + duration for actual wait time) */
-  duration_t target_delta = (duration_t)(int_fast64_t)(target_time - now.tv_nsec);
+  auto target_time = timenow.tv_nsec + dur;  /* ns to wait since m_LastTime (now + duration for actual wait time) */
+  duration_t target_delta = (duration_t)(int_fast64_t)(target_time - timenow.tv_nsec);
   auto wait_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(target_delta);
   // printf("%ld\n",wait_nsec.count());
   timespec_get(&m_test2, TIME_UTC);
