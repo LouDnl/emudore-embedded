@@ -17,6 +17,7 @@
 
 #ifndef EMUDORE_UTIL_H
 #define EMUDORE_UTIL_H
+#pragma once
 
 #include <stdio.h>
 
