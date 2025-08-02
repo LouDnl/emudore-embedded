@@ -85,7 +85,7 @@ class IO
     void cpu(Cpu *v){cpu_=v;};
     void cia1(Cia1 *v){cia1_=v;};
     void cia2(Cia2 *v){cia2_=v;};
-    void mem(Memory *v){mem_ = v;};
+    void memory(Memory *v){mem_ = v;};
     void vic(Vic *v){vic_=v;};
     void sid(Sid *v){sid_=v;};
     void init_color_palette();

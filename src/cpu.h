@@ -160,6 +160,7 @@ class Cpu
     inline void arr();
     inline void xaa(uint8_t v);
   public:
+    Cpu();
     /* cpu state */
     void reset();
     bool emulate();

@@ -34,7 +34,31 @@ Loader::Loader(C64 *c64)
   sid_ = c64_->sid();
   booted_up_ = false;
   format_ = kNone;
+
+  file = NULL;
+
+  sidfile_ = NULL;
+  pl_refresh_rate = 0;
+  pl_frame_cycles = 0;
+  pl_rasterrow_cycles = 0;
+  pl_raster_lines = 0;
+  pl_clock_speed = 0;
+  pl_sidversion = 0;
+  pl_clockspeed = 0;
+  pl_chiptype = 0;
+  pl_curr_sidspeed = 0;
+  pl_sidflags = 0;
+  pl_song_number = 0;
+  pl_songs = 0;
+  pl_sidspeed = 0;
+  pl_databuffer = 0;
+  pl_datalength = 0;
+  pl_playaddr = 0;
+  pl_loadaddr = 0;
+  pl_initaddr = 0;
+
 }
+
 // common ///////////////////////////////////////////////////////////////////
 
 uint16_t Loader::read_short_le()

@@ -38,21 +38,21 @@ C64::C64(bool sdl) :
   /* init cia1 */
   cia1_->cpu(cpu_);
   cia1_->io(io_);
-  cia1_->mem(mem_);
+  cia1_->memory(mem_);
   /* init cia2 */
   cia2_->cpu(cpu_);
   cia2_->io(io_);
-  cia2_->mem(mem_);
+  cia2_->memory(mem_);
   /* init io */
   io_->cpu(cpu_);
-  io_->mem(mem_);
+  io_->memory(mem_);
   io_->cia1(cia1_);
   io_->cia2(cia2_);
   io_->vic(vic_);
   io_->sid(sid_);
   /* Init SID */
   sid_->cpu(cpu_);
-  sid_->mem(mem_);
+  sid_->memory(mem_);
   sid_->cia1(cia1_);
   sid_->cia2(cia2_);
   sid_->vic(vic_);
@@ -100,22 +100,17 @@ void C64::start()
     if(!debugger_->emulate())
       break;
 #endif
-    /* CIA1 */
-    if(!cia1_->emulate())
-      break;
-    /* CIA2 */
-    if(!cia2_->emulate())
-      break;
     /* CPU */
-    if(!cpu_->emulate())
-      break;
+    if(!cpu_->emulate()) break;
+    /* CIA1 */
+    if(!cia1_->emulate()) break;
+    /* CIA2 */
+    if(!cia2_->emulate()) break;
     /* VIC-II */
-    if(!vic_->emulate())
-      break;
-    /* IO */
-    if(!io_->emulate())
-      break;
-    /* callback */
+    if(!vic_->emulate()) break;
+    /* IO (SDL2 keyboard input) */
+    if(!io_->emulate()) break;
+    /* callback executes _after_ first emulation run */
     if(callback_ && !callback_())
       break;
   }

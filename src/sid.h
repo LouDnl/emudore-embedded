@@ -71,7 +71,7 @@ class Sid
     ~Sid();
     void reset(void);
     void cpu(Cpu *v){cpu_ = v;};
-    void mem(Memory *v){mem_ = v;};
+    void memory(Memory *v){mem_ = v;};
     void cia1(Cia1 *v){cia1_ = v;};
     void cia2(Cia2 *v){cia2_ = v;};
     void vic(Vic *v){vic_ = v;};
