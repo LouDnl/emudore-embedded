@@ -34,24 +34,13 @@ class Cia2
     IO *io_;
     Memory *mem_;
 
-    int16_t timer_a_latch_;
-    int16_t timer_b_latch_;
-    int16_t timer_a_counter_;
-    int16_t timer_b_counter_;
-
-    bool timer_a_enabled_;
-    bool timer_b_enabled_;
-    bool timer_a_irq_enabled_;
-    bool timer_b_irq_enabled_;
-    bool timer_a_irq_triggered_;
-    bool timer_b_irq_triggered_;
-
-    uint8_t timer_a_run_mode_;
-    uint8_t timer_b_run_mode_;
-    uint8_t timer_a_input_mode_;
-    uint8_t timer_b_input_mode_;
     unsigned int prev_cpu_cycles_;
-    uint8_t pra_, prb_;
+
+    /* From cRSID/C64.c */
+    unsigned short _fake_samplerate = 44100;
+    short _cia_secondcount = 0;
+    short _cia_tenthsecondcount = (_fake_samplerate/10);
+
   public:
     Cia2();
     void reset(void);
@@ -61,10 +50,9 @@ class Cia2
 
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
-    void reset_timer_a();
-    void reset_timer_b();
     uint16_t vic_base_address();
     bool emulate();
+
     /* constants */
     enum kInputMode
     {
