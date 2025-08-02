@@ -96,18 +96,26 @@ void Cia1::reset()
   mem_->write_byte_no_io(mem_->kCIA1MemWr[PRA],0xFF);
   mem_->write_byte_no_io(mem_->kCIA1MemRd[PRB],0xFF);
   mem_->write_byte_no_io(mem_->kCIA1MemWr[PRB],0xFF);
-  /* OLD */
-  timer_a_latch_ = timer_b_latch_ = timer_a_counter_ = timer_b_counter_ = 0;
-  timer_a_enabled_ = timer_b_enabled_ = timer_a_irq_enabled_ = timer_b_irq_enabled_ = false;
-  timer_a_irq_triggered_ = timer_b_irq_triggered_ = false;
-  timer_a_input_mode_ = timer_b_input_mode_ = kModePHI2;
-  timer_a_run_mode_ = timer_b_run_mode_ = kModeRestart;
 
-  /* NEW */
-  for (uint i = 2; i < 0x10; i++)
-    mem_->write_byte_no_io(mem_->kCIA1Mem[i],0x00);
-  mem_->write_byte_no_io(mem_->kCIA1Mem[PRA],0xFF);
-  mem_->write_byte_no_io(mem_->kCIA1Mem[PRB],0xFF);
+  /* Tests based on cRSID */
+
+  // /* Imitate CIA1 keyboard/joy port, some tunes check if buttons are not pressed */
+  // mem_->write_byte_no_io(mem_->kCIA1MemRd[PRA],0x10);
+  // mem_->write_byte_no_io(mem_->kCIA1MemRd[PRB],0xBB);
+  // if (1) {  /* PAL */
+  //   mem_->write_byte_no_io(mem_->kCIA1MemWr[TAL],0x24);
+  //   mem_->write_byte_no_io(mem_->kCIA1MemWr[TAH],0x40);
+  // } else { /* NTSC */
+  //   mem_->write_byte_no_io(mem_->kCIA1MemWr[TAL],0x95);
+  //   mem_->write_byte_no_io(mem_->kCIA1MemWr[TAH],0x42);
+  // }
+  // /* Reset-default, but for PSID CIA1 TimerA IRQ should be enabled anyway if SID is CIA-timed */
+  // mem_->write_byte_no_io(mem_->kCIA1MemWr[ICR],0x81);
+  // /* Some tunes (and PSID doc) expect already running CIA (Reset-default) */
+  // mem_->write_byte_no_io(mem_->kCIA1MemWr[CRA],0x01);
+  // /* All counters other than CIA1 TimerA should be disabled and set to 0xFF for PSID: */
+  // mem_->write_byte_no_io(mem_->kCIA1MemWr[CRB],0x00);
+
 }
 
 // DMA register access  //////////////////////////////////////////////////////
