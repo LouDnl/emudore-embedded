@@ -19,6 +19,11 @@
 #include "util.h"
 #include <sstream>
 
+Cpu::Cpu()
+{
+ if (LOG_ILLEGALS == 1) logillegals = true;
+}
+
 /**
  * @brief Pre define static CPU cycles variable
  *
@@ -38,7 +43,7 @@ void Cpu::reset()
   pc(mem_->read_word(Memory::kAddrResetVector));
   cycles_ = 6;
 }
-extern bool nope;
+
 /**
  * @brief emulate instruction
  * @return returns false if something goes wrong (e.g. illegal instruction)
@@ -57,7 +62,7 @@ bool Cpu::emulate()
   unsigned int __c = cycles();
   /* D("START INSN: %02X C1:%u\n",insn,__c); */
   bool retval = true;
-  bool ill = (LOG_ILLEGALS == 1 || logillegals); /* set to true for illegal instruction logging */
+  bool ill = logillegals; /* set to true for illegal instruction logging */
   /* emulate instruction */
   switch(insn)
   {
@@ -490,7 +495,7 @@ bool Cpu::emulate()
       if (ill) { dump_regs_insn(insn); }
       nop(2);
       break;
-    case 0x7B: /* RRA abs,Y ~ Illegal OPCode */
+    case 0x7B: /* RRA abs,Y (7) ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
       rra(addr_absy(),4,3);
       break;
@@ -690,13 +695,16 @@ bool Cpu::emulate()
       tax();
       break;
     case 0xB4: /* LDY zpg,X */
-      ldy(load_byte(addr_zerox()),3);
+      // ldy(load_byte(addr_zerox()),3); // incorrect
+      ldy(load_byte(addr_zerox()),4);
       break;
     case 0xB5: /* LDA zpg,X */
-      lda(load_byte(addr_zerox()),3);
+      // lda(load_byte(addr_zerox()),3); // incorrect
+      lda(load_byte(addr_zerox()),4);
       break;
     case 0xB6: /* LDX zpg,Y */
-      ldx(load_byte(addr_zeroy()),3);
+      // ldx(load_byte(addr_zeroy()),3); // incorrect
+      ldx(load_byte(addr_zeroy()),4);
       break;
     case 0xB7: /* LAX zpg,Y ~ Illegal OPCode */
       if (ill) { dump_regs_insn(insn); }
@@ -963,15 +971,18 @@ bool Cpu::emulate()
 }
 
 // helpers ///////////////////////////////////////////////////////////////////
+static unsigned short d_address;
 
 uint8_t Cpu::load_byte(uint16_t addr)
 {
+  d_address = addr;
   return mem_->read_byte(addr);
 }
 
 void Cpu::push(uint8_t v)
 {
   uint16_t addr = Memory::kBaseAddrStack+sp_;
+  d_address = addr;
   mem_->write_byte(addr,v);
   sp_--;
 }
@@ -979,6 +990,7 @@ void Cpu::push(uint8_t v)
 uint8_t Cpu::pop()
 {
   uint16_t addr = ++sp_+Memory::kBaseAddrStack;
+  d_address = addr;
   return load_byte(addr);
 }
 
@@ -997,13 +1009,15 @@ uint16_t Cpu::fetch_opw()
 uint16_t Cpu::addr_zero()
 {
   uint16_t addr = fetch_op();
+  d_address = addr;
   return addr;
 }
 
 uint16_t Cpu::addr_zerox()
 {
   /* wraps around the zeropage */
-  uint16_t addr = (fetch_op() + x()) & 0xff ;
+  uint16_t addr = (fetch_op() + x()) & 0xff;
+  d_address = addr;
   return addr;
 }
 
@@ -1011,12 +1025,14 @@ uint16_t Cpu::addr_zeroy()
 {
   /* wraps around the zeropage */
   uint16_t addr = (fetch_op() + y()) & 0xff;
+  d_address = addr;
   return addr;
 }
 
 uint16_t Cpu::addr_abs()
 {
   uint16_t addr = fetch_opw();
+  d_address = addr;
   return addr;
 }
 
@@ -1026,6 +1042,7 @@ uint16_t Cpu::addr_absy()
   curr_page = addr&0xff00;
   addr += y();
   if ((addr&0xff00)>curr_page) pb_crossed = true;
+  d_address = addr;
   return addr;
 }
 
@@ -1035,6 +1052,7 @@ uint16_t Cpu::addr_absx()
   curr_page = addr&0xff00;
   addr += x();
   if ((addr&0xff00)>curr_page) pb_crossed = true;
+  d_address = addr;
   return addr;
 }
 
@@ -1042,6 +1060,7 @@ uint16_t Cpu::addr_indx()
 {
   /* wraps around the zeropage */
   uint16_t addr = mem_->read_word((addr_zero() + x()) & 0xff);
+  d_address = addr;
   return addr;
 }
 
@@ -1051,6 +1070,7 @@ uint16_t Cpu::addr_indy()
   curr_page = addr&0xff00;
   addr += y();
   if ((addr&0xff00)>curr_page) pb_crossed = true;
+  d_address = addr;
   return addr;
 }
 
@@ -1432,6 +1452,7 @@ void Cpu::dec(uint16_t addr,uint8_t cycles)
   mem_->write_byte(addr,v);
   SET_ZF(v);
   SET_NF(v);
+  tick(cycles);  // was missing
 }
 
 /**
@@ -1683,7 +1704,8 @@ void Cpu::jmp_ind()
   /* Introduce indirect JMP bug */
   addr = (((t&0xFF)==0xFF)?((t&0xFF00)|(addr&0xFF)):addr);
   pc(addr);
-  tick(3);
+  // tick(3); // incorrect
+  tick(5);
 }
 
 /**
@@ -2206,8 +2228,11 @@ void Cpu::dump_regs()
 
 void Cpu::dump_regs_insn(uint8_t insn)
 {
-  D("INSN=%02X ",insn);
+  static uint prev_cycles = cycles();
+  D("INSN=%02X '%-9s' ADDR: $%04X CYC=%u ",
+    insn,opcodenames[insn],d_address,(cycles()-prev_cycles));
   dump_regs();
+  prev_cycles = cycles();
 }
 
 void Cpu::dump_regs_json()
