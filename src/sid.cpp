@@ -87,20 +87,19 @@ uint_fast64_t Sid::wait_ns(unsigned int cycles)
 void Sid::sid_flush()
 {
   const unsigned int now = cpu_->cycles();
-  unsigned int cycles = (now - sid_flush_clk);
+  unsigned int cycles = (now - /* sid_flush_clk */sid_main_clk);
+  // printf("SID Flush called for %d cycles delay @ %u, last was at %u (diff %u) main clock %u\n",
+  //   cycles, now, sid_flush_clk, (now-sid_flush_clk), sid_main_clk);
   if (now < sid_main_clk) { /* Reset / flush */
     sid_write_cycles = 0;
     sid_main_clk = sid_flush_clk = now;
     sid_delay_clk = sid_write_clk = sid_read_clk = now;
     return;
   }
-  // printf("SID Flush called @ %u cycles, last was at %u, diff %u\n",
-    // now, sid_main_clk, cycles);
   while(cycles > 0xFFFF) {
-    printf("SID Flush called @ %u cycles (cycles >= 0xFFFF), last was at %u, diff %u, main clock %u\n",
-    now, sid_flush_clk, cycles, sid_main_clk);
+    // printf("SID Flush called @ %u cycles (cycles >= 0xFFFF), last was at %u, diff %u, main clock %u\n",
+    //   now, sid_flush_clk, cycles, sid_main_clk);
     cycles -= 0xFFFF;
-    // wait_ns(0xFFFF);
   }
   if (int(cycles - sid_write_cycles) > 0) {
     wait_ns(cycles - sid_write_cycles);
@@ -114,7 +113,7 @@ unsigned int Sid::sid_delay()
 {
   timespec_get(&m_test1, TIME_UTC);
   unsigned int now = cpu_->cycles();
-  unsigned int cycles = (now - sid_delay_clk);
+  unsigned int cycles = (now - /* sid_delay_clk */sid_main_clk);
   while (cycles > 0xFFFF) {
     /* printf("SID delay called @ %u cycles (cycles > 0xFFFF), last was at %u, diff %u, main clock %u\n",
       now, sid_delay_clk, cycles, sid_main_clk); */
@@ -145,7 +144,6 @@ void Sid::write_register(uint8_t r, uint8_t v, uint8_t sidno)
   r = ((sidno*0x20) | r);
   unsigned int cycles = sid_delay();
   // mem_->write_byte_no_io(r,v); /* Write to memory space */
-  // if (cycles) wait_ns(cycles);
   if (us_) {
     usbsid->USBSID_WriteRingCycled(r, v, cycles);
     if (logsidrw) D("[WR%d] $%02X:%02X C:%u WRC:%u\n", sidno, r, v, cycles, sid_write_cycles);
