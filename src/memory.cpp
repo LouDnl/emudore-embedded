@@ -35,6 +35,9 @@ Memory::Memory()
    */
   mem_ram_ = new uint8_t[kMemSize]();
   mem_rom_ = new uint8_t[kMemSize]();
+  mem_rom_cia1_ = new uint8_t[kPageSize]();
+  mem_rom_cia2_ = new uint8_t[kPageSize]();
+
   // memset(mem_ram_, 127, sizeof(mem_ram_)/sizeof(mem_ram_[0]));
   int chunk_size = 64;
 
@@ -48,8 +51,10 @@ Memory::Memory()
   // }
 
   /* configure pointers */
-  kCIA1Mem = &mem_ram_[kAddrCIA1Page];
-  kCIA2Mem = &mem_ram_[kAddrCIA2Page];
+  kCIA1MemWr = &mem_ram_[kAddrCIA1Page];
+  kCIA2MemWr = &mem_ram_[kAddrCIA2Page];
+  kCIA1MemRd = &mem_rom_cia1_[0];
+  kCIA2MemRd = &mem_rom_cia2_[0];
 
   /* configure memory layout */
   setup_memory_banks(kLORAM|kHIRAM|kCHAREN);
@@ -73,9 +78,9 @@ Memory::~Memory()
 void Memory::setup_memory_banks(uint8_t v)
 {
   /* get config bits */
-  bool hiram  = ((v&kHIRAM) != 0);
-  bool loram  = ((v&kLORAM) != 0);
-  bool charen = ((v&kCHAREN)!= 0);
+  bool hiram  = ((v&kHIRAM) != 0); /* 2 0b0100 */
+  bool loram  = ((v&kLORAM) != 0); /* 1 0b0010 */
+  bool charen = ((v&kCHAREN)!= 0); /* 4 0b1000 */
   /* init everything to ram */
   for(size_t i=0 ; i < sizeof(banks_) ; i++)
     banks_[i] = kRAM;
@@ -85,10 +90,10 @@ void Memory::setup_memory_banks(uint8_t v)
   load_rom("kernal.901227-03.bin",kBaseAddrKernal);
   /* kernal */
   if (hiram)
-    banks_[kBankKernal] = kROM;
+    banks_[kBankKernal] = kROM;  /* 0xe000 */
   /* basic */
   if (loram && hiram)
-    banks_[kBankBasic] = kROM;
+    banks_[kBankBasic] = kROM;   /* 0xa000 */
   /* charen */
   if (charen && (loram || hiram))
     banks_[kBankCharen] = kIO;

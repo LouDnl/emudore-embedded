@@ -55,7 +55,11 @@ class Memory
     /* ROM & RAM */
     uint8_t *mem_ram_;
     uint8_t *mem_rom_;
+    uint8_t *mem_rom_cia1_;
+    uint8_t *mem_rom_cia2_;
     uint8_t banks_[7];
+
+    uint8_t *disk;
 
     /* Pointers */
     Cpu *cpu_;
@@ -101,18 +105,23 @@ class Memory
     /* load external binaries */
     void load_rom(const std::string &f, uint16_t baseaddr);
     void load_ram(const std::string &f, uint16_t baseaddr);
+
     /* debug */
     void dump();
     void dump(uint16_t start, uint16_t end);
     void print_screen_text();
+
     /* constants */
     static const size_t kMemSize = 0x10000;
+    static const size_t kPageSize = 0x100;
+    static const size_t disksize = 0x2AB00; // max 174848 bytes with 683 sectors of 256 bytes
+
     /* memory addresses  */
-    static const uint16_t kBaseAddrBasic       = 0xa000;
-    static const uint16_t kBaseAddrKernal      = 0xe000;
+    static const uint16_t kBaseAddrBasic       = 0xa000; /* -> 0xbfff */
+    static const uint16_t kBaseAddrKernal      = 0xe000; /* -> 0xffff */
     static const uint16_t kBaseAddrStack       = 0x0100;
     static const uint16_t kBaseAddrScreen      = 0x0400;
-    static const uint16_t kBaseAddrChars       = 0xd000;
+    static const uint16_t kBaseAddrChars       = 0xd000; /* -> 0xdfff */
     static const uint16_t kBaseAddrBitmap      = 0x0000;
     static const uint16_t kBaseAddrColorRAM    = 0xd800;
     static const uint16_t kAddrResetVector     = 0xfffc;
@@ -121,24 +130,38 @@ class Memory
     static const uint16_t kAddrDataDirection   = 0x0000;
     static const uint16_t kAddrMemoryLayout    = 0x0001;
     static const uint16_t kAddrColorRAM        = 0xd800;
-    /* memory layout */
+
+    /* memory page layout */
     static const uint16_t kAddrZeroPage        = 0x0000;
+    /* VIC */
     static const uint16_t kAddrVicFirstPage    = 0xd000;
     static const uint16_t kAddrVicLastPage     = 0xd300;
+    /* SID */
     static const uint16_t kAddrSIDFirstPage    = 0xd400;
     static const uint16_t kAddrSIDLastPage     = 0xd700;
-    static const uint16_t kAddrIOFirstPage     = 0xde00;
-    static const uint16_t kAddrIOLastPage      = 0xdf00;
+    /* CIA */
     static const uint16_t kAddrCIA1Page        = 0xdc00;
     static const uint16_t kAddrCIA2Page        = 0xdd00;
+    /* IO */
+    static const uint16_t kAddrIOFirstPage     = 0xde00;
+    static const uint16_t kAddrIOLastPage      = 0xdf00;
+
+    /* ROM pages */
+    /* BASIC */
     static const uint16_t kAddrBasicFirstPage  = 0xa000;
     static const uint16_t kAddrBasicLastPage   = 0xbf00;
+    /* CHAR */
+    static const uint16_t kAddrCharsFirstPage  = 0xd000;
+    static const uint16_t kAddrCharsLastPage   = 0xdf00;
+    /* KERNAL */
     static const uint16_t kAddrKernalFirstPage = 0xe000;
     static const uint16_t kAddrKernalLastPage  = 0xff00;
+
     /* bank switching */
     static const uint8_t kLORAM  = 1 << 0;
     static const uint8_t kHIRAM  = 1 << 1;
     static const uint8_t kCHAREN = 1 << 2;
+
     /* Number of SID vs memory layout configuration */
     static const uint8_t kMaxSIDs = 2;
     uint8_t kSIDNum = 0; /* TODO: use USBSID-Pico SID amount */
@@ -146,8 +169,10 @@ class Memory
     uint16_t kAddrSIDTwo = 0xd420;
 
     /* Public pointers */
-    uint8_t *kCIA1Mem; /* 0xdc00 */
-    uint8_t *kCIA2Mem; /* 0xdd00 */
+    uint8_t *kCIA1MemWr; /* 0xdc00 */
+    uint8_t *kCIA2MemWr; /* 0xdd00 */
+    uint8_t *kCIA1MemRd; /* 0x(dc)00 */
+    uint8_t *kCIA2MemRd; /* 0x(dd)00 */
 
 };
 
