@@ -263,7 +263,7 @@ x801
            sbc #2 ; 2
            ldx i4 ; 4
            cpx #3 ; 2
-           bcs noload ; 2**
+           bcs noload ; 2** (4) branching
            lda b4 ; 4
            cpx #0 ; 2
            bne nodec ; 2**
@@ -273,25 +273,25 @@ x801
            sbc #1 ; 2
 nodec
 noload
-           sta r4
-           lda #$00
-           ldx i4
-           cpx #7
-           bcs nobit0
+           sta r4 ; 4
+           lda #$00 ; 2
+           ldx i4 ; 4
+           cpx #7 ; 2
+           bcs nobit0 ; 4 branching
 .ifeq NEWCIA - 1
            ora #$81
 .else
            ora #$01
 .endif
 nobit0
-           cpx #6
-           bcs nobit7
+           cpx #6 ; 2
+           bcs nobit7 ; 4 branching
            ora #$80
 nobit7
-           sta rd
-           lda #$01
-           sta re
-           jmp compare
+           sta rd ; 4
+           lda #$01 ;2
+           sta re ; 4
+           jmp compare ; 3
            .bend
 
 ; ------------------------------------------------------------------------------
