@@ -112,10 +112,12 @@ bool Vic::emulate()
       draw_raster_sprites();
     }
     /* next raster */
-    if(is_bad_line())
+    if(is_bad_line()) {
       next_raster_at_+= kBadLineCycles;
-    else
+      /* cpu_->cyclestick(kBadLineCycles); */
+    } else {
       next_raster_at_+= kLineCycles;
+    }
     /* update raster */
     raster_counter(++rstr);
     if (rstr >= kScreenLines)
