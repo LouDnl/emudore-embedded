@@ -460,6 +460,7 @@ void IO::screen_refresh()
  */
 void IO::vsync()
 {
+  sid_->sid_flush(); /* FLUSH */
   using namespace std::chrono;
   auto t = high_resolution_clock::now() - prev_frame_was_at_;
   duration<double> rr(Vic::kRefreshRate);

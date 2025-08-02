@@ -55,6 +55,7 @@ class Vic
     uint8_t bgcolor_[4];
     /* cpu sync */
     unsigned int next_raster_at_;
+    unsigned int prev_next_raster_at_;
     /* frame counter */
     unsigned int frame_c_;
     /* control registers */

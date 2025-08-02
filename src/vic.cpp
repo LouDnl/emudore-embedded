@@ -63,7 +63,9 @@ void Vic::reset()
 // returns true on vertical sync
 bool Vic::emulate()
 {
-  bool verticalSync=false;
+  bool verticalSync = false;
+  static unsigned int cycles, vic_cpu_clock;
+  static int prev_rstr;
   /**
    * if there are unacknowledged interrupts
    * raise an interrupt again
@@ -120,16 +122,19 @@ bool Vic::emulate()
     }
     /* update raster */
     raster_counter(++rstr);
-    if (rstr >= kScreenLines)
+    cycles += (cpu_->cycles() - vic_cpu_clock);
+    if ((rstr >= kScreenLines) /* || ((prev_rstr > rstr) && !(prev_rstr >= kScreenLines)) */)
     { /* BUG: screen refresh is after ~18656 cycles and not 19656? */
       verticalSync=true;
       io_->screen_refresh();
-      sid_->sid_flush(); /* FLUSH */
+      cycles=0;
       frame_c_++;
       raster_counter(0);
       if(sprite_sprite_collision_) ISSET_BIT(irq_enabled_,bitMMC); //checkInterrupt(1);
       if(sprite_bgnd_collision_)   ISSET_BIT(irq_enabled_,bitMBC); //checkInterrupt(2);
-    }
+      prev_next_raster_at_ = next_raster_at_;
+    prev_rstr = rstr;
+    vic_cpu_clock = cpu_->cycles();
   }
   return true;
 }
