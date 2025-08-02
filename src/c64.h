@@ -53,8 +53,9 @@ class C64
     Debugger *debugger_;
 #endif
   public:
-    C64();
+    C64(bool sdl);
     ~C64();
+    bool nosdl;
     void start();
     void callback(std::function<bool()> cb){callback_ = cb;};
     Cpu * cpu(){return cpu_;};

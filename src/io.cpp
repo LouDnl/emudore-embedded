@@ -25,31 +25,38 @@
 bool IO::runstop = false;
 bool IO::shiftlock = false;
 
-IO::IO()
+
+IO::IO(bool sdl) :
+  nosdl(sdl)
 {
-  SDL_Init(SDL_INIT_VIDEO);
-  /**
-   * We create the window double the original pixel size,
-   * the renderer takes care of upscaling
-   */
-  window_ = SDL_CreateWindow(
-        "emudore",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        Vic::kVisibleScreenWidth * 2,
-        Vic::kVisibleScreenHeight * 2,
-        SDL_WINDOW_OPENGL
-  );
+  // printf("sdl: %d %d\n",sdl,nosdl);
+  if(!nosdl) {
+    SDL_Init(SDL_INIT_VIDEO);
+    /**
+    * We create the window double the original pixel size,
+    * the renderer takes care of upscaling
+    */
+    window_ = SDL_CreateWindow(
+          "emudore",
+          SDL_WINDOWPOS_UNDEFINED,
+          SDL_WINDOWPOS_UNDEFINED,
+          Vic::kVisibleScreenWidth * 2,
+          Vic::kVisibleScreenHeight * 2,
+          SDL_WINDOW_OPENGL
+    );
+  }
   cols_ = Vic::kVisibleScreenWidth;
   rows_ = Vic::kVisibleScreenHeight;
   /* use a single texture and hardware acceleration */
-  renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
-  texture_  = SDL_CreateTexture(renderer_,
-                                SDL_PIXELFORMAT_ARGB8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                cols_,
-                                rows_);
-  format_ = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
+  if(!nosdl) {
+    renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
+    texture_  = SDL_CreateTexture(renderer_,
+                                  SDL_PIXELFORMAT_ARGB8888,
+                                  SDL_TEXTUREACCESS_STREAMING,
+                                  cols_,
+                                  rows_);
+    format_ = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
+    }
   /**
    * unfortunately, we need to keep a copy of the rendered frame
    * in our own memory, there does not seem to be a way around
@@ -69,10 +76,12 @@ IO::IO()
 IO::~IO()
 {
   delete [] frame_;
-  SDL_DestroyRenderer(renderer_);
-  SDL_DestroyTexture(texture_);
-  SDL_FreeFormat(format_);
-  SDL_Quit();
+  if(!nosdl) {
+    SDL_DestroyRenderer(renderer_);
+    SDL_DestroyTexture(texture_);
+    SDL_FreeFormat(format_);
+    SDL_Quit();
+  }
 }
 
 void IO::reset()
@@ -216,8 +225,11 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_APOSTROPHE]   = std::make_pair(5,6); // @
   keymap_[SDL_SCANCODE_LGUI]         = std::make_pair(7,5); // (Win/Cmd) CBM / commodore key
   keymap_[SDL_SCANCODE_LCTRL]        = std::make_pair(7,2); // CTRL
+  keymap_[SDL_SCANCODE_RCTRL]        = std::make_pair(7,2); // CTRL
+  keymap_[SDL_SCANCODE_LALT]         = std::make_pair(7,2); // CTRL
+  keymap_[SDL_SCANCODE_RALT]         = std::make_pair(7,2); // CTRL
   keymap_[SDL_SCANCODE_ESCAPE]       = std::make_pair(7,7); // RUN/STOP
-  // keymap_[SDL_SCANCODE_PAGEUP]       = std::make_pair(7,5); // RESTORE
+  keymap_[SDL_SCANCODE_PAGEUP]       = std::make_pair(7,5); // RESTORE
 }
 
 /**
@@ -225,48 +237,52 @@ void IO::init_keyboard()
  */
 void IO::init_color_palette()
 {
-
-  color_palette[0]   = SDL_MapRGB(format_, 0x00, 0x00, 0x00);
-  color_palette[1]   = SDL_MapRGB(format_, 0xff, 0xff, 0xff);
-  color_palette[2]   = SDL_MapRGB(format_, 0xab, 0x31, 0x26);
-  color_palette[3]   = SDL_MapRGB(format_, 0x66, 0xda, 0xff);
-  color_palette[4]   = SDL_MapRGB(format_, 0xbb, 0x3f, 0xb8);
-  color_palette[5]   = SDL_MapRGB(format_, 0x55, 0xce, 0x58);
-  color_palette[6]   = SDL_MapRGB(format_, 0x1d, 0x0e, 0x97);
-  color_palette[7]   = SDL_MapRGB(format_, 0xea, 0xf5, 0x7c);
-  color_palette[8]   = SDL_MapRGB(format_, 0xb9, 0x74, 0x18);
-  color_palette[9]   = SDL_MapRGB(format_, 0x78, 0x53, 0x00);
-  color_palette[10]  = SDL_MapRGB(format_, 0xdd, 0x93, 0x87);
-  color_palette[11]  = SDL_MapRGB(format_, 0x5b, 0x5b, 0x5b);
-  color_palette[12]  = SDL_MapRGB(format_, 0x8b, 0x8b, 0x8b);
-  color_palette[13]  = SDL_MapRGB(format_, 0xb0, 0xf4, 0xac);
-  color_palette[14]  = SDL_MapRGB(format_, 0xaa, 0x9d, 0xef);
-  color_palette[15]  = SDL_MapRGB(format_, 0xb8, 0xb8, 0xb8);
+  if(!nosdl) {
+    color_palette[0]   = SDL_MapRGB(format_, 0x00, 0x00, 0x00);
+    color_palette[1]   = SDL_MapRGB(format_, 0xff, 0xff, 0xff);
+    color_palette[2]   = SDL_MapRGB(format_, 0xab, 0x31, 0x26);
+    color_palette[3]   = SDL_MapRGB(format_, 0x66, 0xda, 0xff);
+    color_palette[4]   = SDL_MapRGB(format_, 0xbb, 0x3f, 0xb8);
+    color_palette[5]   = SDL_MapRGB(format_, 0x55, 0xce, 0x58);
+    color_palette[6]   = SDL_MapRGB(format_, 0x1d, 0x0e, 0x97);
+    color_palette[7]   = SDL_MapRGB(format_, 0xea, 0xf5, 0x7c);
+    color_palette[8]   = SDL_MapRGB(format_, 0xb9, 0x74, 0x18);
+    color_palette[9]   = SDL_MapRGB(format_, 0x78, 0x53, 0x00);
+    color_palette[10]  = SDL_MapRGB(format_, 0xdd, 0x93, 0x87);
+    color_palette[11]  = SDL_MapRGB(format_, 0x5b, 0x5b, 0x5b);
+    color_palette[12]  = SDL_MapRGB(format_, 0x8b, 0x8b, 0x8b);
+    color_palette[13]  = SDL_MapRGB(format_, 0xb0, 0xf4, 0xac);
+    color_palette[14]  = SDL_MapRGB(format_, 0xaa, 0x9d, 0xef);
+    color_palette[15]  = SDL_MapRGB(format_, 0xb8, 0xb8, 0xb8);
+  }
 }
 
 // emulation ///////////////////////////////////////////////////////////////////
 
 bool IO::emulate()
 {
+  process_events();
   return retval_;
 }
 
 void IO::process_events()
 {
-  SDL_Event event;
-  while(SDL_PollEvent(&event))
-  {
-    switch(event.type)
+  if(!nosdl) {
+    SDL_Event event;
+    while(SDL_PollEvent(&event))
     {
-    case SDL_KEYDOWN:
-      handle_keydown(event.key.keysym.scancode);
-      break;
-    case SDL_KEYUP:
-      handle_keyup(event.key.keysym.scancode);
-      break;
-    case SDL_QUIT:
-      retval_ = false;
-      break;
+      switch(event.type)
+      {
+      case SDL_KEYDOWN:
+        handle_keydown(event.key.keysym.scancode);
+        break;
+      case SDL_KEYUP:
+        handle_keyup(event.key.keysym.scancode);
+        break;
+      case SDL_QUIT:
+        retval_ = false;
+        break;
+      }
     }
   }
   /* process fake keystrokes if any */
@@ -296,12 +312,13 @@ void IO::process_events()
 
 void IO::handle_keydown(SDL_Keycode k)
 {
-  // cout << "KEY: " << k;
-  try
   {
+    uint8_t mask = ~(1 << keymap_.at(k).second); /* PRB */
     switch (k) { /* Handle special keypress combo's */
       uint8_t shiftmask;
-      case SDL_SCANCODE_ESCAPE: runstop = true; break;
+      case SDL_SCANCODE_ESCAPE:
+        runstop = true;
+        break;
       case SDL_SCANCODE_CAPSLOCK: /* (Un)set shiftlock */
         shiftlock = !shiftlock;
         if (shiftlock) {
@@ -316,29 +333,32 @@ void IO::handle_keydown(SDL_Keycode k)
         break;
       case SDL_SCANCODE_UP: /* Let up be up */
       case SDL_SCANCODE_LEFT: /* And left be left */
-        keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first]
-          &= ~(1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
+          keyboard_matrix_[keymap_.at(SDL_SCANCODE_LSHIFT).first]
+            &= ~(1 << keymap_.at(SDL_SCANCODE_LSHIFT).second);
         break;
-
-      default: break;
+      case SDL_SCANCODE_PAGEUP:
+        if (runstop == true) {
+          /* RUN/STOP RESTORE PRESSED */
+          if(sid_->isSIDplaying()) {
+            // enable kernel and basic rom in ram
+            sid_->set_playing(false);
+            mem_->write_byte(0x0001, 0x37);
+          }
+          cpu_->reset();
+          cia1_->reset();
+          cia2_->reset();
+          vic_->reset();
+          reset(); /* IOD */
+          sid_->reset();
+        }
+        break;
+      default:
+        break;
     }
-    if (k == SDL_SCANCODE_PAGEUP && runstop == true) {
-      /* RUN/STOP RESTORE PRESSED */
-      if(sid_->isSIDplaying()) {
-        // enable kernel and basic rom in ram
-        sid_->set_playing(false);
-        mem_->write_byte(0x0001, 0x37);
-      }
-      cpu_->reset();
-      cia1_->reset();
-      cia2_->reset();
-      vic_->reset();
-      reset(); /* IOD */
-      sid_->reset();
-    };
-    uint8_t mask = ~(1 << keymap_.at(k).second);
-    keyboard_matrix_[keymap_.at(k).first] &= mask;
-    // cout << " " << keymap_.at(k).first << " " << keymap_.at(k).second << endl;
+    keyboard_matrix_[keymap_.at(k).first] &= mask; /* PRA */
+
+    mem_->kCIA1MemWr[0x00] |= (1<<keymap_.at(k).first);  /* PRA ~ ROW */
+    mem_->kCIA1MemWr[0x01] |= (1<<keymap_.at(k).second); /* PRB ~ COL */
   }
   catch(const std::out_of_range){ cout << endl; }
 }
@@ -360,8 +380,10 @@ void IO::handle_keyup(SDL_Keycode k)
       default: break;
     }
 
-    uint8_t mask = (1 << keymap_.at(k).second);
-    keyboard_matrix_[keymap_.at(k).first] |= mask;
+    uint8_t mask = (1 << keymap_.at(k).second);    /* PRB */
+    keyboard_matrix_[keymap_.at(k).first] |= mask; /* PRA */
+    mem_->kCIA1MemWr[0x01] &= ~(1<<keymap_.at(k).second); /* PRB ~ COL */
+    mem_->kCIA1MemWr[0x00] &= ~(1<<keymap_.at(k).first);  /* PRA ~ ROW */
   }
   catch(const std::out_of_range){}
 }
@@ -401,15 +423,18 @@ void IO::screen_draw_border(int y, int color)
 
 /**
  * @brief refresh screen
+ * Called from vic->emulate();
  *
  * Upload the texture to the GPU
  */
 void IO::screen_refresh()
 {
-  SDL_UpdateTexture(texture_, NULL, frame_, cols_ * sizeof(uint32_t));
-  SDL_RenderClear(renderer_);
-  SDL_RenderCopy(renderer_,texture_, NULL, NULL);
-  SDL_RenderPresent(renderer_);
+  if(!nosdl) {
+    SDL_UpdateTexture(texture_, NULL, frame_, cols_ * sizeof(uint32_t));
+    SDL_RenderClear(renderer_);
+    SDL_RenderCopy(renderer_,texture_, NULL, NULL);
+    SDL_RenderPresent(renderer_);
+  }
   /* process SDL events once every frame */
   process_events();
   /* perform vertical refresh sync */

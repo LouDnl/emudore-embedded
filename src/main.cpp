@@ -25,6 +25,7 @@
 C64 *c64;
 Loader *loader;
 bool wget_download_finished = false;
+bool nosdl = false;
 
 bool loader_cb()
 {
@@ -54,9 +55,19 @@ void load_file(const char *file) /* TODO: ADD ARGUMENTS FOR SIDFILE PLAY */
   }
 }
 
+void checkargs(int argc, char **argv)
+{
+  if(argc>=1) {
+    for(int a = 1; a < argc; a++) {
+      if(!strcmp(argv[a], "-cli")) nosdl = true;
+    }
+  }
+}
+
 int main(int argc, char **argv)
 {
-  c64 = new C64();
+  checkargs(argc, argv);
+  c64 = new C64(nosdl);
   /* check if asked load a program */
   if(argc != 1)
   {

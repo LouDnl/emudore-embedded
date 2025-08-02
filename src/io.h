@@ -76,8 +76,9 @@ class IO
     static bool runstop;
     static bool shiftlock;
   public:
-    IO();
+    IO(bool sdl);
     ~IO();
+    bool nosdl;
     void reset(void);
     bool emulate();
     void process_events();

@@ -17,7 +17,8 @@
 #include "c64.h"
 #include "util.h"
 
-C64::C64()
+C64::C64(bool sdl) :
+  nosdl(sdl)
 {
   /* create chips */
   cpu_  = new Cpu();
@@ -26,7 +27,7 @@ C64::C64()
   cia2_ = new Cia2();
   vic_  = new Vic();
   sid_  = new Sid();
-  io_   = new IO();
+  io_   = new IO(nosdl);
   /* init cpu */
   cpu_->memory(mem_);
   /* init vic-ii */
