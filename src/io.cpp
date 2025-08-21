@@ -201,9 +201,9 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_0] = std::make_pair(4,3);
   /* keymap function keys */
   keymap_[SDL_SCANCODE_F1] = std::make_pair(0,4);
-  keymap_[SDL_SCANCODE_F3] = std::make_pair(0,4);
-  keymap_[SDL_SCANCODE_F5] = std::make_pair(0,4);
-  keymap_[SDL_SCANCODE_F7] = std::make_pair(0,4);
+  keymap_[SDL_SCANCODE_F3] = std::make_pair(0,5);
+  keymap_[SDL_SCANCODE_F5] = std::make_pair(0,6);
+  keymap_[SDL_SCANCODE_F7] = std::make_pair(0,3);
   /* keymap: other */
   keymap_[SDL_SCANCODE_RETURN]    = std::make_pair(0,1);
   keymap_[SDL_SCANCODE_SPACE]     = std::make_pair(7,4);
