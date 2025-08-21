@@ -1,0 +1,311 @@
+#include <c64.h> /* All classes are loaded through c64.h */
+
+
+/**
+ * @brief: Setup must happen _after_ memory
+ */
+PLA::PLA(C64 * c64) :
+  c64_(c64)
+{
+  havecart = c64_->havecart;
+  logplabank = c64_->bankswlog;
+
+  /* configure memory layout */
+  if (!havecart) { /* default mode 31, all bits high */
+    setup_memory_banks(kLORAM|kHIRAM|kCHARGEN|kGAME|kEXROM);
+  } else { /* cart depends on cart type */
+    setup_memory_banks(kLORAM|kHIRAM|kCHARGEN/* |kGAME|kEXROM */); /* TODO: CHANGE */
+  }
+}
+
+PLA::~PLA()
+{
+
+}
+
+/**
+  * Example:
+  * PLA latch bits: 11111 ~ 54321
+  * kLORAM   ~ 1
+  * kHIRAM   ~ 2
+  * kCHARGEN ~ 3
+  * kGAME    ~ 4
+  * kEXROM   ~ 5
+  *
+  * In mode 31 (default) all bits are high (1)
+  * In mode 20 bits are 10100 this corresponds to:
+  * kEXROM,0,kCHARGEN,0,0
+  */
+void PLA::switch_banks(uint8_t v)
+{
+  /* Setup bank mode on boot */
+  switch ((v&0x1F)) { /* Masked to check only available bits */
+    case m31:
+      banks_[kBankRam0]    = kRAM; /* RAM     ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM     ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM     ~ 0x8000 */
+      banks_[kBankBasic]   = kROM; /* BASIC   ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM     ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO      ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL  ~ 0xe000 */
+      break;
+    case m30: /* fallthrough ~ same settings */
+    case m14:
+      banks_[kBankRam0]    = kRAM; /* RAM     ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM     ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM     ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM     ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM     ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO      ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL  ~ 0xe000 */
+      break;
+    case m29: /* fallthrough ~ same settings */
+    case m13:
+      banks_[kBankRam0]    = kRAM; /* RAM     ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM     ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM     ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM     ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM     ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO      ~ 0xd000 */
+      banks_[kBankKernal]  = kRAM; /* RAM     ~ 0xe000 */
+      break;
+    case m28: /* fallthrough ~ same settings */
+    case m24:
+      banks_[kBankRam0]    = kRAM; /* RAM     ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM     ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM     ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM     ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM     ~ 0xc000 */
+      banks_[kBankChargen] = kRAM; /* RAM     ~ 0xd000 */
+      banks_[kBankKernal]  = kRAM; /* RAM     ~ 0xe000 */
+      break;
+    case m27:
+      banks_[kBankRam0]    = kRAM; /* RAM     ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM     ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM     ~ 0x8000 */
+      banks_[kBankBasic]   = kROM; /* BASIC   ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM     ~ 0xc000 */
+      banks_[kBankChargen] = kROM; /* CHARGEN ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL  ~ 0xe000 */
+      break;
+    case m26: /* fallthrough ~ same settings */
+    case m10:
+      banks_[kBankRam0]    = kRAM; /* RAM     ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM     ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM     ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM     ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM     ~ 0xc000 */
+      banks_[kBankChargen] = kROM; /* CHARGEN ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL  ~ 0xe000 */
+      break;
+    case m25: /* fallthrough ~ same settings */
+    case m09:
+      banks_[kBankRam0]    = kRAM; /* RAM     ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM     ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM     ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM     ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM     ~ 0xc000 */
+      banks_[kBankChargen] = kROM; /* CHARGEN ~ 0xd000 */
+      banks_[kBankKernal]  = kRAM; /* KERNAL  ~ 0xe000 */
+      break;
+    case m23: /* fallthrough ~ same settings */
+    case m22:
+    case m21:
+    case m20:
+    case m19:
+    case m18:
+    case m17:
+    case m16:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kUNM; /* UNMAPPED ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kCLO; /* CART LO  ~ 0x8000 */
+      banks_[kBankBasic]   = kUNM; /* UNMAPPED ~ 0xa000 */
+      banks_[kBankRam2]    = kUNM; /* UNMAPPED ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO       ~ 0xd000 */
+      banks_[kBankKernal]  = kCHI; /* CART HI  ~ 0xe000 */
+      break;
+    case m15:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kCLO; /* CART LO  ~ 0x8000 */
+      banks_[kBankBasic]   = kROM; /* BASIC    ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO       ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL   ~ 0xe000 */
+      break;
+    case m12: /* fallthrough ~ same settings */
+    case m08:
+    case m04:
+    case m00:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM      ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM      ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kRAM; /* RAM      ~ 0xd000 */
+      banks_[kBankKernal]  = kRAM; /* RAM      ~ 0xe000 */
+      break;
+    case m11:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kCLO; /* CART LO  ~ 0x8000 */
+      banks_[kBankBasic]   = kROM; /* BASIC    ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kROM; /* CHARGEN  ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL   ~ 0xe000 */
+      break;
+    case m07:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kCLO; /* CART LO  ~ 0x8000 */
+      banks_[kBankBasic]   = kCHI; /* CART HI  ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO       ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL   ~ 0xe000 */
+      break;
+    case m06:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM      ~ 0x8000 */
+      banks_[kBankBasic]   = kCHI; /* CART HI  ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO       ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL   ~ 0xe000 */
+      break;
+    case m05:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM      ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM      ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kIO;  /* IO       ~ 0xd000 */
+      banks_[kBankKernal]  = kRAM; /* RAM      ~ 0xe000 */
+      break;
+    case m03:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kCLO; /* CART LO  ~ 0x8000 */
+      banks_[kBankBasic]   = kCHI; /* CART HI  ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kROM; /* CHARGEN  ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL   ~ 0xe000 */
+      break;
+    case m02:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM      ~ 0x8000 */
+      banks_[kBankBasic]   = kCHI; /* CART HI  ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kROM; /* CHARGEN  ~ 0xd000 */
+      banks_[kBankKernal]  = kROM; /* KERNAL   ~ 0xe000 */
+      break;
+    case m01:
+      banks_[kBankRam0]    = kRAM; /* RAM      ~ 0x0000 - Unchangeable */
+      banks_[kBankRam1]    = kRAM; /* RAM      ~ 0x1000 - Gets unmapped if in Ultimax Mode */
+      banks_[kBankCart]    = kRAM; /* RAM      ~ 0x8000 */
+      banks_[kBankBasic]   = kRAM; /* RAM      ~ 0xa000 */
+      banks_[kBankRam2]    = kRAM; /* RAM      ~ 0xc000 */
+      banks_[kBankChargen] = kRAM; /* RAM      ~ 0xd000 */
+      banks_[kBankKernal]  = kRAM; /* RAM      ~ 0xe000 */
+      break;
+    default:
+      D("[PLA] Unmapped bank switch mode from %02X to %02X %02X requested\n",
+        c64_->mem_->read_byte_no_io(Memory::kAddrMemoryLayout),
+        v, (v&0x1f));
+      break;
+  }
+}
+
+/**
+ * @brief configure memory banks on boot
+ *
+ * There are five latch bits that control the configuration allowing
+ * for a total of 32 different memory layouts, for now we only take
+ * in count three bits : HIRAM/LORAM/CHAREN
+ */
+void PLA::setup_memory_banks(uint8_t v) // TODO: If havecart enable cartrom etc!
+{
+  /* load ROMs */
+  c64_->mem_->load_rom("basic.901226-01.bin",Memory::kBaseAddrBasic);
+  c64_->mem_->load_rom("characters.901225-01.bin",Memory::kBaseAddrChars);
+  c64_->mem_->load_rom("kernal.901227-03.bin",Memory::kBaseAddrKernal);
+
+
+  /* start with mode 1 and set everything to ram */
+  for(size_t i=0 ; i < sizeof(banks_) ; i++) {
+    banks_[i] = kRAM;
+  }
+
+  /* Switch banks on boot */
+  if(logplabank){D("Bank setup @ boot to: %02X %02X\n",v,(v&0x1f));}
+  switch_banks(v);
+
+  /* write the config to the zero page */
+  c64_->memory()->write_byte_no_io(Memory::kAddrMemoryLayout, v);
+
+  /* configure data directional bits */
+  c64_->memory()->write_byte_no_io(Memory::kAddrDataDirection, data_direction_default);
+  /* TODO: Must account for Cartridge and cartridge ROMS aswell! */
+}
+
+/**
+ * @brief configure memory banks during runtime, limited to 3 cpu latches
+ *
+ * During runtime the system can only change bit 0,1 and 2
+ *
+ */
+void PLA::runtime_bank_switching(uint8_t v) /* TODO: UPDATE TO NEW MODE SWITCHING WAY */
+{
+  /* Setup bank mode during runtime */
+  uint8_t c = c64_->mem_->read_byte_no_io(Memory::kAddrMemoryLayout);
+  uint8_t b = (0x18|(v&0x1f)); /* 0x18 is temorary set 11000 for banks, cannot change carts during runtime */
+  if(logplabank){D("[PLA] Bank switch @ runtime from %02X to: %02X %02X\n",c,v,b);};
+  switch_banks(b);
+
+  /* write the config to the zero page */
+  c64_->mem_->write_byte_no_io(Memory::kAddrMemoryLayout, (c|(v&0x7)));
+
+  /* configure data directional bits */
+  c64_->mem_->write_byte_no_io(Memory::kAddrDataDirection, data_direction_default);
+}
+
+/* Not working, broken and unfinished */
+void PLA::c1541(void)
+{
+  return; /* Disabled */
+  disk = new uint8_t[disksize]();
+  DISKptr = &disk[0];
+
+  // memset(mem_ram_, 127, sizeof(mem_ram_)/sizeof(mem_ram_[0]));
+  int chunk_size = 64;
+
+  // for (int i = 0; i < kMemSize; i += chunk_size) {
+  //   memset(mem_ram_ + i, 0x00, chunk_size);
+  //   D("%04X 00\n", i);
+  //   if (i + chunk_size < kMemSize) {
+  //     memset(mem_ram_ + i + chunk_size, 0xFF, chunk_size);
+  //     D("%04X FF\n", i+chunk_size);
+  //   }
+  // }
+}
+
+void PLA::write_pla(uint16_t addr, uint8_t v)
+{ /* Unused */
+
+}
+
+uint8_t PLA::read_pla(uint16_t addr)
+{ /* Unused */
+  uint8_t retval = 0;
+  return retval;
+}
+
+void PLA::reset(void)
+{ /* Unused */
+
+}
+
+void PLA::emulate(void)
+{ /* Unused */
+
+}
