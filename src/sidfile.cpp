@@ -4,7 +4,7 @@
 // Last update : 2025
 //============================================================================
 
-#include "sidfile.h"
+#include <sidfile.h>
 
 SidFile::SidFile()
 {
