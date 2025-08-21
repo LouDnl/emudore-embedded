@@ -14,8 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef EMUDORE_SID_H
 #define EMUDORE_SID_H
+
 
 #include <cstdint>
 
@@ -24,14 +26,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "cpu.h"
-#include "memory.h"
-#include "cia1.h"
-#include "cia2.h"
-#include "vic.h"
-#include "io.h"
-#include "sidfile.h"
-#include "USBSID.h"
+#include <USBSID.h>
 
 
 /**
@@ -43,12 +38,7 @@
 class Sid
 {
   private:
-    Cpu *cpu_;
-    Memory *mem_;
-    Cia1 *cia1_;
-    Cia2 *cia2_;
-    Vic *vic_;
-    IO *io_;
+    C64 *c64_;
 
     USBSID_NS::USBSID_Class *usbsid;
     bool us_ = false;
@@ -67,15 +57,10 @@ class Sid
     uint_fast64_t wait_ns(unsigned int cycles);
 
   public:
-    Sid();
+    Sid(C64 * c64);
     ~Sid();
+
     void reset(void);
-    void cpu(Cpu *v){cpu_ = v;};
-    void memory(Memory *v){mem_ = v;};
-    void cia1(Cia1 *v){cia1_ = v;};
-    void cia2(Cia2 *v){cia2_ = v;};
-    void vic(Vic *v){vic_ = v;};
-    void io(IO *v){io_ = v;};
 
     unsigned int sid_delay();
     void sid_flush(void);
