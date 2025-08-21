@@ -19,6 +19,7 @@
 #define EMUDORE_UTIL_H
 #pragma once
 
+
 #include <stdio.h>
 
 #ifndef NDEBUG
@@ -68,4 +69,5 @@
 #endif
 #endif
 
-#endif
+
+#endif /* EMUDORE_UTIL_H */
