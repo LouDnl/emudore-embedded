@@ -28,8 +28,9 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "util.h"
-#include "debugger.h"
+#include <c64.h>
+#include <debugger.h>
+
 
 Debugger::Debugger()
 {

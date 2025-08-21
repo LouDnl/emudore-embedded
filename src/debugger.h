@@ -14,8 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef EMUDORE_DEBUGGER_H
 #define EMUDORE_DEBUGGER_H
+
 
 /**
  * @brief Debugger
@@ -25,11 +27,9 @@
  * https://github.com/radare/radare2
  */
 
-#include "cpu.h"
-#include "memory.h"
-
 #include <vector>
 #include <string>
+
 
 class Debugger
 {
@@ -65,4 +65,5 @@ class Debugger
     };
 };
 
-#endif
+
+#endif /* EMUDORE_DEBUGGER_H */
