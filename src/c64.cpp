@@ -14,60 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "c64.h"
-#include "util.h"
 
-C64::C64(bool sdl) :
-  nosdl(sdl)
-{
-  /* create chips */
-  cpu_  = new Cpu();
-  mem_  = new Memory();
-  cia1_ = new Cia1();
-  cia2_ = new Cia2();
-  vic_  = new Vic();
-  sid_  = new Sid();
-  io_   = new IO(nosdl);
+#include <c64.h>
+#include <util.h>
+
+
+C64::C64(bool sdl, bool bin, bool crt, bool blog) :
+  nosdl(sdl),
+  isbinary(bin),
+  havecart(crt),
+  bankswlog(blog)
+{ /* BUG: Auto PRG start seems broken at times? */
+  /* create and init C64 */
   /* init cpu */
-  cpu_->memory(mem_);
-  /* init vic-ii */
-  vic_->memory(mem_);
-  vic_->cpu(cpu_);
-  vic_->io(io_);
-  vic_->sid(sid_);
+  cpu_  = new Cpu(this);
+  /* init memory & DMA */
+  mem_  = new Memory(this);
+  /* init PLA */
+  pla_  = new PLA(this);
   /* init cia1 */
-  cia1_->cpu(cpu_);
-  cia1_->io(io_);
-  cia1_->memory(mem_);
+  cia1_ = new Cia1(this);
   /* init cia2 */
-  cia2_->cpu(cpu_);
-  cia2_->io(io_);
-  cia2_->memory(mem_);
+  cia2_ = new Cia2(this);
+  /* init vic-ii */
+  vic_  = new Vic(this);
+  /* init SID */
+  sid_  = new Sid(this);
   /* init io */
-  io_->cpu(cpu_);
-  io_->memory(mem_);
-  io_->cia1(cia1_);
-  io_->cia2(cia2_);
-  io_->vic(vic_);
-  io_->sid(sid_);
-  /* Init SID */
-  sid_->cpu(cpu_);
-  sid_->memory(mem_);
-  sid_->cia1(cia1_);
-  sid_->cia2(cia2_);
-  sid_->vic(vic_);
-  sid_->io(io_);
-  /* DMA */
-  mem_->cpu(cpu_);
-  mem_->vic(vic_);
-  mem_->cia1(cia1_);
-  mem_->cia2(cia2_);
-  mem_->sid(sid_);
+  io_   = new IO(this,nosdl);
+  /* Always create cart object */
+  cart_ = new Cart(this);
 
   /* Resets before start */
   cpu_->reset();
   cia1_->reset();
   cia2_->reset();
+  pla_->reset();
+  cart_->reset();
 
  /* r2 support */
 #ifdef DEBUGGER_SUPPORT
@@ -86,6 +69,7 @@ C64::~C64()
   delete vic_;
   delete sid_;
   delete io_;
+  delete pla_;
 #ifdef DEBUGGER_SUPPORT
   delete debugger_;
 #endif
@@ -99,7 +83,7 @@ void C64::start()
 #ifdef DEBUGGER_SUPPORT
     if(!debugger_->emulate())
       break;
-#endif
+#endif /* TODO: Remove unneeded if statements (deprecate return values on some emulation runs) */
     /* CPU */
     if(!cpu_->emulate()) break;
     /* CIA1 */
@@ -110,6 +94,8 @@ void C64::start()
     if(!vic_->emulate()) break;
     /* IO (SDL2 keyboard input) */
     if(!io_->emulate()) break;
+    pla_->emulate();
+    if(havecart) { cart_->emulate(); }
     /* callback executes _after_ first emulation run */
     if(callback_ && !callback_())
       break;

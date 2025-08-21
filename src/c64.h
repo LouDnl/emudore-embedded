@@ -18,19 +18,35 @@
 #ifndef EMUDORE_C64_H
 #define EMUDORE_C64_H
 
+
 #include <functional>
 
-#include "cpu.h"
-#include "memory.h"
-#include "cia1.h"
-#include "cia2.h"
-#include "vic.h"
-#include "sid.h"
-#include "io.h"
+/* forward declarations */
+class C64;
+class Cpu;
+class PLA;
+class Cia1;
+class Cia2;
+class Vic;
+class IO;
+class Cart;
+class Sid;
+
+#include <memory.h>
+#include <cpu.h>
+#include <pla.h>
+#include <cia1.h>
+#include <cia2.h>
+#include <vic.h>
+#include <io.h>
+#include <cart.h>
+#include <sid.h>
+#include <util.h>
 
 #ifdef DEBUGGER_SUPPORT
-#include "debugger.h"
+#include <debugger.h>
 #endif
+
 
 /**
  * @brief Commodore 64
@@ -40,31 +56,48 @@
  */
 class C64
 {
-  private:
+  public: /* Public so subclasses can access them */
     Cpu *cpu_;
+    PLA *pla_;
     Memory *mem_;
     Cia1 *cia1_;
     Cia2 *cia2_;
     Vic *vic_;
-    Sid *sid_;
     IO *io_;
+    Cart *cart_;
+    Sid *sid_;
+
+  private:
     std::function<bool()> callback_;
 #ifdef DEBUGGER_SUPPORT
     Debugger *debugger_;
 #endif
   public:
-    C64(bool sdl);
+    C64(bool sdl, bool bin, bool crt, bool blog);
     ~C64();
-    bool nosdl;
+
+  public: /* Make protected after class children implementation */
+    bool nosdl = false;
+    bool isbinary = false;
+    bool havecart = false;
+    bool bankswlog = false;
+
+  public:
     void start();
     void callback(std::function<bool()> cb){callback_ = cb;};
     Cpu * cpu(){return cpu_;};
+    PLA * pla(){return pla_;};
     Memory * memory(){return mem_;};
-    IO * io(){return io_;};
+    Cia1 * cia1(){return cia1_;};
+    Cia2 * cia2(){return cia2_;};
     Vic * vic(){return vic_;};
+    IO * io(){return io_;};
+    Cart * cart(){return cart_;};
     Sid * sid(){return sid_;};
+
     /* test cpu */
     void test_cpu();
 };
 
-#endif
+
+#endif /* EMUDORE_C64_H */
