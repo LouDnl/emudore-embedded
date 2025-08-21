@@ -19,13 +19,16 @@
 #include <string>
 #include <algorithm>
 
-#include "c64.h"
-#include "loader.h"
+#include <c64.h>
+#include <loader.h>
+
 
 C64 *c64;
 Loader *loader;
 bool wget_download_finished = false;
-bool nosdl = false;
+bool nosdl = false, isbinary = false,
+     havecart = false, bankswlog = false;
+
 
 bool loader_cb()
 {
@@ -46,8 +49,17 @@ void load_file(const char *file) /* TODO: ADD ARGUMENTS FOR SIDFILE PLAY */
     if(ext == "bas"){
       loader->bas(f);
     }
+    else if(ext == "bin"){
+      loader->bin(f);
+    }
     else if(ext == "prg"){
       loader->prg(f);
+    }
+    else if(ext == "d64"){
+      loader->d64(f);
+    }
+    else if(ext == "crt"){
+      loader->crt(f);
     }
     else if(ext == "sid"){
       loader->sid(f);
@@ -59,7 +71,12 @@ void checkargs(int argc, char **argv)
 {
   if(argc>=1) {
     for(int a = 1; a < argc; a++) {
-      if(!strcmp(argv[a], "-cli")) nosdl = true;
+      if(!strcmp(argv[a], "-cli")) {nosdl = true;};
+      if(!strcmp(argv[a], "-bin")) {isbinary = true;};
+      if(!strcmp(argv[a], "-crt")) {havecart = true;};
+
+      /* log on create */
+      if(!strcmp(argv[a], "-logbanksw")) bankswlog = true;
     }
   }
 }
@@ -67,7 +84,7 @@ void checkargs(int argc, char **argv)
 int main(int argc, char **argv)
 {
   checkargs(argc, argv);
-  c64 = new C64(nosdl);
+  c64 = new C64(nosdl,isbinary,havecart,bankswlog);
   /* check if asked load a program */
   if(argc != 1)
   {
