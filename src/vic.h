@@ -17,10 +17,7 @@
 
 #ifndef EMUDORE_VIC_H
 #define EMUDORE_VIC_H
-#include "io.h"
-#include "cpu.h"
-#include "sid.h"
-#include "memory.h"
+
 
 /**
  * @brief MOS Video Interface Chip II (VIC-II)
@@ -33,10 +30,8 @@
 class Vic
 {
   private:
-    Memory *mem_;
-    Cpu    *cpu_;
-    Sid    *sid_;
-    IO     *io_;
+    C64 *c64_;
+
     /* sprites  */
     uint8_t mx_[8];
     uint8_t my_[8];
@@ -111,20 +106,21 @@ class Vic
     inline uint8_t get_bitmap_data(int column, int row, int line);
     uint8_t get_sprite_pixel(int n,int x,int y);
     inline void set_graphic_mode();
+
   public:
-    Vic();
+    Vic(C64 *c64);
+
     void reset();
     bool emulate();
-    void memory(Memory *v){mem_ = v;};
-    void cpu(Cpu *v){cpu_ = v;};
-    void io(IO *v){io_ = v;};
-    void sid(Sid *v){sid_ = v;};
+
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
+
     unsigned int frames(){return frame_c_;};
     uint16_t get_sprite_ptr(int n);
     int raster_counter();
     void setLightPen(uint16_t x,uint8_t y);
+
     /* constants */
     static const int kScreenLines = 312; /* PAL */
     static const int kScreenCols  = 504;
@@ -169,4 +165,5 @@ class Vic
     static const int kSpritesFirstCol = 18;
 };
 
-#endif
+
+#endif /* EMUDORE_VIC_H */

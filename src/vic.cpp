@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-#include "vic.h"
-#include "util.h"
+#include <c64.h> /* All classes are loaded through c64.h */
+
 
 // ctor and emulate()  ///////////////////////////////////////////////////////
 
-Vic::Vic()
+Vic::Vic(C64 *c64) :
+  c64_(c64)
 {
   reset();
 }
@@ -72,10 +73,10 @@ bool Vic::emulate()
    **/
   if((read_register(0x19) & 0x80) != 0)
   {
-    cpu_->irq();
+    c64_->cpu_->irq();
   }
   /* are we at the next raster line? */
-  if (cpu_->cycles() >= next_raster_at_)
+  if (c64_->cpu_->cycles() >= next_raster_at_)
   {
     int rstr = raster_counter();
     /* check raster IRQs */
@@ -86,14 +87,14 @@ bool Vic::emulate()
       irq_status_ |= (1<<0);
     }
     if(irq_status_){  /* raise interrupt */
-      cpu_->irq();
+      c64_->cpu_->irq();
     }
     if (rstr >= kFirstVisibleLine &&
         rstr < kLastVisibleLine)
     {
       /* draw border */
       int screen_y = rstr - kFirstVisibleLine;
-      io_->screen_draw_border(screen_y,border_color_);
+      c64_->io_->screen_draw_border(screen_y,border_color_);
       /* draw raster on current graphic mode */
       switch(graphic_mode_)
       {
@@ -116,25 +117,39 @@ bool Vic::emulate()
     /* next raster */
     if(is_bad_line()) {
       next_raster_at_+= kBadLineCycles;
-      /* cpu_->cyclestick(kBadLineCycles); */
+      /* c64_->cpu_->cyclestick(kBadLineCycles); */
     } else {
       next_raster_at_+= kLineCycles;
     }
     /* update raster */
     raster_counter(++rstr);
-    cycles += (cpu_->cycles() - vic_cpu_clock);
+    cycles += (c64_->cpu_->cycles() - vic_cpu_clock);
+    // uint cr1__ = cr1_; // canna read rc1_, it breaks!
+    /* printf("WRAP:%d RSTR:%03d (%03d) RSTRC:%03u (%03d) RSTRIRQ:%03d (%d|%d) LINES:%d CYCLES:%u\n",
+      (rstr >= kScreenLines), rstr, prev_rstr, raster_counter(), raster_c_,
+      raster_irq_, raster_irq_enabled(), (raster_irq_enabled()?(rstr == raster_irq_):0), kScreenLines, cycles); */
     if ((rstr >= kScreenLines) /* || ((prev_rstr > rstr) && !(prev_rstr >= kScreenLines)) */)
     { /* BUG: screen refresh is after ~18656 cycles and not 19656? */
+      // printf("WRAP:%d RSTR:%03d (%03d) RSTRC:%03u (%03d) RSTRIRQ:%03d (%d|%d) LINES:%d CYCLES:%u\n",
+      //   (rstr >= kScreenLines), rstr, prev_rstr, raster_counter(), raster_c_,
+      //   raster_irq_, raster_irq_enabled(), (raster_irq_enabled()?(rstr == raster_irq_):0), kScreenLines, cycles);
       verticalSync=true;
-      io_->screen_refresh();
+      c64_->io_->screen_refresh();
+      // c64_->sid_->sid_flush(); /* FLUSH */
       cycles=0;
       frame_c_++;
       raster_counter(0);
       if(sprite_sprite_collision_) ISSET_BIT(irq_enabled_,bitMMC); //checkInterrupt(1);
       if(sprite_bgnd_collision_)   ISSET_BIT(irq_enabled_,bitMBC); //checkInterrupt(2);
+      // printf("prev_next_raster_at_ %d next_raster_at_ %d diff %d\n",
+      //   prev_next_raster_at_,next_raster_at_,(next_raster_at_-prev_next_raster_at_));
       prev_next_raster_at_ = next_raster_at_;
+    } /* else if (prev_rstr > rstr) {
+      c64_->sid_->sid_flush();
+      cycles=0;
+    } */
     prev_rstr = rstr;
-    vic_cpu_clock = cpu_->cycles();
+    vic_cpu_clock = c64_->cpu_->cycles();
   }
   return true;
 }
@@ -460,7 +475,7 @@ void Vic::set_graphic_mode()
 uint8_t Vic::get_screen_char(int column, int row)
 {
   uint16_t addr = screen_mem_ + (row * kGCols) + column;
-  return mem_->vic_read_byte(addr);
+  return c64_->mem_->vic_read_byte(addr);
 }
 
 /**
@@ -469,7 +484,7 @@ uint8_t Vic::get_screen_char(int column, int row)
 uint8_t Vic::get_char_color(int column, int row)
 {
   uint16_t addr = Memory::kAddrColorRAM + (row * kGCols) + column;
-  return (mem_->read_byte_no_io(addr) & 0x0f);
+  return (c64_->mem_->read_byte_no_io(addr) & 0x0f);
 }
 
 /**
@@ -485,7 +500,7 @@ uint8_t Vic::get_char_data(int chr, int line)
     chr&=0x3f;
   }
   uint16_t addr = char_mem_ + (chr * 8) + line;
-  return mem_->vic_read_byte(addr);
+  return c64_->mem_->vic_read_byte(addr);
 }
 
 /**
@@ -494,7 +509,7 @@ uint8_t Vic::get_char_data(int chr, int line)
 uint8_t Vic::get_bitmap_data(int column, int row, int line)
 {
   uint16_t addr = bitmap_mem_ + (row * kGCols + column) * 8 + line;
-  return mem_->vic_read_byte(addr);
+  return c64_->mem_->vic_read_byte(addr);
 }
 
 /**
@@ -506,7 +521,7 @@ uint16_t Vic::get_sprite_ptr(int n)
 {
   uint16_t addr;
   uint16_t ptraddr = screen_mem_ + kSpritePtrsOffset + n;
-  addr = kSpriteSize * mem_->vic_read_byte(ptraddr);
+  addr = kSpriteSize * c64_->mem_->vic_read_byte(ptraddr);
   return addr;
 }
 
@@ -523,7 +538,7 @@ void Vic::draw_char(int x, int y, uint8_t data, uint8_t color)
     /* draw pixel */
     if(ISSET_BIT(data,i))
     {
-      io_->screen_update_pixel(
+      c64_->io_->screen_update_pixel(
         xoffs,
         y,
         color);
@@ -544,16 +559,16 @@ void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uin
     /* draw pixel */
     if(ISSET_BIT(data,i))
     {
-      io_->screen_update_pixel(xoffs,y,color);
+      c64_->io_->screen_update_pixel(xoffs,y,color);
     }
     else
     {
       // if(c >=64 && c <= 127)
-      io_->screen_update_pixel(xoffs,y,bgcolor_[c]);
+      c64_->io_->screen_update_pixel(xoffs,y,bgcolor_[c]);
       // if(c >=128 && c <= 191)
-	    // io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
+	    // c64_->io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
       // if(c >=192 && c <= 255)
-      //  io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
+      //  c64_->io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
     }
   }
 }
@@ -570,16 +585,16 @@ void Vic::draw_ext_backcolor_char(int x, int y, uint8_t data, uint8_t color, uin
 //     /* draw pixel */
 //     if(ISSET_BIT(data,i))
 //     {
-//       io_->screen_update_pixel(xoffs,y,color);
+//       c64_->io_->screen_update_pixel(xoffs,y,color);
 //     }
 //     else
 //     {
 //       if(c >=64 && c <= 127)
-// 	      io_->screen_update_pixel(xoffs,y,bgcolor_[1]);
+// 	      c64_->io_->screen_update_pixel(xoffs,y,bgcolor_[1]);
 //       if(c >=128 && c <= 191)
-// 	      io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
+// 	      c64_->io_->screen_update_pixel(xoffs,y,bgcolor_[2]);
 //       if(c >=192 && c <= 255)
-// 	      io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
+// 	      c64_->io_->screen_update_pixel(xoffs,y,bgcolor_[3]);
 //     }
 //   }
 // }
@@ -608,11 +623,11 @@ void Vic::draw_mcchar(int x, int y, uint8_t data, uint8_t color)
       break;
     }
     int xoffs = x + 7 - i * 2 + horizontal_scroll();
-    io_->screen_update_pixel(
+    c64_->io_->screen_update_pixel(
       xoffs,
       y,
       c);
-    io_->screen_update_pixel(
+    c64_->io_->screen_update_pixel(
       xoffs + 1,
       y,
       c);
@@ -627,9 +642,9 @@ void Vic::draw_raster_char_mode()
   {
     /* draw background */
     if(!ISSET_BIT(cr2_,3)) // 38 columns
-      io_->screen_draw_rect(kGFirstCol+8,y,kGResX-16,bgcolor_[0]);
+      c64_->io_->screen_draw_rect(kGFirstCol+8,y,kGResX-16,bgcolor_[0]);
     else
-      io_->screen_draw_rect(kGFirstCol,y,kGResX,bgcolor_[0]);
+      c64_->io_->screen_draw_rect(kGFirstCol,y,kGResX,bgcolor_[0]);
 
     /* draw characters */
     for(int column=0; column < kGCols ; column++)
@@ -676,14 +691,14 @@ void Vic::draw_bitmap(int x, int y, uint8_t data, uint8_t color)
     /* draw pixel */
     if(ISSET_BIT(data,i))
     {
-      io_->screen_update_pixel(
+      c64_->io_->screen_update_pixel(
         xoffs,
         y,
         forec);
     }
     else
     {
-      io_->screen_update_pixel(
+      c64_->io_->screen_update_pixel(
         xoffs,
         y,
         bgc);
@@ -696,7 +711,7 @@ void Vic::detect_sprite_background_collision(int x, int y, int sprite, int row){
   uint16_t addr = get_sprite_ptr(sprite);
   for (int i=0; i < 3 ; i++)
   {
-    uint8_t  data = mem_->vic_read_byte(addr + row * 3 + i);
+    uint8_t  data = c64_->mem_->vic_read_byte(addr + row * 3 + i);
     if(data!=0){
       for (int j=0; j < 8; j++)
       {
@@ -846,11 +861,11 @@ void Vic::draw_mcbitmap(int x, int y, uint8_t data, uint8_t scolor, uint8_t rcol
       break;
     }
     int xoffs = x + 7 - i * 2 + horizontal_scroll();
-    io_->screen_update_pixel(
+    c64_->io_->screen_update_pixel(
       xoffs,
       y,
       c);
-    io_->screen_update_pixel(
+    c64_->io_->screen_update_pixel(
       xoffs + 1,
       y,
       c);
@@ -866,7 +881,7 @@ void Vic::draw_raster_bitmap_mode()
      !is_screen_off())
   {
     /* draw background */
-    io_->screen_draw_rect(kGFirstCol,y,kGResX,bgcolor_[0]);
+    c64_->io_->screen_draw_rect(kGFirstCol,y,kGResX,bgcolor_[0]);
     /* draw bitmaps */
     for(int column=0; column < kGCols ; column++)
     {
@@ -917,7 +932,7 @@ void Vic::draw_mcsprite(int x, int y, int sprite, int row)
   {
     for (int i=0; i < 3 ; i++)
     {
-      uint8_t  data = mem_->vic_read_byte(addr + row * 3 + i);
+      uint8_t  data = c64_->mem_->vic_read_byte(addr + row * 3 + i);
       for (int j=0; j < 4; j++)
       {
 	/* color */
@@ -945,15 +960,15 @@ void Vic::draw_mcsprite(int x, int y, int sprite, int row)
 	  uint16_t newX = (x+w+(i*8*swid) + (8*swid) - (j*swid*2));
 
 	  if(newX > minX && y >= minY && newX <= maxX && y < maxY)
-	    io_->screen_update_pixel(newX,y,c);
+	    c64_->io_->screen_update_pixel(newX,y,c);
 
 	  newX++;
 	  if(newX > minX && y >= minY && newX <= maxX && y < maxY)
-	    io_->screen_update_pixel(newX,y,c);
+	    c64_->io_->screen_update_pixel(newX,y,c);
 
 	  newX++;
 	  if(is_double_width_sprite(sprite) && newX > minX && y >= minY && newX <= maxX && y < maxY)
-	    io_->screen_update_pixel(newX,y,c);
+	    c64_->io_->screen_update_pixel(newX,y,c);
 	}
       }
     }
@@ -967,14 +982,14 @@ uint8_t Vic::get_sprite_pixel(int n,int x,int y){
 
     int col=x/4;
     int bit=x%4;
-    uint8_t  data = mem_->vic_read_byte(addr + y * 3 + col);
+    uint8_t  data = c64_->mem_->vic_read_byte(addr + y * 3 + col);
 
     return ((data >> bit*2) & 0x3);
   } else{
 
     int col=x/8;
     int bit=x%8;
-    uint8_t  data = mem_->vic_read_byte(addr + y * 3 + col);
+    uint8_t  data = c64_->mem_->vic_read_byte(addr + y * 3 + col);
     return ISSET_BIT(data,(7-bit));
   }
 }
@@ -1008,7 +1023,7 @@ void Vic::draw_sprite(int x, int y, int sprite, int row)
   {
     for (int i=0; i < 3 ; i++)
     {
-      uint8_t data = mem_->vic_read_byte(addr + row * 3 + i);
+      uint8_t data = c64_->mem_->vic_read_byte(addr + row * 3 + i);
 
       for (int j=0; j < 8; j++)
       {
@@ -1017,7 +1032,7 @@ void Vic::draw_sprite(int x, int y, int sprite, int row)
           uint16_t newX = (x+w + (i*8*swid) + (8*swid) - (j*swid)) ;
 
           if(newX > minX && y >= minY && newX <= maxX && y < maxY)
-            io_->screen_update_pixel(newX,y,sprite_colors_[sprite]);
+            c64_->io_->screen_update_pixel(newX,y,sprite_colors_[sprite]);
         }
       //   if(ISSET_BIT(data,j))
       //   {
@@ -1042,7 +1057,7 @@ void Vic::draw_sprite(int x, int y, int sprite, int row)
       //        y >= kGResY+kGFirstCol - btm_border_offset)
       //       color = border_color_;
       //     /* update pixel */
-      //     io_->screen_update_pixel(
+      //     c64_->io_->screen_update_pixel(
       //       new_x,
       //       y,
       //       color);
