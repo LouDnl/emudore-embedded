@@ -17,14 +17,12 @@
 
 #include <fstream>
 #include <iomanip>
-#include "memory.h"
-#include "util.h"
-#include "vic.h"
-#include "cia1.h"
-#include "cia2.h"
-#include "sid.h"
 
-Memory::Memory()
+#include <c64.h> /* All classes are loaded through c64.h */
+
+
+Memory::Memory(C64 * c64) :
+  c64_(c64)
 {
   /**
    * 64 kB memory buffers, zeroed.
@@ -35,75 +33,28 @@ Memory::Memory()
    */
   mem_ram_ = new uint8_t[kMemSize]();
   mem_rom_ = new uint8_t[kMemSize]();
+
+  /**
+   * 1 KB _Read only_ page buffers, zeroed.
+   */
   mem_rom_cia1_ = new uint8_t[kPageSize]();
   mem_rom_cia2_ = new uint8_t[kPageSize]();
 
-  // memset(mem_ram_, 127, sizeof(mem_ram_)/sizeof(mem_ram_[0]));
-  int chunk_size = 64;
-
-  // for (int i = 0; i < kMemSize; i += chunk_size) {
-  //   memset(mem_ram_ + i, 0x00, chunk_size);
-  //   D("%04X 00\n", i);
-  //   if (i + chunk_size < kMemSize) {
-  //     memset(mem_ram_ + i + chunk_size, 0xFF, chunk_size);
-  //     D("%04X FF\n", i+chunk_size);
-  //   }
-  // }
-
   /* configure pointers */
   kCIA1MemWr = &mem_ram_[kAddrCIA1Page];
-  kCIA2MemWr = &mem_ram_[kAddrCIA2Page];
   kCIA1MemRd = &mem_rom_cia1_[0];
+  kCIA2MemWr = &mem_ram_[kAddrCIA2Page];
   kCIA2MemRd = &mem_rom_cia2_[0];
-
-  /* configure memory layout */
-  setup_memory_banks(kLORAM|kHIRAM|kCHAREN);
-  /* configure data directional bits */
-  write_byte_no_io(kAddrDataDirection,0x2f);
 }
 
 Memory::~Memory()
 {
   delete [] mem_ram_;
   delete [] mem_rom_;
+  delete [] mem_rom_cia1_;
+  delete [] mem_rom_cia2_;
 }
 
-/**
- * @brief configure memory banks
- *
- * There are five latch bits that control the configuration allowing
- * for a total of 32 different memory layouts, for now we only take
- * in count three bits : HIRAM/LORAM/CHAREN
- */
-void Memory::setup_memory_banks(uint8_t v)
-{
-  /* get config bits */
-  bool hiram  = ((v&kHIRAM) != 0); /* 2 0b0100 */
-  bool loram  = ((v&kLORAM) != 0); /* 1 0b0010 */
-  bool charen = ((v&kCHAREN)!= 0); /* 4 0b1000 */
-  /* init everything to ram */
-  for(size_t i=0 ; i < sizeof(banks_) ; i++)
-    banks_[i] = kRAM;
-  /* load ROMs */
-  load_rom("basic.901226-01.bin",kBaseAddrBasic);
-  load_rom("characters.901225-01.bin",kBaseAddrChars);
-  load_rom("kernal.901227-03.bin",kBaseAddrKernal);
-  /* kernal */
-  if (hiram)
-    banks_[kBankKernal] = kROM;  /* 0xe000 */
-  /* basic */
-  if (loram && hiram)
-    banks_[kBankBasic] = kROM;   /* 0xa000 */
-  /* charen */
-  if (charen && (loram || hiram))
-    banks_[kBankCharen] = kIO;
-  else if (charen && !loram && !hiram)
-    banks_[kBankCharen] = kRAM;
-  else
-    banks_[kBankCharen] = kROM;
-  /* write the config to the zero page */
-  write_byte_no_io(kAddrMemoryLayout, v);
-}
 
 /**
  * @brief writes a byte to RAM without performing I/O
@@ -117,76 +68,90 @@ void Memory::write_byte_no_io(uint16_t addr, uint8_t v)
  * @brief writes a byte to RAM handling I/O
  */
 void Memory::write_byte(uint16_t addr, uint8_t v)
-{
+{ /* TODO: Account for new bank modes! */
+  if(logmemrw){D("[MEM  W] $%04X:%02X\n",addr,v);};
   uint16_t page = addr&0xff00;
-  /* ZP */
+  /* ZeroPage ~ $0000/$00ff */
   if (page == kAddrZeroPage)
   {
-    /* bank switching */
-    if (addr == kAddrMemoryLayout)
-      setup_memory_banks(v);
-    else
-      mem_ram_[addr] = v;
+    /* bank switching $01 */
+    if (addr == kAddrMemoryLayout) {
+      c64_->pla_->runtime_bank_switching(v); /* Setup (new) bank config */
+    } else {
+      if (addr == kAddrDataDirection) {
+        // printf("Datadirection change: %02X\n",v);
+      }
+      mem_ram_[addr] = v; /* Write to RAM */
+    }
   }
-  /* VIC-II DMA or Character ROM */
-  else if (page >= kAddrVicFirstPage && page <= kAddrVicLastPage)
+  /* VIC-II DMA or Character ROM ~ $d000/$d3ff */
+  else if (page >= kAddrVicFirstPage
+        && page <= kAddrVicLastPage)
   {
-    if(banks_[kBankCharen] == kIO)
-      vic_->write_register(addr&0x7f,v);
-    else
-      mem_ram_[addr] = v;
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      c64_->vic_->write_register(addr&0x7f,v); /* VIC-II write */
+    } else {
+      mem_ram_[addr] = v; /* Write to RAM */
+    }
   }
-  /* CIA1 */
+  /* CIA1 ~ $dc00/$dcff */
   else if (page == kAddrCIA1Page)
   {
-    if(banks_[kBankCharen] == kIO)
-      cia1_->write_register(addr&0x0f,v);
-    else
-      mem_ram_[addr] = v;
+    if(logcia1rw){D("[CIA1 W] $%04X:%02X\n",addr,v);};
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      c64_->cia1_->write_register(addr&0x0f,v);
+    } else {
+      mem_ram_[addr] = v; /* Write to RAM */
+    }
   }
-  /* CIA2 */
+  /* CIA2 ~ $dd00/$ddff */
   else if (page == kAddrCIA2Page)
   {
-    if(banks_[kBankCharen] == kIO)
-      cia2_->write_register(addr&0x0f,v);
-    else
-      mem_ram_[addr] = v;
-  }
-  /* SID */
-  else if ((page >= kAddrSIDFirstPage && page <= kAddrSIDLastPage)
-          || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
-  {
-    if(banks_[kBankCharen] == kIO) {
-      mem_ram_[addr] = v; /* Always save */
-
-      // if (page == (kAddrSIDOne&0xff00)
-      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 0; /* 1 */
-      // if (page == (kAddrSIDTwo&0xff00)
-      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDTwo&0xFF)+0x20))
-      //       && (((uint8_t)addr&0xFF) >= ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 1; /* 2 */
-
-      // switch(kSIDNum) {
-      //   case 0:
-      //   case 1:
-      //     sid_->write_register((uint8_t)(addr&0x1F), v, kSIDNum);
-      //     break;
-      //   default:
-      //     sid_->write_register((uint8_t)(addr&0x1F), v, 1); /* TODO: This should not be fixed */
-      //     break;
-    // }
-    if (page == 0xd400)
-      sid_->write_register((uint8_t)(addr&0x1F), v, 0); /* TODO: This should not be fixed */
-    else
-      mem_ram_[addr] = v;
+    if(logcia2rw){D("[CIA2 W] $%04X:%02X\n",addr,v);};
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      c64_->cia2_->write_register(addr&0x0f,v);
+    } else {
+      mem_ram_[addr] = v; /* Write to RAM */
     }
-    else
-      mem_ram_[addr] = v;
   }
-
+  /* SID ~ $d400/$d7ff */
+  else if (page >= kAddrSIDFirstPage
+        && page <= kAddrSIDLastPage)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      if (page == 0xd400) { /* TODO: Check for SID number */
+        mem_ram_[addr] = v; /* Always write to RAM */
+        c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 0); /* TODO: This should not be fixed */
+      } else {
+        mem_ram_[addr] = v; /* Write to RAM */
+      }
+    }
+    else {
+      mem_ram_[addr] = v; /* Write to RAM */
+    }
+  }
+  /* IO1 ~ $de00 */
+  else if (page == kAddrIO1Page)
+  {
+    /* TODO: CHECK FOR ENABLED IO / CART DEVICES */
+    if(logiorw){D("[IO1  W] $%04X:%02X\n",addr,v);};
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) { /* TODO: CHECK IF THIS IS THE RIGHT BANK CHECK */
+      c64_->cart_->write_register((addr&0xFF),v);
+    } else {
+      mem_ram_[addr] = v; /* Write to RAM */
+    }
+  }
+  /* IO2 ~ $df00 */
+  else if (page == kAddrIO1Page)
+  {
+    /* TODO: CHECK FOR ENABLED IO / CART DEVICES */
+    if(logiorw){D("[IO2  W] $%04X:%02X\n",addr,v);};
+    mem_ram_[addr] = v; /* Write to RAM */
+  }
   /* default */
   else
   {
-    mem_ram_[addr] = v;
+    mem_ram_[addr] = v; /* Write to RAM */
   }
 }
 
@@ -194,81 +159,121 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
  * @brief reads a byte from RAM or ROM (depending on bank config)
  */
 uint8_t Memory::read_byte(uint16_t addr)
-{
+{ /* TODO: Account for new bank modes! */
   uint8_t  retval = 0;
   uint16_t page   = addr&0xff00;
-  /* VIC-II DMA or Character ROM */
-  if (page >= kAddrVicFirstPage && page <= kAddrVicLastPage)
+  /* BASIC or RAM ~ $a000/$bfff */
+  if (page >= kAddrBasicFirstPage
+   && page <= kAddrBasicLastPage)
   {
-    if(banks_[kBankCharen] == kIO)
-      retval = vic_->read_register(addr&0x7f);
-    else if(banks_[kBankCharen] == kROM)
+    if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kROM) {
       retval = mem_rom_[addr];
-    else
+    } else {
       retval = mem_ram_[addr];
+    }
   }
-  /* CIA1 */
+  /* VIC-II DMA or Character ROM ~ $d000/$d3ff */
+  else if (page >= kAddrVicFirstPage
+   && page <= kAddrVicLastPage)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      retval = c64_->vic_->read_register(addr&0x7f);
+    } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      retval = mem_rom_[addr]; /* Read from ROM */
+    } else {
+      retval = mem_ram_[addr]; /* Read from RAM */
+    }
+  }
+  /* SID ~ $d400/$d7ff */
+  else if (page >= kAddrSIDFirstPage
+        && page <= kAddrSIDLastPage)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      retval = mem_ram_[addr]; /* Read from RAM */
+    } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      retval = mem_rom_[addr]; /* Read from ROM */
+    } else {
+      retval = mem_ram_[addr]; /* Read from RAM */
+    }
+  }
+  /* Color RAM ~ $d800/$dbff */
+  else if (page >= kAddrColorFirstPage
+        && page <= kAddrColorLastPage)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      retval = mem_rom_[addr]; /* Read from ROM */
+    } else {
+      retval = mem_ram_[addr]; /* Read from RAM */
+    }
+  }
+  /* CIA1 ~ $dc00/$dcff */
   else if (page == kAddrCIA1Page)
   {
-    if(banks_[kBankCharen] == kIO)
-      retval = cia1_->read_register(addr&0x0f);
-    else
-      retval = mem_ram_[addr];
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      retval = c64_->cia1_->read_register(addr&0x0f);
+    } else if (c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      retval = mem_rom_[addr]; /* Read from ROM */
+    } else {
+      retval = mem_ram_[addr]; /* Read from RAM */
+    }
+    if(logcia1rw){D("[CIA1 R] $%04X:%02X\n",addr,retval);};
   }
-  /* CIA2 */
+  /* CIA2 ~ $dd00/$ddff */
   else if (page == kAddrCIA2Page)
   {
-    if(banks_[kBankCharen] == kIO)
-      retval = cia2_->read_register(addr&0x0f);
-    else
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      retval = c64_->cia2_->read_register(addr&0x0f);
+    } else if (c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      retval = mem_rom_[addr]; /* Read from ROM */
+    } else {
       retval = mem_ram_[addr];
-  }
-  /* BASIC or RAM */
-  else if (page >= kAddrBasicFirstPage && page <= kAddrBasicLastPage)
-  {
-    if (banks_[kBankBasic] == kROM)
-      retval = mem_rom_[addr];
-    else
-      retval = mem_ram_[addr];
-  }
-  /* KERNAL */
-  else if (page >= kAddrKernalFirstPage && page <= kAddrKernalLastPage)
-  {
-    if (banks_[kBankKernal] == kROM)
-      retval = mem_rom_[addr];
-    else
-      retval = mem_ram_[addr];
-  }
-  /* SID */
-  else if ((page >= kAddrSIDFirstPage && page <= kAddrSIDLastPage)
-          || (page >= kAddrIOFirstPage && page <= kAddrIOLastPage))
-  {
-    if(banks_[kBankCharen] == kIO) {
-      // if (page == (kAddrSIDOne&0xff00)
-      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 0; /* 1 */
-      // if (page == (kAddrSIDTwo&0xff00)
-      //       && (((uint8_t)addr&0xFF) < ((uint8_t)(kAddrSIDTwo&0xFF)+0x20))
-      //       && (((uint8_t)addr&0xFF) >= ((uint8_t)(kAddrSIDOne&0xFF)+0x20))) kSIDNum = 1; /* 2 */
-
-      // switch(kSIDNum) {
-      //   case 0:
-      //   case 1:
-      //     retval = sid_->read_register((uint8_t)(addr&0xFF), kSIDNum);
-      //     break;
-      //   default:
-      //     retval = sid_->read_register((uint8_t)(addr&0xFF), 1); /* TODO: This is now fixed at the last SID */
-      //     break;
-      // }
-      retval = mem_ram_[addr]; /* TODO: TEMPORARY OVERRIDE! */
     }
-    else
-      retval = mem_ram_[addr];
+    if(logcia2rw){D("[CIA2 R] $%04X:%02X\n",addr,retval);};
   }
-  /* default */
+  /* IO1 ~ $de00/$deff */
+  else if (page == kAddrIO1Page)
+  {
+    /* TODO: Add check for what is enabled! */
+    // if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+    //   retval = mem_rom_[addr]; /* Read from ROM */
+    // } else {
+    //   retval = mem_ram_[addr]; /* Read from RAM */
+    // }
+
+    /* TODO: CHECK FOR ENABLED IO / CART DEVICES */
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) { /* TODO: CHECK IF THIS IS THE RIGHT BANK CHECK */
+      retval = c64_->cart_->read_register((addr&0xFF));
+    } else {
+      retval = mem_ram_[addr]; /* Read from RAM */
+    }
+    if(logiorw){D("[IO1  R] $%04X:%02X\n",addr,retval);};
+  }
+  /* IO2 ~ $df00/$dfff */
+  else if (page == kAddrIO2Page)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      retval = mem_rom_[addr]; /* Read from ROM */
+    } else {
+      retval = mem_ram_[addr]; /* Read from RAM */
+    }
+    if(logiorw){D("[IO2  R] $%04X:%02X\n",addr,retval);};
+  }
+  /* KERNAL ~ $e000/$ffff */
+  else if (page >= kAddrKernalFirstPage
+        && page <= kAddrKernalLastPage)
+  {
+    if (c64_->pla_->memory_banks(PLA::kBankKernal) == PLA::kROM) {
+      retval = mem_rom_[addr];
+    } else {
+      retval = mem_ram_[addr];
+    }
+  }
+  /* default ~ any other address */
   else
   {
     retval = mem_ram_[addr];
   }
+  if(logmemrw){D("[MEM  R] $%04X:%02X\n",addr,retval);};
   return retval;
 }
 
@@ -333,7 +338,7 @@ void Memory::write_word_no_io(uint16_t addr, uint16_t v)
 uint8_t Memory::vic_read_byte(uint16_t addr)
 {
   uint8_t v;
-  uint16_t vic_addr = cia2_->vic_base_address() + (addr & 0x3fff);
+  uint16_t vic_addr = c64_->cia2_->vic_base_address() + (addr & 0x3fff);
   if((vic_addr >= 0x1000 && vic_addr <  0x2000) ||
      (vic_addr >= 0x9000 && vic_addr <  0xa000))
     v = mem_rom_[kBaseAddrChars + (vic_addr & 0xfff)];

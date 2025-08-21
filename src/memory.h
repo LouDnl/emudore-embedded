@@ -18,16 +18,10 @@
 #ifndef EMUDORE_MEMORY_H
 #define EMUDORE_MEMORY_H
 
+
 #include <iostream>
 #include <cstdint>
 
-/* forward declarations */
-
-class Cpu;
-class Vic;
-class Cia1;
-class Cia2;
-class Sid;
 
 /**
  * @brief DRAM
@@ -57,39 +51,24 @@ class Memory
     uint8_t *mem_rom_;
     uint8_t *mem_rom_cia1_;
     uint8_t *mem_rom_cia2_;
-    uint8_t banks_[7];
 
-    uint8_t *disk;
+    /* Main pointer */
+    C64 * c64_;
 
-    /* Pointers */
-    Cpu *cpu_;
-    Vic *vic_;
-    Cia1 *cia1_;
-    Cia2 *cia2_;
-    Sid *sid_;
+    /* Debug logging */
+    bool logmemrw  = false;
+    bool logcia1rw = false;
+    bool logcia2rw = false;
+    bool logiorw   = false;
+    bool logplarw  = false;
 
   public:
-    Memory();
+    Memory(C64 * c64);
     ~Memory();
-    void cpu(Cpu *v){cpu_ = v;};
-    void vic(Vic *v){vic_ = v;};
-    void cia1(Cia1 *v){cia1_ = v;};
-    void cia2(Cia2 *v){cia2_ = v;};
-    void sid(Sid *v){sid_ = v;};
-    /* bank switching */
-    enum kBankCfg
-    {
-      kROM, /* 0 */
-      kRAM, /* 1 */
-      kIO   /* 2 */
-    };
-    enum Banks
-    {
-      kBankBasic  = 3,
-      kBankCharen = 5,
-      kBankKernal = 6,
-    };
-    void setup_memory_banks(uint8_t v);
+
+    /* Memory pointer */
+    uint8_t *mem_ram(void) {return mem_ram_;};
+
     /* read/write memory */
     uint8_t read_byte(uint16_t addr);
     uint8_t read_byte_no_io(uint16_t addr);
@@ -99,9 +78,11 @@ class Memory
     uint16_t read_word_no_io(uint16_t);
     void write_word(uint16_t addr, uint16_t v);
     void write_word_no_io(uint16_t addr, uint16_t v);
+
     /* vic memory access */
     uint8_t vic_read_byte(uint16_t addr);
     uint8_t read_byte_rom(uint16_t addr);
+
     /* load external binaries */
     void load_rom(const std::string &f, uint16_t baseaddr);
     void load_ram(const std::string &f, uint16_t baseaddr);
@@ -110,11 +91,17 @@ class Memory
     void dump();
     void dump(uint16_t start, uint16_t end);
     void print_screen_text();
+    void setlogrw(char logid) { switch(logid)
+      { case 0: logmemrw  = true; break;
+        case 1: logcia1rw = true; break;
+        case 2: logcia2rw = true; break;
+        case 3: logiorw   = true; break;
+        case 4: logplarw  = true; break;
+        default: break; } };
 
     /* constants */
     static const size_t kMemSize = 0x10000;
     static const size_t kPageSize = 0x100;
-    static const size_t disksize = 0x2AB00; // max 174848 bytes with 683 sectors of 256 bytes
 
     /* memory addresses  */
     static const uint16_t kBaseAddrBasic       = 0xa000; /* -> 0xbfff */
@@ -131,20 +118,34 @@ class Memory
     static const uint16_t kAddrMemoryLayout    = 0x0001;
     static const uint16_t kAddrColorRAM        = 0xd800;
 
-    /* memory page layout */
+    /* RAM, cannot be changed */
+    /* ZeroPage */
     static const uint16_t kAddrZeroPage        = 0x0000;
+
+    /* RAM or Cartridge ROM */
+    static const uint16_t kAddrCartLoFirstPage = 0x8000;
+    static const uint16_t kAddrCartLoLastPage  = 0x9f00;
+    static const uint16_t kAddrCartH1FirstPage = 0xa000;
+    static const uint16_t kAddrCartH1LastPage  = 0xbf00;
+    static const uint16_t kAddrCartH2FirstPage = 0xe000;
+    static const uint16_t kAddrCartH2LastPage  = 0xff00;
+
+    /* RAM, I/O registers and Color RAM */
     /* VIC */
     static const uint16_t kAddrVicFirstPage    = 0xd000;
     static const uint16_t kAddrVicLastPage     = 0xd300;
     /* SID */
     static const uint16_t kAddrSIDFirstPage    = 0xd400;
     static const uint16_t kAddrSIDLastPage     = 0xd700;
+    /* Color RAM */
+    static const uint16_t kAddrColorFirstPage  = 0xd800;
+    static const uint16_t kAddrColorLastPage   = 0xdb00;
     /* CIA */
     static const uint16_t kAddrCIA1Page        = 0xdc00;
     static const uint16_t kAddrCIA2Page        = 0xdd00;
     /* IO */
-    static const uint16_t kAddrIOFirstPage     = 0xde00;
-    static const uint16_t kAddrIOLastPage      = 0xdf00;
+    static const uint16_t kAddrIO1Page         = 0xde00;
+    static const uint16_t kAddrIO2Page         = 0xdf00;
 
     /* ROM pages */
     /* BASIC */
@@ -157,23 +158,21 @@ class Memory
     static const uint16_t kAddrKernalFirstPage = 0xe000;
     static const uint16_t kAddrKernalLastPage  = 0xff00;
 
-    /* bank switching */
-    static const uint8_t kLORAM  = 1 << 0;
-    static const uint8_t kHIRAM  = 1 << 1;
-    static const uint8_t kCHAREN = 1 << 2;
-
     /* Number of SID vs memory layout configuration */
     static const uint8_t kMaxSIDs = 2;
     uint8_t kSIDNum = 0; /* TODO: use USBSID-Pico SID amount */
     uint16_t kAddrSIDOne = 0xd400;
     uint16_t kAddrSIDTwo = 0xd420;
 
-    /* Public pointers */
-    uint8_t *kCIA1MemWr; /* 0xdc00 */
-    uint8_t *kCIA2MemWr; /* 0xdd00 */
-    uint8_t *kCIA1MemRd; /* 0x(dc)00 */
-    uint8_t *kCIA2MemRd; /* 0x(dd)00 */
+    /* Public memory pointers set by Memory class */
+    /* CIA1 */
+    uint8_t *kCIA1MemWr; /* $dc00 */
+    uint8_t *kCIA1MemRd; /* $(dc)00 */
+    /* CIA2 */
+    uint8_t *kCIA2MemWr; /* $dd00 */
+    uint8_t *kCIA2MemRd; /* $(dd)00 */
 
 };
 
-#endif
+
+#endif /* EMUDORE_MEMORY_H */
