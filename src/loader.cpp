@@ -15,21 +15,25 @@
  * limitations under the License.
  */
 
-#include "loader.h"
-#include "sidfile.h"
 #include <bitset>
 #include <iomanip>
+
+#include <loader.h>
+#include <sidfile.h>
+
 
 // const char *sidtype_s[5] = {"Unknown", "N/A", "MOS8580", "MOS6581", "FMopl" };  /* 0 = unknown, 1 = N/A, 2 = MOS8085, 3 = MOS6581, 4 = FMopl */
 const char *chiptype_s[4] = {"Unknown", "MOS6581", "MOS8580", "MOS6581 and MOS8580"};
 const char *clockspeed_s[5] = {"Unknown", "PAL", "NTSC", "PAL and NTSC", "DREAN"};
 
-Loader::Loader(C64 *c64)
+
+Loader::Loader(C64 *c64) :
+  c64_(c64)
 {
-  c64_ = c64;
   io_  = c64_->io();
   cpu_ = c64_->cpu();
   mem_ = c64_->memory();
+  pla_ = c64_->pla();
   vic_ = c64_->vic();
   sid_ = c64_->sid();
   booted_up_ = false;
@@ -93,6 +97,40 @@ void Loader::load_basic()
   }
 }
 
+// BIN //////////////////////////////////////////////////////////////////////
+
+void Loader::bin(const std::string &f)
+{
+  format_ = kBIN;
+  is_.open(f,std::ios::in|std::ios::binary);
+}
+
+void Loader::load_bin()
+{
+  char b;
+  uint16_t bbuf, addr;
+  bbuf = addr = 0x8000; /* Fix binary address at $400 */
+  /* unmap C64 ROMs */
+  mem_->write_byte(Memory::kAddrMemoryLayout, 0);
+  /* load binary into RAM */
+  // if(is_.is_open()) {
+  //   while(is_.good()) {
+  //     is_.seekg (0, is_.end);
+  //     std::streamoff length = is_.tellg();
+  //     is_.seekg (0, is_.beg);
+  //     is_.read ((char *) &mem_->mem_ram_[addr],length);
+  //   }
+  // }
+  if(is_)
+  {
+    is_.seekg (0, is_.end);
+    std::streamoff length = is_.tellg();
+    is_.seekg (0, is_.beg);
+    is_.read ((char *) &mem_->mem_ram()[addr],length);
+  }
+  cpu_->pc(0x8000);
+}
+
 // PRG //////////////////////////////////////////////////////////////////////
 
 void Loader::prg(const std::string &f)
@@ -134,6 +172,69 @@ void Loader::load_prg()
   }
 }
 
+// D64 //////////////////////////////////////////////////////////////////////
+
+void Loader::d64(const std::string &f)
+{
+  format_ = kD64;
+  is_.open(f,std::ios::in|std::ios::binary);
+}
+
+void Loader::load_d64()
+{
+  D("Disk loading not implemented yet!\n");
+  return;
+  char b;
+  int n = 0;
+  //uint16_t pbuf, addr;
+  //pbuf = addr = read_short_le();
+  if(is_.is_open()) {
+    while (is_.good()) {
+      is_.get(b);
+      pla_->DISKptr[n++] = b;
+    }
+    pla_->disk_size = n;
+    io_->set_disk_loaded(true);
+  }
+  //  {
+  //    while(is_.good())
+  //    {
+  //      is_.get(b);
+  //      mem_->write_byte_no_io(pbuf++,b);
+  //    }
+  //
+  //    /* basic-tokenized prg */
+  //    if(addr == kBasicPrgStart)
+  //    {
+  //      /* make BASIC happy */
+  //      mem_->write_word_no_io(kBasicTxtTab,addr);
+  //      mem_->write_word_no_io(kBasicVarTab,pbuf);
+  //      mem_->write_word_no_io(kBasicAryTab,pbuf);
+  //      mem_->write_word_no_io(kBasicStrEnd,pbuf);
+  //      if(autorun) {
+  //        /* exec RUN */
+  //        for(char &c: std::string("RUN\n"))
+  //          io_->IO::type_character(c);
+  //      }
+  //    }
+  //    /* ML */
+  //    else
+  //      cpu_->pc(addr); /* Else always start, or prg start is broken */
+  //  }
+}
+
+// BIN //////////////////////////////////////////////////////////////////////
+
+void Loader::crt(const std::string &f)
+{
+  format_ = kCRT;
+  is_.open(f,std::ios::in|std::ios::binary);
+}
+
+void Loader::load_crt()
+{
+  D("Cart loading not implemented yet!\n");
+}
 // SID //////////////////////////////////////////////////////////////////////
 
 void Loader::sid(const std::string &f)
@@ -356,8 +457,14 @@ void Loader::process_args(int argc, char **argv)
       if((strchr(argv[a], '.') != NULL)) file = argv[a];
       if(!strcmp(argv[a], "-norun")) autorun = false;
       if(!strcmp(argv[a], "-lowercase")) lowercase = true;
-      if(!strcmp(argv[a], "-logillegals")) Cpu::logillegals = true;
+      if(!strcmp(argv[a], "-loginstr")) Cpu::loginstructions = true;
+      if(!strcmp(argv[a], "-logill")) Cpu::logillegals = true;
+      if(!strcmp(argv[a], "-logmemrw")) memrwlog = true;
+      if(!strcmp(argv[a], "-logcia1rw")) cia1rwlog = true;
+      if(!strcmp(argv[a], "-logcia2rw")) cia2rwlog = true;
       if(!strcmp(argv[a], "-logsidrw")) sidrwlog = true;
+      if(!strcmp(argv[a], "-logiorw")) iorwlog = true;
+      if(!strcmp(argv[a], "-logplarw")) plarwlog = true;
     }
   }
   if (lowercase) {
@@ -370,8 +477,23 @@ void Loader::handle_args()
   if (lowercase) {
     mem_->write_byte(0xD018,0x17); /* Enable lowercase mode */
   }
+  if (memrwlog) {
+    mem_->setlogrw(0);
+  }
+  if (cia1rwlog) {
+    mem_->setlogrw(1);
+  }
+  if (cia2rwlog) {
+    mem_->setlogrw(2);
+  }
   if (sidrwlog) {
     sid_->set_sidrwlog(true);
+  }
+  if (iorwlog) {
+    mem_->setlogrw(3);
+  }
+  if (plarwlog) {
+    mem_->setlogrw(4);
   }
 }
 
@@ -385,8 +507,17 @@ bool Loader::emulate()
     case kBasic:
       load_basic();
       break;
+    case kBIN:
+      load_bin();
+      break;
     case kPRG:
       load_prg();
+      break;
+    case kD64:
+      load_d64();
+      break;
+    case kCRT:
+      load_crt();
       break;
     case kSID:
       load_sid();

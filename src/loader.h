@@ -18,10 +18,13 @@
 #ifndef EMUDORE_LOADER_H
 #define EMUDORE_LOADER_H
 
+
 #include <fstream>
 #include "c64.h"
 
+/* Pre declarations */
 class SidFile;
+
 
 /**
  * @brief Program loader
@@ -29,11 +32,12 @@ class SidFile;
 class Loader
 {
   private:
-    bool booted_up_;
+    bool booted_up_ = false;
     C64 *c64_;
     IO *io_;
     Cpu *cpu_;
     Memory *mem_;
+    PLA *pla_;
     Vic *vic_;
     Sid *sid_;
     SidFile *sidfile_;
@@ -42,7 +46,10 @@ class Loader
     {
       kNone,
       kBasic,
+      kBIN,
       kPRG,
+      kD64,
+      kCRT,
       kSID
     };
     kFormat format_;
@@ -69,10 +76,18 @@ class Loader
 
     bool autorun = true;
     bool lowercase = false;
+    bool memrwlog = false;
+    bool cia1rwlog = false;
+    bool cia2rwlog = false;
     bool sidrwlog = false;
+    bool iorwlog = false;
+    bool plarwlog = false;
 
     void load_basic();
+    void load_bin();
     void load_prg();
+    void load_d64();
+    void load_crt();
     void load_sid();
     void load_sidplayerA(uint16_t play, uint16_t init, int songno);
     void load_sidplayerB(uint16_t play, uint16_t init, int songno);
@@ -82,7 +97,10 @@ class Loader
   public:
     Loader(C64 *c64);
     void bas(const std::string &f);
+    void bin(const std::string &f);
     void prg(const std::string &f);
+    void d64(const std::string &f);
+    void crt(const std::string &f);
     void sid(const std::string &f);
     void process_args(int argc, char **argv);
     void handle_args();
@@ -96,4 +114,5 @@ class Loader
     static const uint16_t kBasicStrEnd   = 0x0031;
 };
 
-#endif
+
+#endif /* EMUDORE_LOADER_H */
