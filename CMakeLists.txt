@@ -60,15 +60,17 @@ set(SOURCEFILES
   ${CMAKE_CURRENT_LIST_DIR}/src/io.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/vic.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/sid.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/pla.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/cart.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/cart/MC68B50.cpp
   ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver/USBSID.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/debugger.cpp
 )
 ### Header folders to include
 set(TARGET_INCLUDE_DIRS PRIVATE
-  .
-  src
-  lib
+  ${CMAKE_CURRENT_LIST_DIR}
   ${CMAKE_CURRENT_LIST_DIR}/src
+  ${CMAKE_CURRENT_LIST_DIR}/src/cart
   ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver
   /usr/local/lib
   /usr/local/include
