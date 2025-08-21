@@ -18,8 +18,9 @@
 #ifndef EMUDORE_CPU_H
 #define EMUDORE_CPU_H
 
+
 #include <cstdint>
-#include "memory.h"
+#include <memory.h>
 
 /* These define the position of the status
    flags in the status (flags) register
@@ -35,6 +36,12 @@
 #define SR_CARRY         0x01
 
 #define ANE_MAGIC        0xef
+
+/* macro helpers */
+
+#define SET_ZF(val)     (zf(!(uint8_t)(val)))
+#define SET_NF(val)     (nf(((uint8_t)(val)&0x80)!=0))
+
 
 /**
  * @brief MOS 6510 microprocessor
@@ -66,12 +73,13 @@ class Cpu
     uint8_t sp_, a_, x_, y_;
     /* flags (p/status reg) */
     bool cf_,zf_,idf_,dmf_,bcf_,of_,nf_;
-    /* memory and clock */
-    Memory *mem_;
+    /* c64->memory and clock */
+    C64 *c64_;
     static unsigned int cycles_;
     /* helpers */
     uint16_t curr_page; /* current page at start of cpu emulation */
     bool pb_crossed;    /* true if page boundary crossed */
+
     inline uint8_t load_byte(uint16_t addr);
     inline void push(uint8_t);
     inline uint8_t pop();
@@ -85,6 +93,7 @@ class Cpu
     inline uint16_t addr_absx();
     inline uint16_t addr_indx();
     inline uint16_t addr_indy();
+
     inline uint8_t rol(uint8_t v);
     inline uint8_t ror(uint8_t v);
     inline uint8_t lsr(uint8_t v);
@@ -179,13 +188,10 @@ class Cpu
     inline void arr();
     inline void xaa(uint8_t v);
   public:
-    Cpu();
+    Cpu(C64 * c64);
     /* cpu state */
     void reset();
     bool emulate();
-    /* memory */
-    void memory(Memory *v){mem_ = v;};
-    Memory* memory(){return mem_;};
     /* register access */
     inline uint16_t pc() {return pc_;};
     inline void pc(uint16_t v) {pc_=v;};
@@ -215,10 +221,12 @@ class Cpu
     /* clock */
     inline unsigned int cycles(){return cycles_;};
     inline void cycles(unsigned int v){cycles_=v;};
+    inline void cyclestick(unsigned int v){cycles_+=v;};
     /* interrupts */
     void nmi();
     void irq();
     /* debug */
+    static bool loginstructions;
     static bool logillegals;
     void dump_flags();
     void dump_flags(uint8_t flags);
@@ -230,9 +238,5 @@ class Cpu
     void dbg_b();
 };
 
-/* macro helpers */
 
-#define SET_ZF(val)     (zf(!(uint8_t)(val)))
-#define SET_NF(val)     (nf(((uint8_t)(val)&0x80)!=0))
-
-#endif
+#endif /* EMUDORE_CPU_H */

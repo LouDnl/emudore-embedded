@@ -15,11 +15,13 @@
  * limitations under the License.
  */
 
-#include "cpu.h"
-#include "util.h"
 #include <sstream>
 
-Cpu::Cpu()
+#include <c64.h>
+#include <USBSID.h>
+
+Cpu::Cpu(C64 * c64) :
+  c64_(c64)
 {
  if (LOG_ILLEGALS == 1) logillegals = true;
 }
@@ -29,6 +31,7 @@ Cpu::Cpu()
  *
  */
 unsigned int Cpu::cycles_ = 0;
+bool Cpu::loginstructions = false;
 bool Cpu::logillegals = false;
 
 /**
@@ -40,7 +43,7 @@ void Cpu::reset()
 {
   a_ = x_ = y_ = sp_ = 0;
   cf_ = zf_ = idf_ = dmf_ = bcf_ = of_ = nf_ = false;
-  pc(mem_->read_word(Memory::kAddrResetVector));
+  pc(c64_->mem_->read_word(Memory::kAddrResetVector));
   cycles_ = 6;
 }
 
@@ -63,6 +66,8 @@ bool Cpu::emulate()
   /* D("START INSN: %02X C1:%u\n",insn,__c); */
   bool retval = true;
   bool ill = logillegals; /* set to true for illegal instruction logging */
+  bool linst = loginstructions;
+  if (loginstructions) { dump_regs_insn(insn); }
   /* emulate instruction */
   switch(insn)
   {
@@ -976,14 +981,14 @@ static unsigned short d_address;
 uint8_t Cpu::load_byte(uint16_t addr)
 {
   d_address = addr;
-  return mem_->read_byte(addr);
+  return c64_->mem_->read_byte(addr);
 }
 
 void Cpu::push(uint8_t v)
 {
   uint16_t addr = Memory::kBaseAddrStack+sp_;
   d_address = addr;
-  mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,v);
   sp_--;
 }
 
@@ -1001,7 +1006,7 @@ uint8_t Cpu::fetch_op()
 
 uint16_t Cpu::fetch_opw()
 {
-  uint16_t retval = mem_->read_word(pc_);
+  uint16_t retval = c64_->mem_->read_word(pc_);
   pc_+=2;
   return retval;
 }
@@ -1059,14 +1064,14 @@ uint16_t Cpu::addr_absx()
 uint16_t Cpu::addr_indx()
 {
   /* wraps around the zeropage */
-  uint16_t addr = mem_->read_word((addr_zero() + x()) & 0xff);
+  uint16_t addr = c64_->mem_->read_word((addr_zero() + x()) & 0xff);
   d_address = addr;
   return addr;
 }
 
 uint16_t Cpu::addr_indy()
 {
-  uint16_t addr = mem_->read_word(addr_zero());
+  uint16_t addr = c64_->mem_->read_word(addr_zero());
   curr_page = addr&0xff00;
   addr += y();
   if ((addr&0xff00)>curr_page) pb_crossed = true;
@@ -1081,7 +1086,7 @@ uint16_t Cpu::addr_indy()
  */
 void Cpu::sta(uint16_t addr,uint8_t cycles)
 {
-  mem_->write_byte(addr,a());
+  c64_->mem_->write_byte(addr,a());
   tick(cycles);
 }
 
@@ -1090,7 +1095,7 @@ void Cpu::sta(uint16_t addr,uint8_t cycles)
  */
 void Cpu::stx(uint16_t addr,uint8_t cycles)
 {
-  mem_->write_byte(addr,x());
+  c64_->mem_->write_byte(addr,x());
   tick(cycles);
 }
 
@@ -1099,7 +1104,7 @@ void Cpu::stx(uint16_t addr,uint8_t cycles)
  */
 void Cpu::sty(uint16_t addr,uint8_t cycles)
 {
-  mem_->write_byte(addr,y());
+  c64_->mem_->write_byte(addr,y());
   tick(cycles);
 }
 
@@ -1289,8 +1294,8 @@ void Cpu::rol_mem(uint16_t addr,uint8_t cycles)
 {
   uint8_t v = load_byte(addr);
   /* see ASL doc */
-  mem_->write_byte(addr,v);
-  mem_->write_byte(addr,rol(v));
+  c64_->mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,rol(v));
   tick(cycles);
 }
 
@@ -1322,8 +1327,8 @@ void Cpu::ror_mem(uint16_t addr,uint8_t cycles)
 {
   uint8_t v = load_byte(addr);
   /* see ASL doc */
-  mem_->write_byte(addr,v);
-  mem_->write_byte(addr,ror(v));
+  c64_->mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,ror(v));
   tick(cycles);
 }
 
@@ -1355,8 +1360,8 @@ void Cpu::lsr_mem(uint16_t addr,uint8_t cycles)
 {
   uint8_t v = load_byte(addr);
   /* see ASL doc */
-  mem_->write_byte(addr,v);
-  mem_->write_byte(addr,lsr(v));
+  c64_->mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,lsr(v));
   tick(cycles);
 }
 
@@ -1406,8 +1411,8 @@ void Cpu::asl_a()
 void Cpu::asl_mem(uint16_t addr,uint8_t cycles)
 {
   uint8_t v = load_byte(addr);
-  mem_->write_byte(addr,v);
-  mem_->write_byte(addr,asl(v));
+  c64_->mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,asl(v));
   tick(cycles);
 }
 
@@ -1432,9 +1437,9 @@ void Cpu::inc(uint16_t addr,uint8_t cycles)
 {
   uint8_t v = load_byte(addr);
   /* see ASL doc */
-  mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,v);
   v++;
-  mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,v);
   SET_ZF(v);
   SET_NF(v);
   tick(cycles);
@@ -1447,9 +1452,9 @@ void Cpu::dec(uint16_t addr,uint8_t cycles)
 {
   uint8_t v = load_byte(addr);
   /* see ASL doc */
-  mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,v);
   v--;
-  mem_->write_byte(addr,v);
+  c64_->mem_->write_byte(addr,v);
   SET_ZF(v);
   SET_NF(v);
   tick(cycles);  // was missing
@@ -1698,9 +1703,9 @@ void Cpu::jmp()
  */
 void Cpu::jmp_ind()
 {
-  uint16_t t = mem_->read_word(pc_);
+  uint16_t t = c64_->mem_->read_word(pc_);
   uint16_t abs_ = addr_abs(); /* pc += 2 */
-  uint16_t addr = mem_->read_word(abs_);
+  uint16_t addr = c64_->mem_->read_word(abs_);
   /* Introduce indirect JMP bug */
   addr = (((t&0xFF)==0xFF)?((t&0xFF00)|(addr&0xFF)):addr);
   pc(addr);
@@ -1913,7 +1918,7 @@ void Cpu::brk()
   push(((pc()+1) >> 8) & 0xff);
   push(((pc()+1) & 0xff));
   push(flags());
-  pc(mem_->read_word(Memory::kAddrIRQVector));
+  pc(c64_->mem_->read_word(Memory::kAddrIRQVector));
   idf(true);
   bcf(true);
   tick(7);
@@ -1993,7 +1998,7 @@ void Cpu::sax(uint16_t addr,uint8_t cycles)
   uint8_t _a = a();
   uint8_t _x = x();
   uint8_t _r = (_a & _x);
-  mem_->write_byte(addr,_r);
+  c64_->mem_->write_byte(addr,_r);
   tick(cycles);
 }
 
@@ -2001,7 +2006,7 @@ void Cpu::shy(uint16_t addr,uint8_t cycles)
 {
   uint8_t t = ((addr >> 8) + 1);
   uint8_t y_ = y();
-  mem_->write_byte(addr,(y_ & t));
+  c64_->mem_->write_byte(addr,(y_ & t));
   tick(cycles);
 }
 
@@ -2009,7 +2014,7 @@ void Cpu::shx(uint16_t addr,uint8_t cycles)
 {
   uint8_t t = ((addr >> 8) + 1);
   uint8_t x_ = x();
-  mem_->write_byte(addr,(x_ & t));
+  c64_->mem_->write_byte(addr,(x_ & t));
   tick(cycles);
 }
 
@@ -2018,7 +2023,7 @@ void Cpu::sha(uint16_t addr,uint8_t cycles)
   uint8_t t = ((addr >> 8) + 1);
   uint8_t a_ = a();
   uint8_t x_ = x();
-  mem_->write_byte(addr,((a_ & x_) & t));
+  c64_->mem_->write_byte(addr,((a_ & x_) & t));
   tick(cycles);
 }
 
@@ -2059,10 +2064,10 @@ void Cpu::tas(uint16_t addr,uint8_t cycles)
   if (((addr & 0xff) + y()) > 0xff) {
     tmp2 = ((tmp2 & 0xff) | (v << 8));
     /* write result to address */
-    mem_->write_byte(tmp2, v);
+    c64_->mem_->write_byte(tmp2, v);
   } else {
     /* write result to address */
-    mem_->write_byte(addr, v);
+    c64_->mem_->write_byte(addr, v);
   }
   sp(a()&x()); /* write a & x to stackpointer unchanged */
   tick(cycles);
@@ -2143,7 +2148,7 @@ void Cpu::irq()
     push(((pc()) & 0xff));
     /* push flags with bcf cleared */
     push((flags()&0xef));
-    pc(mem_->read_word(Memory::kAddrIRQVector));
+    pc(c64_->mem_->read_word(Memory::kAddrIRQVector));
     idf(true);
     tick(7);
   }
@@ -2158,7 +2163,7 @@ void Cpu::nmi()
   push(((pc()) & 0xff));
   /* push flags with bcf cleared */
   push((flags() & 0xef));
-  pc(mem_->read_word(Memory::kAddrNMIVector));
+  pc(c64_->mem_->read_word(Memory::kAddrNMIVector));
   tick(7);
 }
 
