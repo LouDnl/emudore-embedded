@@ -14,25 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef EMUDORE_CIA2_H
 #define EMUDORE_CIA2_H
 
-#include "io.h"
-#include "cpu.h"
-#include "memory.h"
+#include <cstdint>
+
 
 /**
  * @brief MOS 6526 Complex Interface Adapter #2
  *
  * - Memory area : $DD00-$DDFF
- * - Tasks       : Serial bus, RS-232, VIC banking, NMI control
+ * - Tasks       : Serial pla, RS-232, VIC banking, NMI control
  */
 class Cia2
 {
   private:
-    Cpu *cpu_;
-    IO *io_;
-    Memory *mem_;
+    C64 *c64_;
 
     unsigned int prev_cpu_cycles_;
 
@@ -42,16 +40,15 @@ class Cia2
     short _cia_tenthsecondcount = (_fake_samplerate/10);
 
   public:
-    Cia2();
+    Cia2(C64 * c64);
+
     void reset(void);
-    void cpu(Cpu *v){ cpu_ = v;};
-    void memory(Memory *v){ mem_ = v;};
-    void io(IO *v){ io_ = v;};
+    bool emulate();
 
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
+
     uint16_t vic_base_address();
-    bool emulate();
 
     /* constants */
     enum kInputMode
@@ -68,4 +65,5 @@ class Cia2
     };
 };
 
-#endif
+
+#endif /* EMUDORE_CIA2_H */

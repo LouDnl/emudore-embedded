@@ -14,12 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef EMUDORE_CIA1_H
 #define EMUDORE_CIA1_H
 
-#include "io.h"
-#include "cpu.h"
-#include "memory.h"
+#include <cstdint>
+
+
 
 /**
  * @brief MOS 6526 Complex Interface Adapter #1
@@ -30,9 +31,7 @@
 class Cia1
 {
   private:
-    Cpu *cpu_;
-    IO *io_;
-    Memory *mem_;
+    C64 *c64_;
 
     unsigned int prev_cpu_cycles_;
 
@@ -42,15 +41,13 @@ class Cia1
     short _cia_tenthsecondcount = (_fake_samplerate/10);
 
   public:
-    Cia1();
+    Cia1(C64 * c64);
+
     void reset(void);
-    void cpu(Cpu *v){cpu_ = v;};
-    void io(IO *v){io_ = v;};
-    void memory(Memory *v){mem_ = v;};
+    bool emulate();
 
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
-    bool emulate();
 
     /* constants */
     enum kInputMode
@@ -67,4 +64,5 @@ class Cia1
     };
 };
 
-#endif
+
+#endif /* EMUDORE_CIA1_H */
