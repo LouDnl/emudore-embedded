@@ -26,8 +26,6 @@
 #include <utility>
 #include <unordered_map>
 
-#include "cpu.h"
-#include "util.h"
 
 /**
  * @brief IO devices
@@ -40,12 +38,8 @@
 class IO
 {
   private:
-    Cpu *cpu_;
-    Cia1 *cia1_;
-    Cia2 *cia2_;
-    Memory *mem_;
-    Vic *vic_;
-    Sid *sid_;
+    C64 *c64_;
+
     SDL_Window *window_;
     SDL_Renderer *renderer_;
     SDL_Texture *texture_;
@@ -75,19 +69,17 @@ class IO
     /* Key combination vars */
     static bool runstop;
     static bool shiftlock;
+
+    /* Disk drive */
+    static bool diskpresent;
   public:
-    IO(bool sdl);
+    IO(C64 *c64, bool sdl);
     ~IO();
     bool nosdl;
     void reset(void);
     bool emulate();
     void process_events();
-    void cpu(Cpu *v){cpu_=v;};
-    void cia1(Cia1 *v){cia1_=v;};
-    void cia2(Cia2 *v){cia2_=v;};
-    void memory(Memory *v){mem_ = v;};
-    void vic(Vic *v){vic_=v;};
-    void sid(Sid *v){sid_=v;};
+
     void init_color_palette();
     void init_keyboard();
     void handle_keydown(SDL_Keycode k);
@@ -98,6 +90,27 @@ class IO
     void screen_draw_rect(int x, int y, int n, int color);
     void screen_draw_border(int y, int color);
     void screen_refresh();
+
+    /* Needs moving to independent class */
+    void set_disk_loaded(bool ready){diskpresent = ready;};
+    bool disk_loaded(void){return diskpresent;};
+    const int num_sectors[41] = {
+      0,
+      21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21, /* 1 ~ 17 */
+      19,19,19,19,19,19,19,
+      18,18,18,18,18,18,
+      17,17,17,17,17,
+      17,17,17,17,17		// Tracks 36..40
+    };
+
+    const int sector_offset[41] = {
+      0,
+      0,21,42,63,84,105,126,147,168,189,210,231,252,273,294,315,336,
+      357,376,395,414,433,452,471,
+      490,508,526,544,562,580,
+      598,615,632,649,666,
+      683,700,717,734,751	// Tracks 36..40
+    };
 };
 
 // inline member functions accesible from other classes /////////////////////
@@ -107,4 +120,4 @@ inline void IO::screen_update_pixel(int x, int y, int color)
   frame_[y * cols_  + x] = color_palette[color & 0xf];
 };
 
-#endif
+#endif /* EMUDORE_IO_H */

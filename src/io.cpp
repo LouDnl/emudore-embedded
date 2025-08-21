@@ -16,8 +16,9 @@
  */
 
 #include <stdexcept>
-#include "io.h"
-#include "vic.h"
+
+#include <c64.h>
+#include <MC68B50.h> /* Temporary */
 
 // clas ctor and dtor //////////////////////////////////////////////////////////
 
@@ -25,8 +26,11 @@
 bool IO::runstop = false;
 bool IO::shiftlock = false;
 
+/* Disk drive */
+bool IO::diskpresent = false;
 
-IO::IO(bool sdl) :
+IO::IO(C64 *c64,bool sdl) :
+  c64_(c64),
   nosdl(sdl)
 {
   // printf("sdl: %d %d\n",sdl,nosdl);
@@ -230,6 +234,11 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_RALT]         = std::make_pair(7,2); // CTRL
   keymap_[SDL_SCANCODE_ESCAPE]       = std::make_pair(7,7); // RUN/STOP
   keymap_[SDL_SCANCODE_PAGEUP]       = std::make_pair(7,5); // RESTORE
+  /* Temporary key to fake incoming Midi commands */
+  // keymap_[SDL_SCANCODE_END] = NULL;
+  /* keymap_[0x4D / 77] SDL_SCANCODE_END -> key up */
+  // keymap_[SDL_SCANCODE_INSERT] = NULL;
+  /* keymap_[0x49 / 73] SDL_SCANCODE_INSERT -> key down */
 }
 
 /**
@@ -287,7 +296,7 @@ void IO::process_events()
   }
   /* process fake keystrokes if any */
   if(!key_event_queue_.empty() &&
-     cpu_->cycles() > next_key_event_at_)
+     c64_->cpu_->cycles() > next_key_event_at_)
   {
     std::pair<kKeyEvent,SDL_Keycode> &ev = key_event_queue_.front();
     key_event_queue_.pop();
@@ -300,7 +309,7 @@ void IO::process_events()
       handle_keyup(ev.second);
       break;
     }
-    next_key_event_at_ = cpu_->cycles() + kWait;
+    next_key_event_at_ = c64_->cpu_->cycles() + kWait;
   }
 }
 
@@ -314,6 +323,24 @@ void IO::handle_keydown(SDL_Keycode k)
 {
   try
   {
+    /* printf("CODE: %2X\n",k); */
+
+    /* Temporary key to fake incoming Midi commands */
+    /* Must be here and separate or we cause an out of range exception */
+    switch (k) {
+      case /* SDL_SCANCODE_INSERT */ 0x49:
+        if(c64_->havecart)
+          c64_->cart_->mc6850_->fake_keydown();
+        return;
+        break;
+      case /* SDL_SCANCODE_END */ 0x4D:
+        if(c64_->havecart)
+          c64_->cart_->mc6850_->fake_keyup();
+        return;
+        break;
+      default: break;
+    }
+
     uint8_t mask = ~(1 << keymap_.at(k).second); /* PRB */
     switch (k) { /* Handle special keypress combo's */
       uint8_t shiftmask;
@@ -340,17 +367,17 @@ void IO::handle_keydown(SDL_Keycode k)
       case SDL_SCANCODE_PAGEUP:
         if (runstop == true) {
           /* RUN/STOP RESTORE PRESSED */
-          if(sid_->isSIDplaying()) {
+          if(c64_->sid_->isSIDplaying()) {
             // enable kernel and basic rom in ram
-            sid_->set_playing(false);
-            mem_->write_byte(0x0001, 0x37);
+            c64_->sid_->set_playing(false);
+            c64_->mem_->write_byte(0x0001, 0x37);
           }
-          cpu_->reset();
-          cia1_->reset();
-          cia2_->reset();
-          vic_->reset();
+          c64_->cpu_->reset();
+          c64_->cia1_->reset();
+          c64_->cia2_->reset();
+          c64_->vic_->reset();
           reset(); /* IOD */
-          sid_->reset();
+          c64_->sid_->reset();
         }
         break;
       default:
@@ -358,10 +385,12 @@ void IO::handle_keydown(SDL_Keycode k)
     }
     keyboard_matrix_[keymap_.at(k).first] &= mask; /* PRA */
 
-    mem_->kCIA1MemWr[0x00] |= (1<<keymap_.at(k).first);  /* PRA ~ ROW */
-    mem_->kCIA1MemWr[0x01] |= (1<<keymap_.at(k).second); /* PRB ~ COL */
+    c64_->mem_->kCIA1MemWr[0x00] |= (1<<keymap_.at(k).first);  /* PRA ~ ROW */
+    c64_->mem_->kCIA1MemWr[0x01] |= (1<<keymap_.at(k).second); /* PRB ~ COL */
   }
-  catch(const std::out_of_range){}
+  catch(const std::out_of_range){
+    printf ("KEY %02X IS OUT OF RANGE\n",k);
+  }
 }
 
 /**
@@ -383,8 +412,8 @@ void IO::handle_keyup(SDL_Keycode k)
 
     uint8_t mask = (1 << keymap_.at(k).second);    /* PRB */
     keyboard_matrix_[keymap_.at(k).first] |= mask; /* PRA */
-    mem_->kCIA1MemWr[0x01] &= ~(1<<keymap_.at(k).second); /* PRB ~ COL */
-    mem_->kCIA1MemWr[0x00] &= ~(1<<keymap_.at(k).first);  /* PRA ~ ROW */
+    c64_->mem_->kCIA1MemWr[0x01] &= ~(1<<keymap_.at(k).second); /* PRB ~ COL */
+    c64_->mem_->kCIA1MemWr[0x00] &= ~(1<<keymap_.at(k).first);  /* PRA ~ ROW */
   }
   catch(const std::out_of_range){}
 }
@@ -460,7 +489,7 @@ void IO::screen_refresh()
  */
 void IO::vsync()
 {
-  sid_->sid_flush(); /* FLUSH */
+  c64_->sid_->sid_flush(); /* FLUSH */
   using namespace std::chrono;
   auto t = high_resolution_clock::now() - prev_frame_was_at_;
   duration<double> rr(Vic::kRefreshRate);
