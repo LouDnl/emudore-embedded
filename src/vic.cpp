@@ -1,6 +1,9 @@
 /*
  * emudore, Commodore 64 emulator
  * Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
+ * Changes and additions (c) 2025, LouD <emudore@mail.loudai.nl>
+ *
+ * vic.cpp
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,8 +137,8 @@ bool Vic::emulate()
       //   (rstr >= kScreenLines), rstr, prev_rstr, raster_counter(), raster_c_,
       //   raster_irq_, raster_irq_enabled(), (raster_irq_enabled()?(rstr == raster_irq_):0), kScreenLines, cycles);
       verticalSync=true;
+      c64_->sid_->sid_flush(); /* FLUSH */
       c64_->io_->screen_refresh();
-      // c64_->sid_->sid_flush(); /* FLUSH */
       cycles=0;
       frame_c_++;
       raster_counter(0);
