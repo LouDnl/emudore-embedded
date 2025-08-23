@@ -1,6 +1,9 @@
 /*
  * emudore, Commodore 64 emulator
  * Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
+ * Changes and additions (c) 2025, LouD <emudore@mail.loudai.nl>
+ *
+ * memory.cppb
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
