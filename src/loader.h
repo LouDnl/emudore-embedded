@@ -41,6 +41,7 @@ class Loader
     Cpu *cpu_;
     Memory *mem_;
     PLA *pla_;
+    Cart *cart_;
     Vic *vic_;
     Sid *sid_;
     SidFile *sidfile_;
@@ -56,6 +57,10 @@ class Loader
       kSID
     };
     kFormat format_;
+
+
+    uint16_t load_addr;
+    uint16_t start_addr;
 
     uint16_t pl_loadaddr;
     uint16_t pl_initaddr;
@@ -77,20 +82,10 @@ class Loader
     int pl_frame_cycles;
     int pl_refresh_rate;
 
-    bool autorun = true;
-    bool lowercase = false;
-    bool memrwlog = false;
-    bool cia1rwlog = false;
-    bool cia2rwlog = false;
-    bool sidrwlog = false;
-    bool iorwlog = false;
-    bool plarwlog = false;
-
     void load_basic();
     void load_bin();
     void load_prg();
     void load_d64();
-    void load_crt();
     void load_sid();
     void load_sidplayerA(uint16_t play, uint16_t init, int songno);
     void load_sidplayerB(uint16_t play, uint16_t init, int songno);
@@ -98,17 +93,37 @@ class Loader
     void print_sid_info(); /* TODO: Print on C64 screen */
     uint16_t read_short_le();
   public:
-    Loader(C64 *c64);
+    Loader();
+    ~Loader(){};
+    void C64ctr(C64 *c64);
     void bas(const std::string &f);
     void bin(const std::string &f);
     void prg(const std::string &f);
     void d64(const std::string &f);
-    void crt(const std::string &f);
+    bool crt(); /* File is loaded from Cart */
     void sid(const std::string &f);
-    void process_args(int argc, char **argv);
     void handle_args();
+    bool handle_file();
     bool emulate();
-    char *file;
+
+    /* Startup arguments */
+    uint16_t init_addr = 0x0; /* Zero as signal it hasn't been changed */
+    bool autorun = true;
+    bool basic_run = false; /* TODO: Add startup argument for this */
+    bool lowercase = false;
+
+    bool iscart = false; /* For binary (.bin) cart files */
+
+    bool memrwlog = false;
+    bool cia1rwlog = false;
+    bool cia2rwlog = false;
+    bool sidrwlog = false;
+    bool iorwlog = false;
+    bool plarwlog = false;
+    bool cartrwlog = false;
+
+    char *filename;
+
     /* constants */
     static const uint16_t kBasicPrgStart = 0x0801;
     static const uint16_t kBasicTxtTab   = 0x002b;

@@ -18,29 +18,24 @@
 
 #include <bitset>
 #include <iomanip>
+#include <string.h>
 
 #include <loader.h>
 #include <sidfile.h>
 
 
-// const char *sidtype_s[5] = {"Unknown", "N/A", "MOS8580", "MOS6581", "FMopl" };  /* 0 = unknown, 1 = N/A, 2 = MOS8085, 3 = MOS6581, 4 = FMopl */
 const char *chiptype_s[4] = {"Unknown", "MOS6581", "MOS8580", "MOS6581 and MOS8580"};
 const char *clockspeed_s[5] = {"Unknown", "PAL", "NTSC", "PAL and NTSC", "DREAN"};
 
-
-Loader::Loader(C64 *c64) :
-  c64_(c64)
+/**
+ * @brief Initialize Loader object
+ */
+Loader::Loader()
 {
-  io_  = c64_->io();
-  cpu_ = c64_->cpu();
-  mem_ = c64_->memory();
-  pla_ = c64_->pla();
-  vic_ = c64_->vic();
-  sid_ = c64_->sid();
   booted_up_ = false;
   format_ = kNone;
 
-  file = NULL;
+  filename = NULL;
 
   sidfile_ = NULL;
   pl_refresh_rate = 0;
@@ -61,7 +56,13 @@ Loader::Loader(C64 *c64) :
   pl_playaddr = 0;
   pl_loadaddr = 0;
   pl_initaddr = 0;
+}
 
+/**
+ * @brief called to create pointer object to Machine */
+void Loader::C64ctr(C64 *c64)
+{
+  c64_  = c64;
 }
 
 // common ///////////////////////////////////////////////////////////////////
@@ -93,7 +94,7 @@ void Loader::load_basic()
     while(is_.good())
     {
       is_.get(c);
-      io_->IO::type_character(c);
+      c64_->io_->IO::type_character(c);
     }
   }
 }
@@ -111,25 +112,31 @@ void Loader::load_bin()
   char b;
   uint16_t bbuf, addr;
   bbuf = addr = 0x8000; /* Fix binary address at $400 */
-  /* unmap C64 ROMs */
-  mem_->write_byte(Memory::kAddrMemoryLayout, 0);
-  /* load binary into RAM */
-  // if(is_.is_open()) {
-  //   while(is_.good()) {
-  //     is_.seekg (0, is_.end);
-  //     std::streamoff length = is_.tellg();
-  //     is_.seekg (0, is_.beg);
-  //     is_.read ((char *) &mem_->mem_ram_[addr],length);
-  //   }
-  // }
-  if(is_)
-  {
-    is_.seekg (0, is_.end);
-    std::streamoff length = is_.tellg();
-    is_.seekg (0, is_.beg);
-    is_.read ((char *) &mem_->mem_ram()[addr],length);
+  if (init_addr != 0) {addr = init_addr;};
+  // if (bank_setup != 0) {}; // TODO: Add custom bank setup
+  /* Remap C64 ROMs */
+  // TODO: Since we do not load a rom but a binary into RAM we cannot change the banks
+  if (iscart) {c64_->pla_->switch_banks(PLA::m15);};
+
+  if (iscart) {
+      c64_->mem_->write_byte(0xD020,0); /* Bordor color to black */
+      c64_->mem_->write_byte(0xD021,0); /* Background color to black */
   }
-  cpu_->pc(0x8000);
+
+  if(is_.is_open())
+  { /* BUG: */
+    while(is_.good()) /* BUG: THIS WORKS */
+    {
+      is_.get(b);
+      c64_->mem_->write_byte_no_io(bbuf++,b);
+    }
+    /* BUG: This does not!? */
+    // is_.seekg (0, is_.end);
+    // std::streamoff length = is_.tellg();
+    // is_.seekg (0, is_.beg);
+    // is_.read ((char *) &mem_->mem_ram()[addr],length);
+  }
+  c64_->cpu_->pc(addr);
 }
 
 // PRG //////////////////////////////////////////////////////////////////////
@@ -143,33 +150,47 @@ void Loader::prg(const std::string &f)
 void Loader::load_prg()
 {
   char b;
-  uint16_t pbuf, addr;
-  pbuf = addr = read_short_le();
+  uint16_t pbuf;
+  pbuf = load_addr = read_short_le();
   if(is_.is_open())
   {
     while(is_.good())
     {
       is_.get(b);
-      mem_->write_byte_no_io(pbuf++,b);
+      c64_->mem_->write_byte_no_io(pbuf++,b);
     }
 
     /* basic-tokenized prg */
-    if(addr == kBasicPrgStart)
+    if(load_addr == kBasicPrgStart)
     {
       /* make BASIC happy */
-      mem_->write_word_no_io(kBasicTxtTab,addr);
-      mem_->write_word_no_io(kBasicVarTab,pbuf);
-      mem_->write_word_no_io(kBasicAryTab,pbuf);
-      mem_->write_word_no_io(kBasicStrEnd,pbuf);
+      c64_->mem_->write_word_no_io(kBasicTxtTab,load_addr);
+      c64_->mem_->write_word_no_io(kBasicVarTab,pbuf);
+      c64_->mem_->write_word_no_io(kBasicAryTab,pbuf);
+      c64_->mem_->write_word_no_io(kBasicStrEnd,pbuf);
       if(autorun) {
-        /* exec RUN */
-        for(char &c: std::string("RUN\n"))
-          io_->IO::type_character(c);
+        if (basic_run) { /* TODO: Not re-implemented yet */
+          /* type and exec RUN */
+          for(char &c: std::string("RUN\n")) {
+            io_->IO::type_character(c);
+          }
+        } else if (init_addr == 0x0) {
+          // init_addr = (start_addr + 0x2);
+          init_addr = ((c64_->mem_->read_byte_no_io(load_addr)|c64_->mem_->read_byte_no_io(load_addr+0x1)<<8)+0x2);
+          D("load_addr %04X start_addr %04X, calculated init_addr %04X\n", load_addr, start_addr, init_addr);
+          c64_->cpu_->pc(init_addr);
+        } else {
+          D("load_addr %04X start_addr %04X, provided init_addr %04X\n", load_addr, start_addr, init_addr);
+          c64_->cpu_->pc(init_addr); /* Example: Cynthcart start/init address is 0x80D */
+        }
       }
     }
-    /* ML */
-    else
-      cpu_->pc(addr); /* Else always start, or prg start is broken */
+    else {
+      init_addr = ((c64_->mem_->read_byte_no_io(load_addr)|c64_->mem_->read_byte_no_io(load_addr+0x1)<<8)+0x2);
+      D("load_addr %04X start_addr %04X, calculated init_addr %04X\n", load_addr, start_addr, init_addr);
+      c64_->cpu_->pc(init_addr);
+    }
+
   }
 }
 
@@ -192,10 +213,10 @@ void Loader::load_d64()
   if(is_.is_open()) {
     while (is_.good()) {
       is_.get(b);
-      pla_->DISKptr[n++] = b;
+      c64_->pla_->DISKptr[n++] = b;
     }
-    pla_->disk_size = n;
-    io_->set_disk_loaded(true);
+    c64_->pla_->disk_size = n;
+    c64_->io_->set_disk_loaded(true);
   }
   //  {
   //    while(is_.good())
@@ -224,18 +245,14 @@ void Loader::load_d64()
   //  }
 }
 
-// BIN //////////////////////////////////////////////////////////////////////
+// CRT //////////////////////////////////////////////////////////////////////
 
-void Loader::crt(const std::string &f)
+bool Loader::crt()
 {
   format_ = kCRT;
-  is_.open(f,std::ios::in|std::ios::binary);
+  return true;
 }
 
-void Loader::load_crt()
-{
-  D("Cart loading not implemented yet!\n");
-}
 // SID //////////////////////////////////////////////////////////////////////
 
 void Loader::sid(const std::string &f)
@@ -255,9 +272,6 @@ void Loader::load_sid()
   pl_chiptype = sidfile_->GetChipType(1);
   pl_clockspeed = sidfile_->GetClockSpeed();
   pl_sidversion = sidfile_->GetSidVersion();
-  // 2 2 3 ~ Genius
-  // 2 1 3 ~ Jump
-  // printf("%d %d %d\n", ct, cs, sv);
   pl_clock_speed = clockSpeed[pl_clockspeed];
   pl_raster_lines = scanLines[pl_clockspeed];
   pl_rasterrow_cycles = scanlinesCycles[pl_clockspeed];
@@ -270,12 +284,12 @@ void Loader::load_sid()
   pl_initaddr = sidfile_->GetInitAddress();
 
   print_sid_info();
-  mem_->write_byte(0xD020,2); /* Bordor color to red */
-  mem_->write_byte(0xD021,0); /* Background color to black */
+  c64_->mem_->write_byte(0xD020,2); /* Bordor color to red */
+  c64_->mem_->write_byte(0xD021,0); /* Background color to black */
 
   /* Load SID data into memory */
   for (unsigned int i = 0; i < pl_datalength; i++) {
-    mem_->write_byte((pl_loadaddr+i),pl_databuffer[i]);
+    c64_->mem_->write_byte((pl_loadaddr+i),pl_databuffer[i]);
   }
   printf("load: $%04X play: $%04X init: $%04X\n",
     pl_loadaddr, pl_playaddr, pl_initaddr);
@@ -285,124 +299,124 @@ void Loader::load_sid()
   // load_sidplayerB(pl_playaddr, pl_initaddr, pl_song_number);
   // load_sidplayerC(pl_playaddr, pl_initaddr, pl_song_number);
 
-  sid_->sid_flush();
-  sid_->set_playing(true);
-  cpu_->pc(mem_->read_word(Memory::kAddrResetVector));
+  c64_->sid_->sid_flush();
+  c64_->sid_->set_playing(true);
+  c64_->cpu_->pc(c64_->mem_->read_word(Memory::kAddrResetVector));
 }
 
 void Loader::load_sidplayerA(uint16_t play, uint16_t init, int songno)
 {
   // install reset vector for microplayer (0x0000)
-  mem_->write_byte(0xFFFD, 0x00);
-  mem_->write_byte(0xFFFC, 0x02);
+  c64_->mem_->write_byte(0xFFFD, 0x00);
+  c64_->mem_->write_byte(0xFFFC, 0x02);
 
   // install IRQ vector for play routine launcher (0x000C)
-  mem_->write_byte(0xFFFF, 0x00);
-  mem_->write_byte(0xFFFE, 0x0C);
+  c64_->mem_->write_byte(0xFFFF, 0x00);
+  c64_->mem_->write_byte(0xFFFE, 0x0C);
 
   // clear kernel and basic rom from ram
-  mem_->write_byte(0x0001, 0x35);
+  c64_->mem_->write_byte(0x0001, 0x35);
 
   // install the micro player, 6502 assembly code
-  mem_->write_byte(0x0002, 0xA9);               // 0xA9 LDA imm load A with the song number
-  mem_->write_byte(0x0003, songno);             // 0xNN #NN song number
+  c64_->mem_->write_byte(0x0002, 0xA9);               // 0xA9 LDA imm load A with the song number
+  c64_->mem_->write_byte(0x0003, songno);             // 0xNN #NN song number
 
-  mem_->write_byte(0x0004, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  mem_->write_byte(0x0005, init & 0xFF);        // 0xxxNN address lo
-  mem_->write_byte(0x0006, (init >> 8) & 0xFF); // 0xNNxx address hi
+  c64_->mem_->write_byte(0x0004, 0x20);               // 0x20 JSR abs jump sub to INIT routine
+  c64_->mem_->write_byte(0x0005, init & 0xFF);        // 0xxxNN address lo
+  c64_->mem_->write_byte(0x0006, (init >> 8) & 0xFF); // 0xNNxx address hi
 
-  mem_->write_byte(0x0007, 0x58);               // 0x58 CLI enable interrupt
-  mem_->write_byte(0x0008, 0xEA);               // 0xEA NOP impl
-  mem_->write_byte(0x0009, 0x4C);               // JMP jump to 0x0006
-  mem_->write_byte(0x000A, 0x08);               // 0xxxNN address lo
-  mem_->write_byte(0x000B, 0x00);               // 0xNNxx address hi
+  c64_->mem_->write_byte(0x0007, 0x58);               // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0x0008, 0xEA);               // 0xEA NOP impl
+  c64_->mem_->write_byte(0x0009, 0x4C);               // JMP jump to 0x0006
+  c64_->mem_->write_byte(0x000A, 0x08);               // 0xxxNN address lo
+  c64_->mem_->write_byte(0x000B, 0x00);               // 0xNNxx address hi
 
-  mem_->write_byte(0x000C, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  mem_->write_byte(0x000D, 0xEA);               // 0xEA NOP // 0x01 #NN
-  mem_->write_byte(0x000E, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  mem_->write_byte(0x000F, 0x20);               // 0x20 JSR jump sub to play routine
-  mem_->write_byte(0x0010, play & 0xFF);        // playaddress lo
-  mem_->write_byte(0x0011, (play >> 8) & 0xFF); // playaddress hi
-  mem_->write_byte(0x0012, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  mem_->write_byte(0x0013, 0x40);               // 0x40 RTI return from interrupt
+  c64_->mem_->write_byte(0x000C, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
+  c64_->mem_->write_byte(0x000D, 0xEA);               // 0xEA NOP // 0x01 #NN
+  c64_->mem_->write_byte(0x000E, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
+  c64_->mem_->write_byte(0x000F, 0x20);               // 0x20 JSR jump sub to play routine
+  c64_->mem_->write_byte(0x0010, play & 0xFF);        // playaddress lo
+  c64_->mem_->write_byte(0x0011, (play >> 8) & 0xFF); // playaddress hi
+  c64_->mem_->write_byte(0x0012, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0x0013, 0x40);               // 0x40 RTI return from interrupt
 }
 
 void Loader::load_sidplayerB(uint16_t play, uint16_t init, int songno)
 { /* BUG: Doesn't work at all! */
   // install reset vector for microplayer (0x0000)
-  mem_->write_byte(0xFFFD, 0x00);
-  mem_->write_byte(0xFFFC, 0x02);
+  c64_->mem_->write_byte(0xFFFD, 0x00);
+  c64_->mem_->write_byte(0xFFFC, 0x02);
 
   // install IRQ vector for play routine launcher (0x0813)
-  mem_->write_byte(0xFFFF, 0xD7);
-  mem_->write_byte(0xFFFE, 0xE0);
+  c64_->mem_->write_byte(0xFFFF, 0xD7);
+  c64_->mem_->write_byte(0xFFFE, 0xE0);
 
   // clear kernel and basic rom from ram
-  // mem_->write_byte(0x0001, 0x35);
+  // c64_->mem_->write_byte(0x0001, 0x35);
 
   // install the micro pl`ayer, 6502 assembly code
-  mem_->write_byte(0xD7E0, 0xA9);               // 0xA9 LDA imm load A with the song number
-  mem_->write_byte(0xD7E1, songno);             // 0xNN #NN song number
+  c64_->mem_->write_byte(0xD7E0, 0xA9);               // 0xA9 LDA imm load A with the song number
+  c64_->mem_->write_byte(0xD7E1, songno);             // 0xNN #NN song number
 
-  mem_->write_byte(0xD7E2, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  mem_->write_byte(0xD7E3, init & 0xFF);        // 0xxxNN address lo
-  mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
+  c64_->mem_->write_byte(0xD7E2, 0x20);               // 0x20 JSR abs jump sub to INIT routine
+  c64_->mem_->write_byte(0xD7E3, init & 0xFF);        // 0xxxNN address lo
+  c64_->mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
 
   // infinite loop?
-  mem_->write_byte(0xD7E5, 0x58);               // 0x58 CLI enable interrupt
-  mem_->write_byte(0xD7E6, 0xEA);               // 0xEA NOP impl
-  mem_->write_byte(0xD7E7, 0x4C);               // JMP jump to 0x0006
-  mem_->write_byte(0xD7E8, 0x08);               // 0xxxNN address lo
-  mem_->write_byte(0xD7E9, 0x00);               // 0xNNxx address hi
+  c64_->mem_->write_byte(0xD7E5, 0x58);               // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0xD7E6, 0xEA);               // 0xEA NOP impl
+  c64_->mem_->write_byte(0xD7E7, 0x4C);               // JMP jump to 0x0006
+  c64_->mem_->write_byte(0xD7E8, 0x08);               // 0xxxNN address lo
+  c64_->mem_->write_byte(0xD7E9, 0x00);               // 0xNNxx address hi
 
   // install the play routine launcher
-  mem_->write_byte(0xD7EA, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  mem_->write_byte(0xD7EB, 0xEA);               // 0xEA NOP // 0x01 #NN
-  mem_->write_byte(0xD7EC, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  mem_->write_byte(0xD7ED, 0x20);               // 0x20 JSR jump sub to play routine
-  mem_->write_byte(0xD7EE, play & 0xFF);        // playaddress lo
-  mem_->write_byte(0xD7EF, (play >> 8) & 0xFF); // playaddress hi
-  mem_->write_byte(0xD7F0, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  mem_->write_byte(0xD7F1, 0x40);               // 0x40 RTI return from interrupt
+  c64_->mem_->write_byte(0xD7EA, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
+  c64_->mem_->write_byte(0xD7EB, 0xEA);               // 0xEA NOP // 0x01 #NN
+  c64_->mem_->write_byte(0xD7EC, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
+  c64_->mem_->write_byte(0xD7ED, 0x20);               // 0x20 JSR jump sub to play routine
+  c64_->mem_->write_byte(0xD7EE, play & 0xFF);        // playaddress lo
+  c64_->mem_->write_byte(0xD7EF, (play >> 8) & 0xFF); // playaddress hi
+  c64_->mem_->write_byte(0xD7F0, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0xD7F1, 0x40);               // 0x40 RTI return from interrupt
 }
 
 void Loader::load_sidplayerC(uint16_t play, uint16_t init, int songno)
 { /* BUG: Causes turbo play and other issues, do not use */
   // install reset vector for microplayer (0x0000)
-  mem_->write_byte(0xFFFD, 0x00);
-  mem_->write_byte(0xFFFC, 0x02);
+  c64_->mem_->write_byte(0xFFFD, 0x00);
+  c64_->mem_->write_byte(0xFFFC, 0x02);
 
   // install IRQ vector for play routine launcher (0x0813)
-  mem_->write_byte(0xFFFF, 0x00);
-  mem_->write_byte(0xFFFE, 0x13);
+  c64_->mem_->write_byte(0xFFFF, 0x00);
+  c64_->mem_->write_byte(0xFFFE, 0x13);
 
   // clear kernel and basic rom from ram
-  // mem_->write_byte(0x0001, 0x35);
+  // c64_->mem_->write_byte(0x0001, 0x35);
 
   // install the micro player, 6502 assembly code
-  mem_->write_byte(0x0000, 0xA9);               // 0xA9 LDA imm load A with the song number
-  mem_->write_byte(0x0001, songno);             // 0xNN #NN song number
+  c64_->mem_->write_byte(0x0000, 0xA9);               // 0xA9 LDA imm load A with the song number
+  c64_->mem_->write_byte(0x0001, songno);             // 0xNN #NN song number
 
-  mem_->write_byte(0x0002, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  mem_->write_byte(0x0003, init & 0xFF);        // 0xxxNN address lo
-  mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
+  c64_->mem_->write_byte(0x0002, 0x20);               // 0x20 JSR abs jump sub to INIT routine
+  c64_->mem_->write_byte(0x0003, init & 0xFF);        // 0xxxNN address lo
+  c64_->mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
 
   // infinite loop?
-  mem_->write_byte(0x0005, 0x58);               // 0x58 CLI enable interrupt
-  mem_->write_byte(0x0006, 0xEA);               // 0xEA NOP impl
-  mem_->write_byte(0x0007, 0x4C);               // JMP jump to 0x0006
-  mem_->write_byte(0x0008, 0x08);               // 0xxxNN address lo
-  mem_->write_byte(0x0009, 0x00);               // 0xNNxx address hi
+  c64_->mem_->write_byte(0x0005, 0x58);               // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0x0006, 0xEA);               // 0xEA NOP impl
+  c64_->mem_->write_byte(0x0007, 0x4C);               // JMP jump to 0x0006
+  c64_->mem_->write_byte(0x0008, 0x08);               // 0xxxNN address lo
+  c64_->mem_->write_byte(0x0009, 0x00);               // 0xNNxx address hi
 
   // install the play routine launcher
-  mem_->write_byte(0x0013, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  mem_->write_byte(0x0014, 0xEA);               // 0xEA NOP // 0x01 #NN
-  mem_->write_byte(0x0015, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  mem_->write_byte(0x0016, 0x20);               // 0x20 JSR jump sub to play routine
-  mem_->write_byte(0x0017, play & 0xFF);        // playaddress lo
-  mem_->write_byte(0x0018, (play >> 8) & 0xFF); // playaddress hi
-  mem_->write_byte(0x0019, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  mem_->write_byte(0x001A, 0x40);               // 0x40 RTI return from interrupt
+  c64_->mem_->write_byte(0x0013, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
+  c64_->mem_->write_byte(0x0014, 0xEA);               // 0xEA NOP // 0x01 #NN
+  c64_->mem_->write_byte(0x0015, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
+  c64_->mem_->write_byte(0x0016, 0x20);               // 0x20 JSR jump sub to play routine
+  c64_->mem_->write_byte(0x0017, play & 0xFF);        // playaddress lo
+  c64_->mem_->write_byte(0x0018, (play >> 8) & 0xFF); // playaddress hi
+  c64_->mem_->write_byte(0x0019, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0x001A, 0x40);               // 0x40 RTI return from interrupt
 }
 
 void Loader::print_sid_info() /* TODO: THIS MUST GO TO C64 SCREEN */
@@ -451,51 +465,58 @@ void Loader::print_sid_info() /* TODO: THIS MUST GO TO C64 SCREEN */
 
 // emulate //////////////////////////////////////////////////////////////////
 
-void Loader::process_args(int argc, char **argv)
-{
-  if(argc>=1) {
-    for(int a = 1; a < argc; a++) {
-      if((strchr(argv[a], '.') != NULL)) file = argv[a];
-      if(!strcmp(argv[a], "-norun")) autorun = false;
-      if(!strcmp(argv[a], "-lowercase")) lowercase = true;
-      if(!strcmp(argv[a], "-loginstr")) Cpu::loginstructions = true;
-      if(!strcmp(argv[a], "-logill")) Cpu::logillegals = true;
-      if(!strcmp(argv[a], "-logmemrw")) memrwlog = true;
-      if(!strcmp(argv[a], "-logcia1rw")) cia1rwlog = true;
-      if(!strcmp(argv[a], "-logcia2rw")) cia2rwlog = true;
-      if(!strcmp(argv[a], "-logsidrw")) sidrwlog = true;
-      if(!strcmp(argv[a], "-logiorw")) iorwlog = true;
-      if(!strcmp(argv[a], "-logplarw")) plarwlog = true;
-    }
-  }
-  if (lowercase) {
-    mem_->write_byte(0xD018,0x17); /* Enable lowercase mode */
-  }
-}
-
 void Loader::handle_args()
 {
   if (lowercase) {
-    mem_->write_byte(0xD018,0x17); /* Enable lowercase mode */
+    c64_->mem_->write_byte(0xD018,0x17); /* Enable lowercase mode */
   }
   if (memrwlog) {
-    mem_->setlogrw(0);
+    c64_->mem_->setlogrw(0);
   }
   if (cia1rwlog) {
-    mem_->setlogrw(1);
+    c64_->mem_->setlogrw(1);
   }
   if (cia2rwlog) {
-    mem_->setlogrw(2);
-  }
-  if (sidrwlog) {
-    sid_->set_sidrwlog(true);
+    c64_->mem_->setlogrw(2);
   }
   if (iorwlog) {
-    mem_->setlogrw(3);
+    c64_->mem_->setlogrw(3);
   }
   if (plarwlog) {
-    mem_->setlogrw(4);
+    c64_->mem_->setlogrw(4);
   }
+  if (cartrwlog) {
+    c64_->mem_->setlogrw(5);
+  }
+  if (sidrwlog) {
+    c64_->sid_->set_sidrwlog(true);
+  }
+}
+
+bool Loader::handle_file()
+{
+  switch(format_)
+  {
+  case kBasic:
+    load_basic();
+    break;
+  case kBIN:
+    load_bin();
+    break;
+  case kPRG:
+    load_prg();
+    break;
+  case kD64:
+    load_d64();
+    break;
+  case kSID:
+    load_sid();
+    break;
+  case kCRT: /* Skip, is done in Cart */
+  default:
+    break;
+  }
+  return false;
 }
 
 bool Loader::emulate()
@@ -503,35 +524,13 @@ bool Loader::emulate()
   handle_args();
   if(booted_up_)
   {
-    switch(format_)
-    {
-    case kBasic:
-      load_basic();
-      break;
-    case kBIN:
-      load_bin();
-      break;
-    case kPRG:
-      load_prg();
-      break;
-    case kD64:
-      load_d64();
-      break;
-    case kCRT:
-      load_crt();
-      break;
-    case kSID:
-      load_sid();
-      break;
-    default:
-      break;
-    }
+    handle_file();
     return false;
   }
   else
   {
     /* at this point BASIC is ready */
-    if(cpu_->pc() == 0xa65c)
+    if(c64_->cpu_->pc() == 0xa65c)
       booted_up_ = true;
   }
   return true;
