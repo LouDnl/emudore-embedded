@@ -22,17 +22,26 @@
 #include <util.h>
 
 
-C64::C64(bool sdl, bool bin, bool crt, bool blog) :
+C64::C64(
+  bool sdl,
+  bool bin, bool cart,
+  bool blog, bool mid,
+  const std::string &f
+  ) :
   nosdl(sdl),
-  isbinary(bin),
-  havecart(crt),
-  bankswlog(blog)
-{ /* BUG: Auto PRG start seems broken at times? */
+  isbinary(bin), /* Unused */
+  havecart(cart),
+  bankswlog(blog),
+  midi(mid),
+  cartfile(f)
+{
   /* create and init C64 */
   /* init cpu */
   cpu_  = new Cpu(this);
   /* init memory & DMA */
   mem_  = new Memory(this);
+  /* init cart slot */
+  cart_ = new Cart(this);
   /* init PLA */
   pla_  = new PLA(this);
   /* init cia1 */
@@ -45,15 +54,11 @@ C64::C64(bool sdl, bool bin, bool crt, bool blog) :
   sid_  = new Sid(this);
   /* init io */
   io_   = new IO(this,nosdl);
-  /* Always create cart object */
-  cart_ = new Cart(this);
 
-  /* Resets before start */
+  /* Resets needed before start */
   cpu_->reset();
   cia1_->reset();
   cia2_->reset();
-  pla_->reset();
-  cart_->reset();
 
  /* r2 support */
 #ifdef DEBUGGER_SUPPORT
@@ -86,7 +91,12 @@ void C64::start()
 #ifdef DEBUGGER_SUPPORT
     if(!debugger_->emulate())
       break;
-#endif /* TODO: Remove unneeded if statements (deprecate return values on some emulation runs) */
+#endif
+    // TODO: Remove unneeded if statements (deprecate return values on some emulation runs)
+    /* callback executes _before_ first emulation run */
+    if(callback_ && !callback_()) break;
+    /* Cart */
+    cart_->emulate();
     /* CPU */
     if(!cpu_->emulate()) break;
     /* CIA1 */
@@ -97,11 +107,6 @@ void C64::start()
     if(!vic_->emulate()) break;
     /* IO (SDL2 keyboard input) */
     if(!io_->emulate()) break;
-    pla_->emulate();
-    if(havecart) { cart_->emulate(); }
-    /* callback executes _after_ first emulation run */
-    if(callback_ && !callback_())
-      break;
   }
 }
 

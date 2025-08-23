@@ -76,14 +76,18 @@ class C64
     Debugger *debugger_;
 #endif
   public:
-    C64(bool sdl, bool bin, bool crt, bool blog);
+    C64(bool sdl, bool bin, bool cart, bool blog, bool mid, const std::string &f);
     ~C64();
 
   public: /* Make protected after class children implementation */
     bool nosdl = false;
     bool isbinary = false;
-    bool havecart = false;
     bool bankswlog = false;
+    /* Specific for CRT files */
+    bool havecart = false;
+    std::string cartfile;
+    /* Specific for Midi like Cynthcart that uses MC6850 */
+    bool midi = false;
 
   public:
     void start();
