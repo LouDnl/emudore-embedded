@@ -64,6 +64,7 @@ class Memory
     bool logcia2rw = false;
     bool logiorw   = false;
     bool logplarw  = false;
+    bool logcrtrw  = false;
 
   public:
     Memory(C64 * c64);
@@ -87,8 +88,8 @@ class Memory
     uint8_t read_byte_rom(uint16_t addr);
 
     /* load external binaries */
-    void load_rom(const std::string &f, uint16_t baseaddr);
-    void load_ram(const std::string &f, uint16_t baseaddr);
+    bool load_rom(const std::string &f, uint16_t baseaddr);
+    bool load_ram(const std::string &f, uint16_t baseaddr);
 
     /* debug */
     void dump();
@@ -100,6 +101,7 @@ class Memory
         case 2: logcia2rw = true; break;
         case 3: logiorw   = true; break;
         case 4: logplarw  = true; break;
+        case 5: logcrtrw  = true; break;
         default: break; } };
 
     /* constants */
@@ -124,6 +126,10 @@ class Memory
     /* RAM, cannot be changed */
     /* ZeroPage */
     static const uint16_t kAddrZeroPage        = 0x0000;
+    /* RAM */
+    static const uint16_t kAddrRAM1FirstPage   = 0x1000;
+    static const uint16_t kAddrRAM1LastPage    = 0x7000;
+    static const uint16_t kAddrRAM2Page        = 0xc000;
 
     /* RAM or Cartridge ROM */
     static const uint16_t kAddrCartLoFirstPage = 0x8000;
@@ -174,6 +180,11 @@ class Memory
     /* CIA2 */
     uint8_t *kCIA2MemWr; /* $dd00 */
     uint8_t *kCIA2MemRd; /* $(dd)00 */
+
+    /* Cart ROM pointers */ // TODO: Move pointers to Cart?
+    uint8_t *kCARTRomLo;  /* $8000 ~ $9fff */
+    uint8_t *kCARTRomHi1; /* $a000 ~ $bfff */
+    uint8_t *kCARTRomHi2; /* $e000 ~ $ffff */
 
 };
 

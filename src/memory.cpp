@@ -79,11 +79,11 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
   {
     /* bank switching $01 */
     if (addr == kAddrMemoryLayout) {
-      c64_->pla_->runtime_bank_switching(v); /* Setup (new) bank config */
+      c64_->pla_->runtime_bank_switching(v); /* Setup (new) runtime bank config */
     } else {
-      if (addr == kAddrDataDirection) {
-        // printf("Datadirection change: %02X\n",v);
-      }
+      // if (addr == kAddrDataDirection) {
+      //   D("Datadirection change from %02X to %02X\n", mem_ram_[kAddrDataDirection], v);
+      // }
       mem_ram_[addr] = v; /* Write to RAM */
     }
   }
@@ -165,12 +165,44 @@ uint8_t Memory::read_byte(uint16_t addr)
 { /* TODO: Account for new bank modes! */
   uint8_t  retval = 0;
   uint16_t page   = addr&0xff00;
+  /* RAM ~ $1000/$1fff */
+  if (page >= kAddrRAM1FirstPage
+        && page <= kAddrRAM1LastPage)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankCart) == PLA::kUNM) {
+      retval = 0xFF; /* TODO: What to return if unmapped!? */
+    } else {
+      retval = mem_ram_[addr];
+    }
+  }
+  /* CART LORAM ~ $8000/$9fff */
+  else if (page >= kAddrCartLoFirstPage
+        && page <= kAddrCartLoLastPage)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankCart) == PLA::kCLO) {
+      retval = kCARTRomLo[(addr-0x8000)]; /* TODO: Move to Cart? */
+      if (logcrtrw) {D("[CART R] $%04X:%02X\n",addr,retval);};
+    } else {
+      retval = mem_ram_[addr];
+    }
+  }
   /* BASIC or RAM ~ $a000/$bfff */
-  if (page >= kAddrBasicFirstPage
+  else if (page >= kAddrBasicFirstPage
    && page <= kAddrBasicLastPage)
   {
     if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kROM) {
       retval = mem_rom_[addr];
+    } else if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kCHI) {
+      retval = kCARTRomHi1[(addr-0xa000)]; /* TODO: Move to Cart? */
+    } else {
+      retval = mem_ram_[addr];
+    }
+  }
+  /* RAM ~ $c000/$cfff */
+  else if (page == kAddrRAM2Page)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankCart) == PLA::kUNM) {
+      retval = 0xFF; /* TODO: What to return if unmapped!? */
     } else {
       retval = mem_ram_[addr];
     }
@@ -267,6 +299,8 @@ uint8_t Memory::read_byte(uint16_t addr)
   {
     if (c64_->pla_->memory_banks(PLA::kBankKernal) == PLA::kROM) {
       retval = mem_rom_[addr];
+    } else if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kCHI) {
+      retval = kCARTRomHi2[(addr-0xe000)]; /* TODO: Move to Cart? */
     } else {
       retval = mem_ram_[addr];
     }
@@ -353,9 +387,10 @@ uint8_t Memory::vic_read_byte(uint16_t addr)
 /**
  * @brief loads a external binary into ROM
  */
-void Memory::load_rom(const std::string &f, uint16_t baseaddr)
+bool Memory::load_rom(const std::string &f, uint16_t baseaddr)
 {
-  std::string path = "./assets/roms/" + f;
+  // std::string path = "./assets/roms/" + f;
+  std::string path = "./assets/" + f;
   std::ifstream is(path, std::ios::in | std::ios::binary);
   if(is)
   {
@@ -363,13 +398,15 @@ void Memory::load_rom(const std::string &f, uint16_t baseaddr)
     std::streamoff length = is.tellg();
     is.seekg (0, is.beg);
     is.read ((char *) &mem_rom_[baseaddr],length);
+    return true;
   }
+  return false;
 }
 
 /**
  * @brief loads a external binary into RAM
  */
-void Memory::load_ram(const std::string &f, uint16_t baseaddr)
+bool Memory::load_ram(const std::string &f, uint16_t baseaddr)
 {
   std::string path = "./assets/" + f;
   std::ifstream is(path, std::ios::in | std::ios::binary);
@@ -379,7 +416,9 @@ void Memory::load_ram(const std::string &f, uint16_t baseaddr)
     std::streamoff length = is.tellg();
     is.seekg (0, is.beg);
     is.read ((char *) &mem_ram_[baseaddr],length);
+    return true;
   }
+  return false;
 }
 
 // debug ////////////////////////////////////////////////////////////////////
