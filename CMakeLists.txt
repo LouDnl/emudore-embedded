@@ -1,3 +1,22 @@
+##
+# emudore, Commodore 64 emulator
+# Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
+# Changes and additions (c) 2025, LouD <emudore@mail.loudai.nl>
+#
+# CMakeLists.txt
+#
+# Licensed under the Apache License, Version 2.0 (the "License")
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 ### Cmake minimum version
 cmake_minimum_required(VERSION 3.17)
 
@@ -10,12 +29,12 @@ set(PROJECT_NAME adorable)
 
 set(ILLEGAL_LOGGING 0)
 set(DBG_SUPPORT -DDEBUGGER_SUPPORT)
-# set(DBG_SUPPORT )
+set(SDL_ENABLED 1)
 
 ### Compiler flags and options
 set(COMPILE_OPTS PRIVATE
   -g3
-  -Og
+  -O0
   # -Wall
   # -Wunused
   # -Werror
@@ -40,9 +59,7 @@ pkg_check_modules(libusb REQUIRED IMPORTED_TARGET libusb-1.0)
 pkg_check_modules(udev REQUIRED IMPORTED_TARGET libudev)
 
 ### Libraries to link
-pkg_check_modules(sdl REQUIRED IMPORTED_TARGET sdl2)
 set(TARGET_LL
-  PkgConfig::sdl
   PkgConfig::libusb
   PkgConfig::udev
 )
@@ -77,6 +94,22 @@ set(TARGET_INCLUDE_DIRS PRIVATE
   /usr/lib
   /usr/include
 )
+
+if(SDL_ENABLED EQUAL 1)
+  set(COMPILE_OPTS
+    ${COMPILE_OPTS}
+    -DSDL_ENABLED=1
+  )
+  pkg_check_modules(sdl REQUIRED IMPORTED_TARGET sdl2)
+  set(TARGET_LL
+    ${TARGET_LL}
+    PkgConfig::sdl
+    )
+else()
+  set(TARGET_INCLUDE_DIRS
+    ${TARGET_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_LIST_DIR}/lib/SDL)
+endif()
 
 ### Compile time
 add_executable(${PROJECT_NAME} ${SOURCEFILES})
