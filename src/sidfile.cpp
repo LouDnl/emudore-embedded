@@ -1,7 +1,10 @@
 //============================================================================
 // Description : SID file parser
+// Filename    : sidfile.cpp
+// Source repo : https://github.com/LouDnl/SidBerry
 // Authors     : Gianluca Ghettini, LouD
 // Last update : 2025
+// License     : GPL2 https://github.com/LouDnl/SidBerry/blob/master/LICENSE
 //============================================================================
 
 #include <sidfile.h>
