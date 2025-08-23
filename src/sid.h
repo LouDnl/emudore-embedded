@@ -1,5 +1,10 @@
 /*
- * emudore, Commodore 64 emulator
+ * MOS Sound Interface Device (SID) USB hardware communication
+ * Copyright (c) 2025, LouD <emudore@mail.loudai.nl>
+ *
+ * sid.h
+ *
+ * Made for emudore, Commodore 64 emulator
  * Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");

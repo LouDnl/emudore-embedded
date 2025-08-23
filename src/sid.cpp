@@ -1,3 +1,24 @@
+/*
+ * MOS Sound Interface Device (SID) USB hardware communication
+ * Copyright (c) 2025, LouD <emudore@mail.loudai.nl>
+ *
+ * sid.h
+ *
+ * Made for emudore, Commodore 64 emulator
+ * Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <time.h>
 
@@ -25,6 +46,7 @@ Sid::Sid(C64 * c64) :
   if(usbsid->USBSID_Init(true, true) != 0) {
     us_ = false;
   } else {
+    usbsid->USBSID_SetClockRate(USBSID_NS::PAL, true);
     us_ = true;
   }
   sid_main_clk = sid_flush_clk = sid_delay_clk = sid_write_clk = sid_read_clk = sid_write_cycles = 0;
@@ -104,7 +126,8 @@ void Sid::sid_flush()
     cycles -= 0xFFFF;
   }
   if (int(cycles - sid_write_cycles) > 0) {
-    wait_ns(cycles - sid_write_cycles);
+    // if (us_) wait_ns(cycles - sid_write_cycles);
+    if (us_) usbsid->USBSID_WaitForCycle(cycles - sid_write_cycles);
   }
   sid_main_clk = sid_delay_clk = sid_flush_clk = now;
   sid_write_cycles = 0;
@@ -120,7 +143,8 @@ unsigned int Sid::sid_delay()
     /* printf("SID delay called @ %u cycles (cycles > 0xFFFF), last was at %u, diff %u, main clock %u\n",
       now, sid_delay_clk, cycles, sid_main_clk); */
     cycles -= 0xFFFF;
-    wait_ns(0xFFFF);
+    // if (us_) wait_ns(0xFFFF);
+    if (us_) usbsid->USBSID_WaitForCycle(0xFFFF);
   }
   sid_main_clk = sid_delay_clk = now;
   return cycles;
@@ -146,7 +170,8 @@ void Sid::write_register(uint8_t r, uint8_t v, uint8_t sidno)
   r = ((sidno*0x20) | r);
   unsigned int cycles = sid_delay();
   if (us_) {
-    wait_ns(cycles);
+    // wait_ns(cycles);
+    usbsid->USBSID_WaitForCycle(cycles);
     usbsid->USBSID_WriteRingCycled(r, v, cycles);
     if (logsidrw) D("[WR%d] $%02X:%02X C:%u WRC:%u\n", sidno, r, v, cycles, sid_write_cycles);
   } else {
