@@ -12,6 +12,9 @@
 !src/**
 !assets
 !assets/**
+!lib
+!lib/SDL
+!lib/SDL/**
 
 # Yeah let's ignore this again okay?
 assets/sidprgs
