@@ -21,13 +21,19 @@
 #ifndef EMUDORE_IO_H
 #define EMUDORE_IO_H
 
-#include <SDL.h>
 #include <queue>
 #include <chrono>
 #include <thread>
 #include <vector>
 #include <utility>
 #include <unordered_map>
+
+#if defined(SDL_ENABLED)
+#include <SDL.h>
+#else
+#include <SDL_scancode.h>
+typedef uint8_t SDL_Keycode;
+#endif
 
 
 /**
@@ -43,10 +49,12 @@ class IO
   private:
     C64 *c64_;
 
+    #if defined(SDL_ENABLED)
     SDL_Window *window_;
     SDL_Renderer *renderer_;
     SDL_Texture *texture_;
     SDL_PixelFormat *format_;
+    #endif
     uint32_t *frame_;
     size_t cols_;
     size_t rows_;

@@ -37,6 +37,7 @@ IO::IO(C64 *c64,bool sdl) :
   nosdl(sdl)
 {
   // printf("sdl: %d %d\n",sdl,nosdl);
+  #if defined(SDL_ENABLED)
   if(!nosdl) {
     SDL_Init(SDL_INIT_VIDEO);
     /**
@@ -52,9 +53,11 @@ IO::IO(C64 *c64,bool sdl) :
           SDL_WINDOW_OPENGL
     );
   }
+  #endif
   cols_ = Vic::kVisibleScreenWidth;
   rows_ = Vic::kVisibleScreenHeight;
   /* use a single texture and hardware acceleration */
+  #if defined(SDL_ENABLED)
   if(!nosdl) {
     renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
     texture_  = SDL_CreateTexture(renderer_,
@@ -64,6 +67,7 @@ IO::IO(C64 *c64,bool sdl) :
                                   rows_);
     format_ = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
     }
+  #endif
   /**
    * unfortunately, we need to keep a copy of the rendered frame
    * in our own memory, there does not seem to be a way around
@@ -83,12 +87,14 @@ IO::IO(C64 *c64,bool sdl) :
 IO::~IO()
 {
   delete [] frame_;
+  #if defined(SDL_ENABLED)
   if(!nosdl) {
     SDL_DestroyRenderer(renderer_);
     SDL_DestroyTexture(texture_);
     SDL_FreeFormat(format_);
     SDL_Quit();
   }
+  #endif
 }
 
 void IO::reset()
@@ -249,6 +255,7 @@ void IO::init_keyboard()
  */
 void IO::init_color_palette()
 {
+  #if defined(SDL_ENABLED)
   if(!nosdl) {
     color_palette[0]   = SDL_MapRGB(format_, 0x00, 0x00, 0x00);
     color_palette[1]   = SDL_MapRGB(format_, 0xff, 0xff, 0xff);
@@ -267,6 +274,7 @@ void IO::init_color_palette()
     color_palette[14]  = SDL_MapRGB(format_, 0xaa, 0x9d, 0xef);
     color_palette[15]  = SDL_MapRGB(format_, 0xb8, 0xb8, 0xb8);
   }
+  #endif
 }
 
 // emulation ///////////////////////////////////////////////////////////////////
@@ -279,6 +287,7 @@ bool IO::emulate()
 
 void IO::process_events()
 {
+  #if defined(SDL_ENABLED)
   if(!nosdl) {
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -297,6 +306,7 @@ void IO::process_events()
       }
     }
   }
+  #endif
   /* process fake keystrokes if any */
   if(!key_event_queue_.empty() &&
      c64_->cpu_->cycles() > next_key_event_at_)
@@ -321,23 +331,22 @@ void IO::process_events()
 /**
  * @brief emulate keydown
  */
-
 void IO::handle_keydown(SDL_Keycode k)
 {
   try
   {
-    /* printf("CODE: %2X\n",k); */
+    /* D("CODE: %2X\n",k); */
 
     /* Temporary key to fake incoming Midi commands */
     /* Must be here and separate or we cause an out of range exception */
     switch (k) {
       case /* SDL_SCANCODE_INSERT */ 0x49:
-        if(c64_->havecart)
+        if(c64_->midi)
           c64_->cart_->mc6850_->fake_keydown();
         return;
         break;
       case /* SDL_SCANCODE_END */ 0x4D:
-        if(c64_->havecart)
+        if(c64_->midi)
           c64_->cart_->mc6850_->fake_keyup();
         return;
         break;
@@ -379,7 +388,9 @@ void IO::handle_keydown(SDL_Keycode k)
           c64_->cia1_->reset();
           c64_->cia2_->reset();
           c64_->vic_->reset();
-          reset(); /* IOD */
+          this->reset(); /* IO */
+          c64_->pla_->reset();
+          c64_->cart_->reset(); /* NOTE: Disables cart contents e.g. MC6850 */
           c64_->sid_->reset();
         }
         break;
@@ -431,10 +442,14 @@ void IO::type_character(char c)
 {
   try
   {
-    for(SDL_Keycode &k: charmap_.at(toupper(c)))
+    for(SDL_Keycode &k: charmap_.at(toupper(c))) {
+      /* D("kPress %c %x\n",c,k); */
       key_event_queue_.push(std::make_pair(kPress,k));
-    for(SDL_Keycode &k: charmap_.at(toupper(c)))
+    }
+    for(SDL_Keycode &k: charmap_.at(toupper(c))) {
+      /* D("kRelease %c %x\n",c,k); */
       key_event_queue_.push(std::make_pair(kRelease,k));
+    }
   }
   catch(const std::out_of_range){}
 }
@@ -462,12 +477,14 @@ void IO::screen_draw_border(int y, int color)
  */
 void IO::screen_refresh()
 {
+  #if defined(SDL_ENABLED)
   if(!nosdl) {
     SDL_UpdateTexture(texture_, NULL, frame_, cols_ * sizeof(uint32_t));
     SDL_RenderClear(renderer_);
     SDL_RenderCopy(renderer_,texture_, NULL, NULL);
     SDL_RenderPresent(renderer_);
   }
+  #endif
   /* process SDL events once every frame */
   process_events();
   /* perform vertical refresh sync */
@@ -492,7 +509,6 @@ void IO::screen_refresh()
  */
 void IO::vsync()
 {
-  c64_->sid_->sid_flush(); /* FLUSH */
   using namespace std::chrono;
   auto t = high_resolution_clock::now() - prev_frame_was_at_;
   duration<double> rr(Vic::kRefreshRate);
