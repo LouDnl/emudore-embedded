@@ -1,6 +1,9 @@
 /*
  * emudore, Commodore 64 emulator
  * Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
+ * Changes and additions (c) 2025, LouD <emudore@mail.loudai.nl>
+ *
+ * util.h
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +71,30 @@
 # define ntohll(x) (x)
 #endif
 #endif
+
+/* BACKTRACE START */
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+inline void print_trace(void)
+{
+  void *array[10];
+  char **strings;
+  int size, i;
+
+  size = backtrace (array, 10);
+  strings = backtrace_symbols (array, size);
+  if (strings != NULL)
+  {
+
+    printf ("Obtained %d stack frames.\n", size);
+    for (i = 0; i < size; i++)
+      printf ("%s\n", strings[i]);
+  }
+
+  free (strings);
+}
+/* BACKTRACE END */
 
 
 #endif /* EMUDORE_UTIL_H */
