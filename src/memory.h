@@ -22,8 +22,14 @@
 #define EMUDORE_MEMORY_H
 
 
+#if DESKTOP
 #include <iostream>
+#endif
 #include <cstdint>
+#if EMBEDDED
+#include <cstring>
+#include <string>
+#endif
 
 
 /**
@@ -59,12 +65,13 @@ class Memory
     C64 * c64_;
 
     /* Debug logging */
-    bool logmemrw  = false;
-    bool logcia1rw = false;
-    bool logcia2rw = false;
-    bool logiorw   = false;
-    bool logplarw  = false;
-    bool logcrtrw  = false;
+    bool logmemrw  = false; /* $0000 ~ $ffff */
+    bool logcia1rw = false; /* $dc00 ~ $dcff */
+    bool logcia2rw = false; /* $dd00 ~ $ddff */
+    bool logiorw   = false; /* $de00 ~ $dfff */
+    bool logplarw  = false; /* unused */
+    bool logcrtrw  = false; /* $8000 ~ $9fff  */
+    bool logsidrw  = false; /* $d400 ~ $d4ff */
 
   public:
     Memory(C64 * c64);
@@ -95,14 +102,36 @@ class Memory
     void dump();
     void dump(uint16_t start, uint16_t end);
     void print_screen_text();
-    void setlogrw(char logid) { switch(logid)
+    void setlogrw(int logid) {
+      switch(logid)
       { case 0: logmemrw  = true; break;
         case 1: logcia1rw = true; break;
         case 2: logcia2rw = true; break;
         case 3: logiorw   = true; break;
         case 4: logplarw  = true; break;
         case 5: logcrtrw  = true; break;
+        case 6: logsidrw  = true; break; /* logs from SID class */
         default: break; } };
+    void unsetlogrw(int logid) {
+      switch(logid)
+      { case 0: logmemrw  = false; break;
+        case 1: logcia1rw = false; break;
+        case 2: logcia2rw = false; break;
+        case 3: logiorw   = false; break;
+        case 4: logplarw  = false; break;
+        case 5: logcrtrw  = false; break;
+        case 6: logsidrw  = false; break;
+        default: break; } };
+    bool getlogrw(int logid) {
+      switch(logid)
+      { case 0: return logmemrw;
+        case 1: return logcia1rw;
+        case 2: return logcia2rw;
+        case 3: return logiorw;
+        case 4: return logplarw;
+        case 5: return logcrtrw;
+        case 6: return logsidrw;
+        default: return false; } };
 
     /* constants */
     static const size_t kMemSize = 0x10000;
@@ -168,10 +197,14 @@ class Memory
     static const uint16_t kAddrKernalLastPage  = 0xff00;
 
     /* Number of SID vs memory layout configuration */
-    static const uint8_t kMaxSIDs = 2;
-    uint8_t kSIDNum = 0; /* TODO: use USBSID-Pico SID amount */
-    uint16_t kAddrSIDOne = 0xd400;
-    uint16_t kAddrSIDTwo = 0xd420;
+    uint16_t kSIDOneMask   = 0xff1f;
+    uint16_t kSIDTwoMask   = 0xff3f;
+    uint16_t kSIDThreeMask = 0xff5f;
+    uint16_t kSIDFourMask  = 0xff7f;
+    uint16_t kAddrSIDOne   = 0xd400;
+    uint16_t kAddrSIDTwo   = 0xd420;
+    uint16_t kAddrSIDThree = 0xd420;
+    uint16_t kAddrSIDFour  = 0xd420;
 
     /* Public memory pointers set by Memory class */
     /* CIA1 */

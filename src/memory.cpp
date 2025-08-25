@@ -35,7 +35,9 @@ Memory::Memory(C64 * c64) :
    * hidden RAM, this trickery is used in certain graphic modes.
    */
   mem_ram_ = new uint8_t[kMemSize]();
+  #if DESKTOP
   mem_rom_ = new uint8_t[kMemSize]();
+  #endif
 
   /**
    * 1 KB _Read only_ page buffers, zeroed.
@@ -53,7 +55,9 @@ Memory::Memory(C64 * c64) :
 Memory::~Memory()
 {
   delete [] mem_ram_;
+  #if DESKTOP
   delete [] mem_rom_;
+  #endif
   delete [] mem_rom_cia1_;
   delete [] mem_rom_cia2_;
 }
@@ -97,6 +101,38 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
       mem_ram_[addr] = v; /* Write to RAM */
     }
   }
+  /* SID ~ $d400/$d7ff */
+  else if (page >= kAddrSIDFirstPage
+        && page <= kAddrSIDLastPage)
+  {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      if (page == kAddrSIDFirstPage) { /* No SID's in second page */
+        mem_ram_[addr] = v; /* Always write to RAM */
+        /* Check SID address in reverse order */
+        if (((addr & kSIDFourMask) >= kAddrSIDFour)
+          && (addr & kSIDFourMask) < (kAddrSIDFour+0x20)) { /* SID Four */
+            c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 3);
+        } else
+        if (((addr & kSIDThreeMask) >= kAddrSIDThree)
+          && (addr & kSIDThreeMask) < kAddrSIDFour) { /* SID Three */
+            c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 2);
+        } else
+        if (((addr & kSIDTwoMask) >= kAddrSIDTwo)
+          && (addr & kSIDTwoMask) < kAddrSIDThree) { /* SID Two */
+            c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 1);
+        } else
+        if (((addr & kSIDOneMask) >= kAddrSIDOne)
+          && (addr & kSIDOneMask) < kAddrSIDTwo) { /* SID One */
+            c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 0);
+        }
+      } else {
+        mem_ram_[addr] = v; /* Write to RAM */
+      }
+    }
+    else {
+      mem_ram_[addr] = v; /* Write to RAM */
+    }
+  }
   /* CIA1 ~ $dc00/$dcff */
   else if (page == kAddrCIA1Page)
   {
@@ -117,29 +153,17 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
       mem_ram_[addr] = v; /* Write to RAM */
     }
   }
-  /* SID ~ $d400/$d7ff */
-  else if (page >= kAddrSIDFirstPage
-        && page <= kAddrSIDLastPage)
-  {
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
-      if (page == 0xd400) { /* TODO: Check for SID number */
-        mem_ram_[addr] = v; /* Always write to RAM */
-        c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 0); /* TODO: This should not be fixed */
-      } else {
-        mem_ram_[addr] = v; /* Write to RAM */
-      }
-    }
-    else {
-      mem_ram_[addr] = v; /* Write to RAM */
-    }
-  }
   /* IO1 ~ $de00 */
   else if (page == kAddrIO1Page)
   {
-    /* TODO: CHECK FOR ENABLED IO / CART DEVICES */
-    if(logiorw){D("[IO1  W] $%04X:%02X\n",addr,v);};
+    if(logiorw){D("[IO1  W] $%04X:%02X ($%02x)\n",addr,v,c64_->pla_->memory_banks(PLA::kBankChargen));};
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) { /* TODO: CHECK IF THIS IS THE RIGHT BANK CHECK */
-      c64_->cart_->write_register((addr&0xFF),v);
+      /* hack for mc68b60 acia on cart */
+      if (c64_->acia) {
+        c64_->cart_->write_register((addr&0xFF),v);
+      } else {
+        mem_ram_[addr] = v; /* Write to RAM */
+      }
     } else {
       mem_ram_[addr] = v; /* Write to RAM */
     }
@@ -180,7 +204,7 @@ uint8_t Memory::read_byte(uint16_t addr)
         && page <= kAddrCartLoLastPage)
   {
     if(c64_->pla_->memory_banks(PLA::kBankCart) == PLA::kCLO) {
-      retval = kCARTRomLo[(addr-0x8000)]; /* TODO: Move to Cart? */
+      retval = kCARTRomLo[(addr-kAddrCartLoFirstPage)]; /* TODO: Move to Cart? */
       if (logcrtrw) {D("[CART R] $%04X:%02X\n",addr,retval);};
     } else {
       retval = mem_ram_[addr];
@@ -191,9 +215,13 @@ uint8_t Memory::read_byte(uint16_t addr)
    && page <= kAddrBasicLastPage)
   {
     if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kROM) {
-      retval = mem_rom_[addr];
+      #if DESKTOP
+      retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->basic_[(addr-kAddrBasicFirstPage)]; /* Read from ROM */
+      #endif
     } else if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kCHI) {
-      retval = kCARTRomHi1[(addr-0xa000)]; /* TODO: Move to Cart? */
+      retval = kCARTRomHi1[(addr-kAddrCartH1FirstPage)]; /* TODO: Move to Cart? */
     } else {
       retval = mem_ram_[addr];
     }
@@ -214,7 +242,11 @@ uint8_t Memory::read_byte(uint16_t addr)
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
       retval = c64_->vic_->read_register(addr&0x7f);
     } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      #if DESKTOP
       retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->chargen_[(addr-kAddrCharsFirstPage)]; /* Read from ROM */
+      #endif
     } else {
       retval = mem_ram_[addr]; /* Read from RAM */
     }
@@ -224,9 +256,35 @@ uint8_t Memory::read_byte(uint16_t addr)
         && page <= kAddrSIDLastPage)
   {
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
-      retval = mem_ram_[addr]; /* Read from RAM */
+      if (page == kAddrSIDFirstPage) { /* No SID's in second page */
+        /* Check SID address in reverse order */
+        if (((addr & kSIDFourMask) >= kAddrSIDFour)
+          && (addr & kSIDFourMask) < (kAddrSIDFour+0x20)) { /* SID Four */
+            retval = c64_->sid_->read_register((uint8_t)(addr&0x1F), 3);
+        } else
+        if (((addr & kSIDThreeMask) >= kAddrSIDThree)
+          && (addr & kSIDThreeMask) < kAddrSIDFour) { /* SID Three */
+            retval = c64_->sid_->read_register((uint8_t)(addr&0x1F), 2);
+        } else
+        if (((addr & kSIDTwoMask) >= kAddrSIDTwo)
+          && (addr & kSIDTwoMask) < kAddrSIDThree) { /* SID Two */
+            retval = c64_->sid_->read_register((uint8_t)(addr&0x1F), 1);
+        } else
+        if (((addr & kSIDOneMask) >= kAddrSIDOne)
+          && (addr & kSIDOneMask) < kAddrSIDTwo) { /* SID One */
+            retval = c64_->sid_->read_register((uint8_t)(addr&0x1F), 0);
+        } else {
+          retval = mem_ram_[addr]; /* Read from RAM */
+        }
+      } else {
+        retval = mem_ram_[addr]; /* Read from RAM */
+      }
     } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      #if DESKTOP
       retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->chargen_[(addr-kAddrCharsFirstPage)]; /* Read from ROM */
+      #endif
     } else {
       retval = mem_ram_[addr]; /* Read from RAM */
     }
@@ -236,7 +294,11 @@ uint8_t Memory::read_byte(uint16_t addr)
         && page <= kAddrColorLastPage)
   {
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      #if DESKTOP
       retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->chargen_[(addr-kAddrCharsFirstPage)]; /* Read from ROM */
+      #endif
     } else {
       retval = mem_ram_[addr]; /* Read from RAM */
     }
@@ -247,7 +309,11 @@ uint8_t Memory::read_byte(uint16_t addr)
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
       retval = c64_->cia1_->read_register(addr&0x0f);
     } else if (c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      #if DESKTOP
       retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->chargen_[(addr-kAddrCharsFirstPage)]; /* Read from ROM */
+      #endif
     } else {
       retval = mem_ram_[addr]; /* Read from RAM */
     }
@@ -259,7 +325,11 @@ uint8_t Memory::read_byte(uint16_t addr)
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
       retval = c64_->cia2_->read_register(addr&0x0f);
     } else if (c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      #if DESKTOP
       retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->chargen_[(addr-kAddrCharsFirstPage)]; /* Read from ROM */
+      #endif
     } else {
       retval = mem_ram_[addr];
     }
@@ -268,26 +338,33 @@ uint8_t Memory::read_byte(uint16_t addr)
   /* IO1 ~ $de00/$deff */
   else if (page == kAddrIO1Page)
   {
-    /* TODO: Add check for what is enabled! */
-    // if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
-    //   retval = mem_rom_[addr]; /* Read from ROM */
-    // } else {
-    //   retval = mem_ram_[addr]; /* Read from RAM */
-    // }
-
-    /* TODO: CHECK FOR ENABLED IO / CART DEVICES */
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) { /* TODO: CHECK IF THIS IS THE RIGHT BANK CHECK */
-      retval = c64_->cart_->read_register((addr&0xFF));
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      #if DESKTOP
+      retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->chargen_[(addr-kAddrCharsFirstPage)]; /* Read from ROM */
+      #endif
+    } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+      /* hack for mc68b60 acia on cart */
+      if (c64_->acia) {
+        retval = c64_->cart_->read_register((addr&0xFF));
+      } else {
+        retval = mem_ram_[addr];
+      }
     } else {
       retval = mem_ram_[addr]; /* Read from RAM */
     }
-    if(logiorw){D("[IO1  R] $%04X:%02X\n",addr,retval);};
+    if(logiorw){D("[IO1  R] $%04X:%02X ($%02x)\n",addr,retval,c64_->pla_->memory_banks(PLA::kBankChargen));};
   }
   /* IO2 ~ $df00/$dfff */
   else if (page == kAddrIO2Page)
   {
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
+      #if DESKTOP
       retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->chargen_[(addr-kAddrCharsFirstPage)]; /* Read from ROM */
+      #endif
     } else {
       retval = mem_ram_[addr]; /* Read from RAM */
     }
@@ -298,9 +375,13 @@ uint8_t Memory::read_byte(uint16_t addr)
         && page <= kAddrKernalLastPage)
   {
     if (c64_->pla_->memory_banks(PLA::kBankKernal) == PLA::kROM) {
-      retval = mem_rom_[addr];
-    } else if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kCHI) {
-      retval = kCARTRomHi2[(addr-0xe000)]; /* TODO: Move to Cart? */
+      #if DESKTOP
+      retval = mem_rom_[addr]; /* Read from ROM */
+      #elif EMBEDDED
+      retval = c64_->kernal_[(addr-kAddrKernalFirstPage)]; /* Read from ROM */
+      #endif
+    } else if (c64_->pla_->memory_banks(PLA::kBankKernal) == PLA::kCHI) { /* Was kBankBasic ?? */
+      retval = kCARTRomHi2[(addr-kAddrCartH2FirstPage)]; /* TODO: Move to Cart? */
     } else {
       retval = mem_ram_[addr];
     }
@@ -377,10 +458,15 @@ uint8_t Memory::vic_read_byte(uint16_t addr)
   uint8_t v;
   uint16_t vic_addr = c64_->cia2_->vic_base_address() + (addr & 0x3fff);
   if((vic_addr >= 0x1000 && vic_addr <  0x2000) ||
-     (vic_addr >= 0x9000 && vic_addr <  0xa000))
+     (vic_addr >= 0x9000 && vic_addr <  0xa000)) {
+    #if DESKTOP
     v = mem_rom_[kBaseAddrChars + (vic_addr & 0xfff)];
-  else
+    #elif EMBEDDED
+    v = c64_->chargen_[/* kBaseAddrChars +  */(vic_addr & 0xfff)];
+    #endif
+  } else {
     v = read_byte_no_io(vic_addr);
+  }
   return v;
 }
 
@@ -389,6 +475,7 @@ uint8_t Memory::vic_read_byte(uint16_t addr)
  */
 bool Memory::load_rom(const std::string &f, uint16_t baseaddr)
 {
+  #if DESKTOP
   // std::string path = "./assets/roms/" + f;
   std::string path = "./assets/" + f;
   std::ifstream is(path, std::ios::in | std::ios::binary);
@@ -401,6 +488,9 @@ bool Memory::load_rom(const std::string &f, uint16_t baseaddr)
     return true;
   }
   return false;
+  #elif EMBEDDED
+  return true;
+  #endif
 }
 
 /**
@@ -408,6 +498,7 @@ bool Memory::load_rom(const std::string &f, uint16_t baseaddr)
  */
 bool Memory::load_ram(const std::string &f, uint16_t baseaddr)
 {
+  #if DESKTOP
   std::string path = "./assets/" + f;
   std::ifstream is(path, std::ios::in | std::ios::binary);
   if(is)
@@ -419,6 +510,9 @@ bool Memory::load_ram(const std::string &f, uint16_t baseaddr)
     return true;
   }
   return false;
+  #elif EMBEDDED
+  return true;
+  #endif
 }
 
 // debug ////////////////////////////////////////////////////////////////////
@@ -428,22 +522,26 @@ bool Memory::load_ram(const std::string &f, uint16_t baseaddr)
  */
 void Memory::dump()
 {
+  #if DESKTOP
   for(unsigned int p=0 ; p < kMemSize ; p++)
   {
     if (p % 15 == 0 || p == 0) std::cout << std::setw(5) << std::setfill('0') << (p == 0 ? p : p - 16) << " ";
     std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(read_byte_no_io(p)) << " ";
     if (p % 15 == 0 && p != 0) std::cout << std::endl;
   }
+  #endif
 }
 /**
  * @brief dumps memory range as seen by the CPU to stdout
  */
 void Memory::dump(uint16_t start, uint16_t end)
 {
+  #if DESKTOP
   for(unsigned int p=start ; p < (end<=kMemSize?end:kMemSize) ; p++)
   {
     if (p % 15 == 0 || p == 0) std::cout << std::setw(5) << std::setfill('0') << (p == 0 ? p : p - 16) << " ";
     std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(read_byte_no_io(p)) << " ";
     if (p % 15 == 0 && p != 0) std::cout << std::endl;
   }
+  #endif
 }
