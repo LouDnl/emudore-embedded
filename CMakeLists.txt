@@ -27,33 +27,50 @@ set(CMAKE_CXX_STANDARD 17)
 ### Project magic sprinkles
 set(PROJECT_NAME adorable)
 
-set(ILLEGAL_LOGGING 0)
-set(DBG_SUPPORT -DDEBUGGER_SUPPORT)
+# enable or disable radare2 debugging support
+set(DBG_SUPPORT 1)
+# enabled/disable SDL window (SET TO 0 FOR EMBEDDED!)
 set(SDL_ENABLED 1)
+# DESKTOP and EMBEDDED are mutually exclusive
+set(DESKTOP 1)
+set(EMBEDDED 0) # Requires Pico SDK components!
+# enable or disable hardware sid driver
+set(USBSID_DRIVER 1)
 
-### Compiler flags and options
-set(COMPILE_OPTS PRIVATE
-  -g3
-  -O0
+set(DBG -g3)
+set(OPT -O0)
+set(WARN PRIVATE
   # -Wall
   # -Wunused
   # -Werror
-  -fno-omit-frame-pointer
   -Wno-format          # int != int32_t as far as the compiler is concerned because gcc has int32_t as long int
   -Wno-unused-function # extra check to verify no unused lingering code is present
   -Wno-maybe-uninitialized
-  -save-temps
+)
+
+### Compiler flags and options
+set(COMPILE_OPTS PRIVATE
+  ${DBG}
+  ${OPT}
+  -fno-omit-frame-pointer
   -fverbose-asm
-  -DLOG_ILLEGALS=${ILLEGAL_LOGGING}
-  ${DBG_SUPPORT}
+  -save-temps
+  -DDEBUGGER_SUPPORT=${DBG_SUPPORT}
+  -DDESKTOP=${DESKTOP}
+  -DSDL_ENABLED=${SDL_ENABLED}
+  -DUSBSID_DRIVER=${USBSID_DRIVER}
+  -DEMBEDDED=${EMBEDDED}
 )
 
 # Run the project command
 project(${PROJECT_NAME} C CXX ASM)
 
+if(DESKTOP EQUAL 1)
 # the `pkg_check_modules` function is created with this call
 find_package(PkgConfig REQUIRED)
+endif()
 
+if(USBSID_DRIVER EQUAL 1)
 # these calls create special `PkgConfig::<MODULE>` variables
 pkg_check_modules(libusb REQUIRED IMPORTED_TARGET libusb-1.0)
 pkg_check_modules(udev REQUIRED IMPORTED_TARGET libudev)
@@ -63,6 +80,7 @@ set(TARGET_LL
   PkgConfig::libusb
   PkgConfig::udev
 )
+endif()
 
 ### Source files to compile
 set(SOURCEFILES
@@ -76,11 +94,10 @@ set(SOURCEFILES
   ${CMAKE_CURRENT_LIST_DIR}/src/cia2.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/io.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/vic.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/sid.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/sidadapter.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/pla.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/cart.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/cart/MC68B50.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver/USBSID.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/debugger.cpp
 )
 ### Header folders to include
@@ -88,18 +105,24 @@ set(TARGET_INCLUDE_DIRS PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}
   ${CMAKE_CURRENT_LIST_DIR}/src
   ${CMAKE_CURRENT_LIST_DIR}/src/cart
-  ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver
   /usr/local/lib
   /usr/local/include
   /usr/lib
   /usr/include
 )
 
-if(SDL_ENABLED EQUAL 1)
-  set(COMPILE_OPTS
-    ${COMPILE_OPTS}
-    -DSDL_ENABLED=1
+if(USBSID_DRIVER EQUAL 1)
+  set(SOURCEFILES
+    ${SOURCEFILES}
+    ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver/USBSID.cpp
   )
+  set(TARGET_INCLUDE_DIRS
+    ${TARGET_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_LIST_DIR}/lib/USBSID-Pico-driver
+  )
+endif()
+
+if(SDL_ENABLED EQUAL 1)
   pkg_check_modules(sdl REQUIRED IMPORTED_TARGET sdl2)
   set(TARGET_LL
     ${TARGET_LL}
