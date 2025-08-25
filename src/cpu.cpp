@@ -21,12 +21,11 @@
 #include <sstream>
 
 #include <c64.h>
-#include <USBSID.h>
 
 Cpu::Cpu(C64 * c64) :
   c64_(c64)
 {
- if (LOG_ILLEGALS == 1) logillegals = true;
+
 }
 
 /**
@@ -2104,7 +2103,13 @@ void Cpu::arr()
     int tmp2 = tmp;
     tmp2 |= ((flags() & SR_CARRY) << 8);
     tmp2 >>= 1;
-    nf(((flags() & SR_CARRY)?0x80:0)); /* set signed on negative flag */
+    // compiler integer in boolean situation warning/error
+    // nf(((flags() & SR_CARRY)?0x80:0)); /* set signed on negative flag */
+    if (flags() & SR_CARRY) {
+      nf(0x80); /* set signed on negative flag */
+    } else {
+      nf(0); /* unset signed on negative flag */
+    }
     SET_ZF(tmp2);
     of((tmp2 ^ tmp) & 0x40);
     if (((tmp & 0xf) + (tmp & 0x1)) > 0x5) {
