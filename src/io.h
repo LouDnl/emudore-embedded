@@ -28,12 +28,14 @@
 #include <utility>
 #include <unordered_map>
 
-#if defined(SDL_ENABLED)
+#if DESKTOP
+#if SDL_ENABLED
 #include <SDL.h>
 #else
 #include <SDL_scancode.h>
 typedef uint8_t SDL_Keycode;
 #endif
+#endif /* DESKTOP */
 
 
 /**
@@ -48,31 +50,38 @@ class IO
 {
   private:
     C64 *c64_;
-
-    #if defined(SDL_ENABLED)
+    #if DESKTOP
+    #if SDL_ENABLED
     SDL_Window *window_;
     SDL_Renderer *renderer_;
     SDL_Texture *texture_;
     SDL_PixelFormat *format_;
-    #endif
+    #endif /* SDL_ENABLED */
     uint32_t *frame_;
+    #endif /* DESKTOP */
     size_t cols_;
     size_t rows_;
+    #if DESKTOP
     unsigned int color_palette[16];
+    #endif
     uint8_t keyboard_matrix_[8];
     bool retval_ = true;
     /* keyboard mappings */
+    #if DESKTOP
     std::unordered_map<SDL_Keycode,std::pair<int,int>> keymap_;
     std::unordered_map<char,std::vector<SDL_Keycode>> charmap_;
+    #endif
     enum kKeyEvent
     {
       kPress,
       kRelease,
     };
     /* key events */
+    #if DESKTOP
     std::queue<std::pair<kKeyEvent,SDL_Keycode>> key_event_queue_;
     unsigned int next_key_event_at_;
     static const int kWait = 18000;
+    #endif
     /* vertical refresh sync */
     std::chrono::high_resolution_clock::time_point prev_frame_was_at_;
     void vsync();
@@ -93,9 +102,11 @@ class IO
 
     void init_color_palette();
     void init_keyboard();
+    #if DESKTOP
     void handle_keydown(SDL_Keycode k);
     void handle_keyup(SDL_Keycode k);
     void type_character(char c);
+    #endif
     inline uint8_t keyboard_matrix_row(int col){return keyboard_matrix_[col];};
     void screen_update_pixel(int x, int y, int color);
     void screen_draw_rect(int x, int y, int n, int color);
@@ -128,7 +139,9 @@ class IO
 
 inline void IO::screen_update_pixel(int x, int y, int color)
 {
+  #if DESKTOP
   frame_[y * cols_  + x] = color_palette[color & 0xf];
+  #endif
 };
 
 #endif /* EMUDORE_IO_H */

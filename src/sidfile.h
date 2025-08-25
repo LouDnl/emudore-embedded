@@ -15,7 +15,9 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#if DESKTOP
 #include <iostream>
+#endif
 #include <stdio.h>
 using namespace std;
 
@@ -185,6 +187,9 @@ private:
 public:
     SidFile();
     int Parse(std::string file);
+    #if EMBEDDED
+    int ParsePtr(uint8_t * fileptr,size_t filesize);
+    #endif
     std::string GetSidType();
     std::string GetModuleName();
     std::string GetAuthorName();

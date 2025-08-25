@@ -21,7 +21,8 @@
 #include <stdexcept>
 
 #include <c64.h>
-#include <MC68B50.h> /* Temporary */
+#include <io.h>
+
 
 // clas ctor and dtor //////////////////////////////////////////////////////////
 
@@ -36,8 +37,9 @@ IO::IO(C64 *c64,bool sdl) :
   c64_(c64),
   nosdl(sdl)
 {
+  #if DESKTOP
   // printf("sdl: %d %d\n",sdl,nosdl);
-  #if defined(SDL_ENABLED)
+  #if SDL_ENABLED
   if(!nosdl) {
     SDL_Init(SDL_INIT_VIDEO);
     /**
@@ -54,10 +56,12 @@ IO::IO(C64 *c64,bool sdl) :
     );
   }
   #endif
+  #endif /* DESKTOP */
   cols_ = Vic::kVisibleScreenWidth;
   rows_ = Vic::kVisibleScreenHeight;
   /* use a single texture and hardware acceleration */
-  #if defined(SDL_ENABLED)
+  #if DESKTOP
+  #if SDL_ENABLED
   if(!nosdl) {
     renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
     texture_  = SDL_CreateTexture(renderer_,
@@ -68,6 +72,7 @@ IO::IO(C64 *c64,bool sdl) :
     format_ = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
     }
   #endif
+  #endif /* DESKTOP */
   /**
    * unfortunately, we need to keep a copy of the rendered frame
    * in our own memory, there does not seem to be a way around
@@ -77,17 +82,22 @@ IO::IO(C64 *c64,bool sdl) :
    * The rendered frame gets uploaded to the GPU on every
    * screen refresh.
    */
+  #if DESKTOP
   frame_  = new uint32_t[cols_ * rows_]();
+  #endif
   init_color_palette();
   init_keyboard();
+  #if DESKTOP
   next_key_event_at_ = 0;
+  #endif
   prev_frame_was_at_ = std::chrono::high_resolution_clock::now();
 }
 
 IO::~IO()
 {
+  #if DESKTOP
   delete [] frame_;
-  #if defined(SDL_ENABLED)
+  #if SDL_ENABLED
   if(!nosdl) {
     SDL_DestroyRenderer(renderer_);
     SDL_DestroyTexture(texture_);
@@ -95,11 +105,14 @@ IO::~IO()
     SDL_Quit();
   }
   #endif
+  #endif /* DESKTOP */
 }
 
 void IO::reset()
 {
+  #if DESKTOP
   next_key_event_at_ = 0;
+  #endif
   prev_frame_was_at_ = std::chrono::high_resolution_clock::now();
 }
 
@@ -116,6 +129,7 @@ void IO::init_keyboard()
     keyboard_matrix_[i] = 0xff;
   }
   /* character to sdl key map */
+  #if DESKTOP
   charmap_['A']  = {SDL_SCANCODE_A};
   charmap_['B']  = {SDL_SCANCODE_B};
   charmap_['C']  = {SDL_SCANCODE_C};
@@ -243,11 +257,7 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_RALT]         = std::make_pair(7,2); // CTRL
   keymap_[SDL_SCANCODE_ESCAPE]       = std::make_pair(7,7); // RUN/STOP
   keymap_[SDL_SCANCODE_PAGEUP]       = std::make_pair(7,5); // RESTORE
-  /* Temporary key to fake incoming Midi commands */
-  // keymap_[SDL_SCANCODE_END] = NULL;
-  /* keymap_[0x4D / 77] SDL_SCANCODE_END -> key up */
-  // keymap_[SDL_SCANCODE_INSERT] = NULL;
-  /* keymap_[0x49 / 73] SDL_SCANCODE_INSERT -> key down */
+  #endif /* DESKTOP */
 }
 
 /**
@@ -255,7 +265,8 @@ void IO::init_keyboard()
  */
 void IO::init_color_palette()
 {
-  #if defined(SDL_ENABLED)
+  #if DESKTOP
+  #if SDL_ENABLED
   if(!nosdl) {
     color_palette[0]   = SDL_MapRGB(format_, 0x00, 0x00, 0x00);
     color_palette[1]   = SDL_MapRGB(format_, 0xff, 0xff, 0xff);
@@ -275,6 +286,7 @@ void IO::init_color_palette()
     color_palette[15]  = SDL_MapRGB(format_, 0xb8, 0xb8, 0xb8);
   }
   #endif
+  #endif /* DESKTOP */
 }
 
 // emulation ///////////////////////////////////////////////////////////////////
@@ -287,7 +299,8 @@ bool IO::emulate()
 
 void IO::process_events()
 {
-  #if defined(SDL_ENABLED)
+  #if DESKTOP
+  #if SDL_ENABLED
   if(!nosdl) {
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -306,7 +319,7 @@ void IO::process_events()
       }
     }
   }
-  #endif
+  #endif /* SDL_ENABLED */
   /* process fake keystrokes if any */
   if(!key_event_queue_.empty() &&
      c64_->cpu_->cycles() > next_key_event_at_)
@@ -324,6 +337,7 @@ void IO::process_events()
     }
     next_key_event_at_ = c64_->cpu_->cycles() + kWait;
   }
+  #endif /* DESKTOP */
 }
 
 // keyboard handling ///////////////////////////////////////////////////////////
@@ -331,27 +345,12 @@ void IO::process_events()
 /**
  * @brief emulate keydown
  */
+#if DESKTOP
 void IO::handle_keydown(SDL_Keycode k)
 {
   try
   {
     /* D("CODE: %2X\n",k); */
-
-    /* Temporary key to fake incoming Midi commands */
-    /* Must be here and separate or we cause an out of range exception */
-    switch (k) {
-      case /* SDL_SCANCODE_INSERT */ 0x49:
-        if(c64_->midi)
-          c64_->cart_->mc6850_->fake_keydown();
-        return;
-        break;
-      case /* SDL_SCANCODE_END */ 0x4D:
-        if(c64_->midi)
-          c64_->cart_->mc6850_->fake_keyup();
-        return;
-        break;
-      default: break;
-    }
 
     uint8_t mask = ~(1 << keymap_.at(k).second); /* PRB */
     switch (k) { /* Handle special keypress combo's */
@@ -406,10 +405,12 @@ void IO::handle_keydown(SDL_Keycode k)
     printf ("KEY %02X IS OUT OF RANGE\n",k);
   }
 }
+#endif /* DESKTOP */
 
 /**
  * @brief emulate keyup
  */
+#if DESKTOP
 void IO::handle_keyup(SDL_Keycode k)
 {
   try
@@ -431,6 +432,7 @@ void IO::handle_keyup(SDL_Keycode k)
   }
   catch(const std::out_of_range){}
 }
+#endif /* DESKTOP */
 
 /**
  * @brief fake press a key, monkeys love it
@@ -438,6 +440,7 @@ void IO::handle_keyup(SDL_Keycode k)
  * Characters are added to a queue and processed within
  * the emulation loop.
  */
+#if DESKTOP
 void IO::type_character(char c)
 {
   try
@@ -453,6 +456,7 @@ void IO::type_character(char c)
   }
   catch(const std::out_of_range){}
 }
+#endif /* DESKTOP */
 
 // screen handling /////////////////////////////////////////////////////////////
 
@@ -477,7 +481,8 @@ void IO::screen_draw_border(int y, int color)
  */
 void IO::screen_refresh()
 {
-  #if defined(SDL_ENABLED)
+  #if DESKTOP
+  #if SDL_ENABLED
   if(!nosdl) {
     SDL_UpdateTexture(texture_, NULL, frame_, cols_ * sizeof(uint32_t));
     SDL_RenderClear(renderer_);
@@ -485,7 +490,8 @@ void IO::screen_refresh()
     SDL_RenderPresent(renderer_);
   }
   #endif
-  /* process SDL events once every frame */
+  #endif /* DESKTOP */
+  /* process events once every frame */
   process_events();
   /* perform vertical refresh sync */
   vsync();
@@ -516,7 +522,19 @@ void IO::vsync()
    * Microsoft's chrono is buggy and does not properly handle
    * doubles, we need to recast to milliseconds.
    */
+  #if DESKTOP
   auto ttw = duration_cast<milliseconds>(rr - t);
   std::this_thread::sleep_for(ttw);
+  #elif EMBEDDED
+  /* TODO: Cast to nanoseconds and then calculation actual cpu cycles */
+  /* Cast duration to microseconds */
+  auto ttw = duration_cast<microseconds>(rr - t);
+  /* unsigned short cast */
+  using cast = std::chrono::duration<std::uint16_t>;
+  /* Cast microseconds duration to unsigned short */
+  std::uint16_t cycles = duration_cast< cast >(ttw).count();
+  /* delay no cycles */
+  cycled_delay_operation(cycles);
+  #endif /* EMBEDDED */
   prev_frame_was_at_ = std::chrono::high_resolution_clock::now();
 }

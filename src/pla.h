@@ -23,8 +23,13 @@
 #ifndef EMUDORE_C64PLA_H
 #define EMUDORE_C64PLA_H
 
+#if DESKTOP
 #include <iostream>
+#endif
 #include <cstdint>
+#if EMBEDDED
+#include <stdlib.h>
+#endif
 
 
 /**

@@ -191,6 +191,157 @@ int SidFile::Parse(std::string file)
     return SIDFILE_OK;
 }
 
+#if EMBEDDED
+int SidFile::ParsePtr(uint8_t * f, size_t fsize)
+{
+
+    if (f == nullptr)
+    {
+        return SIDFILE_ERROR_FILENOTFOUND;
+    }
+
+    // uint8_t header[PSID_MAX_HEADER_LENGTH];
+    uint8_t * header = f;
+    // memset(header, 0, PSID_MAX_HEADER_LENGTH);
+
+    // size_t read = fread(header, 1, PSID_MAX_HEADER_LENGTH, f);
+    // memcpy(header, 1, PSID_MAX_HEADER_LENGTH, f);
+
+    // if (read < PSID_MIN_HEADER_LENGTH || !IsPSIDHeader(header))
+    // {
+    //     fclose(f);
+    //     return SIDFILE_ERROR_MALFORMED;
+    // }
+
+    numOfSongs = (int)Read16(header, SIDFILE_PSID_NUMBER_H);
+    // printf("%d\n",numOfSongs);
+
+    if (numOfSongs == 0)
+    {
+        numOfSongs = 1;
+    }
+
+    firstSong = Read16(header, SIDFILE_PSID_DEFSONG_H);
+    if (firstSong)
+    {
+        firstSong--;
+    }
+    if (firstSong >= numOfSongs)
+    {
+        firstSong = 0;
+    }
+
+    dataOffset = Read16(header, SIDFILE_PSID_LENGTH_H);
+    initAddr = Read16(header, SIDFILE_PSID_INIT_H);
+    playAddr = Read16(header, SIDFILE_PSID_MAIN_H);
+    speedFlags = Read32(header, SIDFILE_PSID_SPEED);
+
+    moduleName = (char *)(header + SIDFILE_PSID_NAME);
+
+    authorName = (char *)(header + SIDFILE_PSID_AUTHOR);
+
+    copyrightInfo = (char *)(header + SIDFILE_PSID_COPYRIGHT);
+
+    sidType = (char *)(header + SIDFILE_PSID_ID);
+    sidVersion = Read16(header, SIDFILE_PSID_VERSION_H);
+
+    // Seek to start of module data
+    // fseek(f, Read16(header, SIDFILE_PSID_LENGTH_H), SEEK_SET);
+
+    // Find load address
+    loadAddr = Read16(header, SIDFILE_PSID_START_H);
+    uint16_t seek_addr = dataOffset;
+    if (loadAddr == 0)
+    {
+        // uint8_t lo = fgetc(f);
+        // uint8_t hi = fgetc(f);
+        uint8_t lo = f[dataOffset];
+        uint8_t hi = f[dataOffset+1];
+        loadAddr = (hi << 8) | lo;
+        seek_addr+=2;
+    }
+
+    if (initAddr == 0)
+    {
+        initAddr = loadAddr;
+    }
+
+    // Load module data
+    // dataLength = fread(dataBuffer, 1, 0x10000, f);
+    dataLength = (fsize - seek_addr);
+
+    // flags start at 0x76
+    sidFlags = Read16(header, SIDFILE_PSID_FLAGS_H);
+
+    // - Bit 0 specifies format of the binary data (musPlayer):
+    // 0 = built-in music player,
+    // 1 = Compute!'s Sidplayer MUS data, music player must be merged.
+
+    // x = 20; // 0x0014
+    // x = x & 1;
+
+    // - Bit 1 specifies whether the tune is PlaySID specific, e.g. uses PlaySID
+    // samples (psidSpecific):
+    // 0 = C64 compatible,
+    // 1 = PlaySID specific (PSID v2NG, v3, v4)
+    // 1 = C64 BASIC flag (RSID)
+
+    // x = x & 2;
+
+    // - Bits 2-3 specify the video standard (clock):
+    // 00 = Unknown,
+    // 01 = PAL,
+    // 10 = NTSC,
+    // 11 = PAL and NTSC.
+
+    // clockSpeed = (reverse(sidFlags) >> 5) & 3; // 0b00001100 bits 2 & 3 ~ but from reverse bits
+    // clockSpeed = (sidFlags >> 2) & 3; // 0b00001100 bits 2 & 3
+    clockSpeed = ((sidFlags & 0xC) >> 2) & 3; // 0b00001100 bits 2 & 3
+
+    // - Bits 4-5 specify the SID version (sidModel):
+    // 00 = Unknown,
+    // 01 = MOS6581,
+    // 10 = MOS8580,
+    // 11 = MOS6581 and MOS8580.
+
+    // chipType = (reverse(sidFlags) >> 3) & 3; // 0b00110000 bits 4 & 5 ~ but from reverse bits
+    chipType = (sidFlags >> 4) & 3; // 0b00110000 bits 4 & 5
+
+    // This is a v2NG specific field.
+    // - Bits 6-7 specify the SID version (sidModel) of the second SID:
+    // 00 = Unknown, <- then same as SID 1
+    // 01 = MOS6581,
+    // 10 = MOS8580,
+    // 11 = MOS6581 and MOS8580.
+    chipType2 = (sidFlags >> 6) & 3; // 0b00110000 bits 4 & 5
+
+    // This is a v3 specific field.
+    // - Bits 8-9 specify the SID version (sidModel) of the third SID:
+    // 00 = Unknown, <- then same as SID 1
+    // 01 = MOS6581,
+    // 10 = MOS8580,
+    // 11 = MOS6581 and MOS8580.
+    chipType3 = (sidFlags >> 8) & 3; // 0b00110000 bits 4 & 5
+
+    startPage = Read8(header, SIDFILE_PSID_STARTPAGE);
+    pageLength = Read8(header, SIDFILE_PSID_PAGELENGTH);
+    if (sidVersion == 3 || sidVersion == 4) {
+        secondSID = Read8(header, SIDFILE_PSID_SECONDSID);
+        thirdSID = Read8(header, SIDFILE_PSID_THIRDSID);
+    }
+    if (sidVersion == 78) {
+        /* Flipped these addresses around to make it sound better */
+        secondSID = Read8(header, SIDFILEPLUS_PSID_SECONDSID);
+        thirdSID = Read8(header, SIDFILEPLUS_PSID_THIRDSID);
+        fourthSID = Read8(header, SIDFILEPLUS_PSID_FOURTHSID);
+    }
+
+    // fclose(f);
+
+    return SIDFILE_OK;
+}
+#endif /* EMBEDDED */
+
 std::string SidFile::GetSidType()
 {
     return sidType;
