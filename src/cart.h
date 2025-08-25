@@ -35,9 +35,6 @@ class Cart
     uint16_t read_short_be(void);
     void load_crt(const std::string &f);
 
-    /* MC68B50 ACIA ROM & RAM */
-    uint8_t *mem_rom_mc6850_;
-
     /* Main pointer */
     C64 * c64_;
 
@@ -50,7 +47,7 @@ class Cart
 
     void deinit_cart(void);
     void reset(void);
-    void emulate(void);
+    bool emulate(void);
 
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
@@ -58,11 +55,8 @@ class Cart
     /* Emulated cart ic's */
     MC68B50 *mc6850_;
 
-    /* MC68B50 ACIA ROM & RAM */
-    void init_mc6850(void);
+    /* MC68B50 ACIA */
     bool acia_active = false;
-    uint8_t *k6850MemWr; /* $de00 */
-    uint8_t *k6850MemRd; /* $de00 */
 
     /* Cart stuff */
     uint8_t banksetup; /* Used by PLA if havecart == true */

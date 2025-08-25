@@ -20,6 +20,7 @@
  * limitations under the License.
  */
 
+#include <cstring>
 #include <fstream>
 
 #include <c64.h>
@@ -36,12 +37,13 @@ Cart::Cart(C64 * c64) :
   c64_(c64)
 {
   cartactive = c64_->havecart;
-  midi = c64_->midi;
+  midi = c64_->acia;
 
+  /* enable mc68B50 if requested */
   if (midi && !acia_active) {
-    init_mc6850();
+    /* init_mc6850(); */
     mc6850_ = new MC68B50(c64_);
-    // mc6850_->reset();
+    acia_active = true;
   }
 
   if (cartactive) {
@@ -51,22 +53,12 @@ Cart::Cart(C64 * c64) :
 
 Cart::~Cart()
 {
-  if (acia_active) { delete [] mem_rom_mc6850_; }
-  if (midi) { delete mc6850_; }
-}
-
-void Cart::init_mc6850(void) /* TOOD: Move to MC68B50.cpp */
-{
-  mem_rom_mc6850_ = new uint8_t[Memory::kPageSize]();
-  acia_active = true;
-  k6850MemWr = &c64_->mem_->mem_ram()[Memory::kAddrIO1Page];
-  k6850MemRd = &mem_rom_mc6850_[0];
+  if (acia_active) { delete mc6850_; }
 }
 
 void Cart::deinit_cart(void)
-{ /* RUN/STOP+RESTORE resets cart contents! */
-  if (acia_active) { delete [] mem_rom_mc6850_; } /* TOOD: Move to MC68B50.cpp */
-  if (midi) { delete mc6850_; } /* TOOD: Move to MC68B50.cpp */
+{ /* RUN/STOP+RESTORE resets cart contents! or maybe not? */
+  if (acia_active) { delete mc6850_; }
   acia_active = false;
   midi = false;
   cartactive = false;
@@ -77,16 +69,17 @@ void Cart::reset(void)
   deinit_cart();
 }
 
-void Cart::emulate(void)
+bool Cart::emulate(void)
 {
-  if (midi) {
+  if (acia_active) {
     mc6850_->emulate();
   }
+  return true;
 }
 
 void Cart::write_register(uint8_t r, uint8_t v)
 {
-  if (midi) {
+  if (acia_active) {
     mc6850_->write_register(r,v);
   }
 }
@@ -94,7 +87,7 @@ void Cart::write_register(uint8_t r, uint8_t v)
 uint8_t Cart::read_register(uint8_t r)
 {
   uint8_t retval = 0;
-  if (midi) {
+  if (acia_active) {
     retval = mc6850_->read_register(r);
   }
   return retval;
@@ -136,7 +129,7 @@ void Cart::load_crt(const std::string &f)
     is_.seekg(0, is_.end);
     std::streamoff length = is_.tellg();
     is_.seekg(0, is_.beg);
-    D("CART SIZE: %u\n",length);
+    D("CART SIZE: %ld\n",length);
     uint8_t * cart_sig = new uint8_t[16]();
     is_.read((char *) &cart_sig[0],cart_header.signature_l);
     int n = memcmp(cart_sig, cart_header.signature_id_s, 16);
@@ -145,11 +138,11 @@ void Cart::load_crt(const std::string &f)
     is_.seekg(cart_header.version);
     uint16_t v = read_short_be();
     std::streamoff pos = is_.tellg();
-    D("VERSION? %d POS: 0x%04X\n",v,pos);
+    D("VERSION? %d POS: %ld\n",v,pos);
     is_.seekg(cart_header.hardware_type);
     uint16_t h = read_short_be();
     pos = is_.tellg();
-    D("HARDWARE TYPE? %d IN SPEC? %d POS: 0x%04X\n",h,(h<=27),pos);
+    D("HARDWARE TYPE? %d IN SPEC? %d POS: %ld\n",h,(h<=27),pos);
     is_.get(b);
     uint8_t e = b;
     is_.get(b);
@@ -157,7 +150,7 @@ void Cart::load_crt(const std::string &f)
     D("EXROM? %d GAME %d\n",e,g);
     // is_.seekg(0, is_.beg);
     /* Count number of Chip ROMS */
-    int n_chips = 0;
+    size_t n_chips = 0;
     size_t offset = 0;
     is_.seekg(cart_header.cart_data);
     uint8_t * chip_sig = new uint8_t[4]();
@@ -167,11 +160,11 @@ CHIP:;
     pos = is_.tellg();
     is_.seekg(pos-4);
     pos = is_.tellg();
-    D("POS IS: 0x%04X C IS: %d\n",pos,c);
+    /* D("POS IS: %ld C IS: %d\n",pos,c); */
 NOCHIP:;
     if(c==0) { /* Chips = 1 */
       n_chips++;
-      D("Chip (0)? %d No. chips: %d\n",c,n_chips);
+      /* D("Chip (0)? %d No. chips: %lu\n",c,n_chips); */
       is_.seekg(cart_header.cart_data+(0x2010*n_chips));
       // is_.seekg(cart_header.cart_data+(n_chips*0x10));
       pos = is_.tellg();
@@ -183,15 +176,16 @@ NOCHIP:;
       }
     } else {
       delete [] chip_sig;
-      D("No. chips found: %d\n",n_chips);
-      D("ROMS start at $%04X\n",is_.tellg());
+      D("No. chips found: %lu\n",n_chips);
+      std::streamoff romstart = is_.tellg();
+      D("ROMS start at $%04X\n",(uint16_t)romstart);
     }
     /* Get chip data */
     is_.seekg(cart_header.cart_data);
     // cart_chip_t chips[n_chips]; /* Must be public to switch bank into */
     chips = new Cart::cart_chip_t[n_chips](); /* Must be public to switch bank into */
     for (size_t n = 0; n < n_chips; n++) {
-      D("CHIP%d\n",n+1);
+      D("CHIP%lu\n",n+1);
       is_.get(b);
       chips[n].signature |= (b<<24);
       is_.get(b);
@@ -234,7 +228,7 @@ NOCHIP:;
       chips[n].rom = new uint8_t[chips[n].romsize]();
       is_.read ((char *) &chips[n].rom[0],chips[n].romsize);
       // c64_->mem_->kCARTRomLo = &chips[n].rom[0];
-      D("kCARTRomLo @ 0x%x\n",&c64_->mem_->kCARTRomLo);
+      /* D("kCARTRomLo @ 0x%x\n",&c64_->mem_->kCARTRomLo); */
     }
 
     /* Start with default */
@@ -251,28 +245,33 @@ NOCHIP:;
     // c64_->pla_->setup_memory_banks();
 
     // TODO: Set rom locations based on chips on cart!
+    // TODO: Move this to PLA for bank switching!?
     c64_->mem_->kCARTRomLo  = &chips[0].rom[0];
-    /* c64_->mem_->kCARTRomHi1 = &chips[1].rom[0]; */
-    // c64_->mem_->kCARTRomHi2 = &chips[1].rom[0];
-
     D("4BYTES ROMLO: $%02X $%02X $%02X $%02X\n",
       c64_->mem_->kCARTRomLo[0],
       c64_->mem_->kCARTRomLo[1],
       c64_->mem_->kCARTRomLo[2],
       c64_->mem_->kCARTRomLo[3]
     );
-    // D("4BYTES ROMHI1: $%02X $%02X $%02X $%02X\n",
-    //   c64_->mem_->kCARTRomHi1[0],
-    //   c64_->mem_->kCARTRomHi1[1],
-    //   c64_->mem_->kCARTRomHi1[2],
-    //   c64_->mem_->kCARTRomHi1[3]
-    // );
-    // D("4BYTES ROMHI2: $%02X $%02X $%02X $%02X\n",
-    //   c64_->mem_->kCARTRomHi2[0],
-    //   c64_->mem_->kCARTRomHi2[1],
-    //   c64_->mem_->kCARTRomHi2[2],
-    //   c64_->mem_->kCARTRomHi2[3]
-    // );
+    // if (n_chips > 1) {
+    //   c64_->mem_->kCARTRomHi1 = &chips[1].rom[0];
+    //   /* c64_->mem_->kCARTRomHi2 = &chips[1].rom[0]; */
+    //   D("4BYTES ROMHI1: $%02X $%02X $%02X $%02X\n",
+    //     c64_->mem_->kCARTRomHi1[0],
+    //     c64_->mem_->kCARTRomHi1[1],
+    //     c64_->mem_->kCARTRomHi1[2],
+    //     c64_->mem_->kCARTRomHi1[3]
+    //   );
+    // }
+    if (n_chips > 1) {
+      c64_->mem_->kCARTRomHi2 = &chips[1].rom[0];
+      D("4BYTES ROMHI2: $%02X $%02X $%02X $%02X\n",
+        c64_->mem_->kCARTRomHi2[0],
+        c64_->mem_->kCARTRomHi2[1],
+        c64_->mem_->kCARTRomHi2[2],
+        c64_->mem_->kCARTRomHi2[3]
+      );
+    }
 
     // D("4BYTES: $%02X $%02X $%02X $%02X\n",
     //   chips[0].rom[0],
