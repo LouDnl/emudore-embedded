@@ -21,9 +21,9 @@
 #ifndef EMUDORE_LOADER_H
 #define EMUDORE_LOADER_H
 
-
 #include <fstream>
 #include "c64.h"
+
 
 /* Pre declarations */
 class SidFile;
@@ -37,13 +37,6 @@ class Loader
   private:
     bool booted_up_ = false;
     C64 *c64_;
-    IO *io_;
-    Cpu *cpu_;
-    Memory *mem_;
-    PLA *pla_;
-    Cart *cart_;
-    Vic *vic_;
-    Sid *sid_;
     SidFile *sidfile_;
     std::ifstream is_;
     enum kFormat

@@ -62,7 +62,7 @@ Loader::Loader()
  * @brief called to create pointer object to Machine */
 void Loader::C64ctr(C64 *c64)
 {
-  c64_  = c64;
+  c64_ = c64;
 }
 
 // common ///////////////////////////////////////////////////////////////////
@@ -169,13 +169,12 @@ void Loader::load_prg()
       c64_->mem_->write_word_no_io(kBasicAryTab,pbuf);
       c64_->mem_->write_word_no_io(kBasicStrEnd,pbuf);
       if(autorun) {
-        if (basic_run) { /* TODO: Not re-implemented yet */
+        if (basic_run) {
           /* type and exec RUN */
           for(char &c: std::string("RUN\n")) {
-            io_->IO::type_character(c);
+            c64_->io_->IO::type_character(c);
           }
-        } else if (init_addr == 0x0) {
-          // init_addr = (start_addr + 0x2);
+        } else if (init_addr == 0x0) { /* BUG: Not always correct */
           init_addr = ((c64_->mem_->read_byte_no_io(load_addr)|c64_->mem_->read_byte_no_io(load_addr+0x1)<<8)+0x2);
           D("load_addr %04X start_addr %04X, calculated init_addr %04X\n", load_addr, start_addr, init_addr);
           c64_->cpu_->pc(init_addr);
@@ -489,7 +488,7 @@ void Loader::handle_args()
     c64_->mem_->setlogrw(5);
   }
   if (sidrwlog) {
-    c64_->sid_->set_sidrwlog(true);
+    c64_->mem_->setlogrw(6);
   }
 }
 
