@@ -21,8 +21,9 @@
 #ifndef EMUDORE_C64_H
 #define EMUDORE_C64_H
 
-
+#if DESKTOP
 #include <functional>
+#endif
 
 /* forward declarations */
 class C64;
@@ -43,11 +44,18 @@ class Sid;
 #include <vic.h>
 #include <io.h>
 #include <cart.h>
-#include <sid.h>
+#include <sidadapter.h>
 #include <util.h>
 
-#ifdef DEBUGGER_SUPPORT
+#if DEBUGGER_SUPPORT
 #include <debugger.h>
+#endif
+
+#if EMBEDDED
+extern "C" uint16_t cycled_delay_operation(uint16_t cycles);
+extern "C" void cycled_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
+extern "C" uint16_t cycled_delayed_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
+extern "C" void reset_sid(void);
 #endif
 
 
@@ -59,7 +67,21 @@ class Sid;
  */
 class C64
 {
+  private:
+    bool runloop;
   public: /* Public so subclasses can access them */
+    C64(
+      bool sdl, bool bin, bool cart,
+      bool blog, bool aci,
+    #if DESKTOP
+      const std::string &f
+    #elif EMBEDDED
+      uint8_t * b_, uint8_t * c_,
+      uint8_t * k_, uint8_t * p_
+    #endif
+    );
+    ~C64();
+
     Cpu *cpu_;
     PLA *pla_;
     Memory *mem_;
@@ -70,28 +92,40 @@ class C64
     Cart *cart_;
     Sid *sid_;
 
+  #if DESKTOP
   private:
     std::function<bool()> callback_;
-#ifdef DEBUGGER_SUPPORT
+  #if DEBUGGER_SUPPORT
     Debugger *debugger_;
-#endif
+  #endif
   public:
-    C64(bool sdl, bool bin, bool cart, bool blog, bool mid, const std::string &f);
-    ~C64();
-
-  public: /* Make protected after class children implementation */
+  #endif /* DESKTOP */
     bool nosdl = false;
     bool isbinary = false;
     bool bankswlog = false;
     /* Specific for CRT files */
     bool havecart = false;
     std::string cartfile;
-    /* Specific for Midi like Cynthcart that uses MC6850 */
-    bool midi = false;
+    /* Specific for Midi like Cynthcart that uses MC68B50 */
+    bool acia = false;
 
-  public:
+    #if EMBEDDED
+    /* Binary pointers */
+    uint8_t * basic_;
+    uint8_t * chargen_;
+    uint8_t * kernal_;
+    uint8_t * binary_;
+    #endif
+
+    void emulate();
     void start();
+
+    bool is_looping(void){return runloop;};
+    bool disable_looping(void){runloop=false;return runloop;};
+
+    #if DESKTOP
     void callback(std::function<bool()> cb){callback_ = cb;};
+    #endif
     Cpu * cpu(){return cpu_;};
     PLA * pla(){return pla_;};
     Memory * memory(){return mem_;};
@@ -102,8 +136,6 @@ class C64
     Cart * cart(){return cart_;};
     Sid * sid(){return sid_;};
 
-    /* test cpu */
-    void test_cpu();
 };
 
 

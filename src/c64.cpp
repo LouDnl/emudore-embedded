@@ -21,19 +21,30 @@
 #include <c64.h>
 #include <util.h>
 
-
 C64::C64(
   bool sdl,
   bool bin, bool cart,
-  bool blog, bool mid,
+  bool blog, bool aci,
+  #if DESKTOP
   const std::string &f
+  #elif EMBEDDED
+  uint8_t * b_, uint8_t * c_,
+  uint8_t * k_, uint8_t * p_
+  #endif
   ) :
   nosdl(sdl),
   isbinary(bin), /* Unused */
   havecart(cart),
   bankswlog(blog),
-  midi(mid),
+  acia(aci),
+  #if DESKTOP
   cartfile(f)
+  #elif EMBEDDED
+  basic_(b_),
+  chargen_(c_),
+  kernal_(k_),
+  binary_(p_)
+  #endif
 {
   /* create and init C64 */
   /* init cpu */
@@ -60,16 +71,19 @@ C64::C64(
   cia1_->reset();
   cia2_->reset();
 
- /* r2 support */
-#ifdef DEBUGGER_SUPPORT
+  /* r2 support */
+  #if DEBUGGER_SUPPORT
   debugger_ = new Debugger();
   debugger_->memory(mem_);
   debugger_->cpu(cpu_);
-#endif
+  #endif
+
+  runloop = true; /* Enable looping */
 }
 
 C64::~C64()
 {
+  runloop = false;
   delete cpu_;
   delete mem_;
   delete cia1_;
@@ -78,25 +92,32 @@ C64::~C64()
   delete sid_;
   delete io_;
   delete pla_;
-#ifdef DEBUGGER_SUPPORT
+  #if DEBUGGER_SUPPORT
   delete debugger_;
-#endif
+  #endif
+
+  #if EMBEDDED
+  reset_sid();
+  #endif
 }
 
+/**
+ * @brief run c64 continuously
+ */
 void C64::start()
 {
   /* main emulator loop */
-  while(true)
+  while(runloop)
   {
-#ifdef DEBUGGER_SUPPORT
-    if(!debugger_->emulate())
-      break;
-#endif
-    // TODO: Remove unneeded if statements (deprecate return values on some emulation runs)
+    #if DEBUGGER_SUPPORT
+    if(!debugger_->emulate()) break;
+    #endif
+    #if DESKTOP
     /* callback executes _before_ first emulation run */
     if(callback_ && !callback_()) break;
+    #endif
     /* Cart */
-    cart_->emulate();
+    if(!cart_->emulate()) break;
     /* CPU */
     if(!cpu_->emulate()) break;
     /* CIA1 */
@@ -111,32 +132,24 @@ void C64::start()
 }
 
 /**
- * @brief runs Klaus Dormann's 6502 test suite
- *
- * https://github.com/Klaus2m5/6502_65C02_functional_tests
+ * @brief run a single c64 emulation loop
+ * ignores emulation return statements and
+ * has no debugger support
  */
-void C64::test_cpu()
+void C64::emulate()
 {
-  uint16_t pc=0;
-  /* unmap C64 ROMs */
-  mem_->write_byte(Memory::kAddrMemoryLayout, 0);
-  /* load tests into RAM */
-  mem_->load_ram("tests/6502_functional_test.bin",0x400);
-  cpu_->pc(0x400);
-  while(true)
-  {
-    if(pc == cpu_->pc())
-    {
-      D("infinite loop at %x\n",pc);
-      break;
-    }
-    else if(cpu_->pc() == 0x3463)
-    {
-      D("test passed!\n");
-      break;
-    }
-    pc = cpu_->pc();
-    if(!cpu_->emulate())
-      break;
+  if (runloop) {
+    /* Cart */
+    cart_->emulate();
+    /* CPU */
+    cpu_->emulate();
+    /* CIA1 */
+    cia1_->emulate();
+    /* CIA2 */
+    cia2_->emulate();
+    /* VIC-II */
+    vic_->emulate();
+    /* IO (SDL2 keyboard input) */
+    io_->emulate();
   }
 }
