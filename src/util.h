@@ -25,10 +25,14 @@
 
 #include <stdio.h>
 
-#ifndef NDEBUG
-#define D(...) fprintf (stderr,__VA_ARGS__)
-#else
-#define D(...) do {} while (0)
+#if DESKTOP
+  #ifndef NDEBUG
+    #define D(...) fprintf (stderr,__VA_ARGS__)
+  #else
+    #define D(...) do {} while (0)
+  #endif
+#elif EMBEDDED
+  #define D(...) printf(__VA_ARGS__) // TODO: Disable if not needed
 #endif
 
 #define PBIT(v) D("%X 0b%d%d%d%d%d%d%d%d\n", \
@@ -45,6 +49,7 @@
 
 #define ISSET_BIT(v,b)  ((v&(1<<b))!=0)
 
+#if DESKTOP
 #if defined(__APPLE__)
 # include <machine/endian.h>
 # include <libkern/OSByteOrder.h>
@@ -71,7 +76,9 @@
 # define ntohll(x) (x)
 #endif
 #endif
+#endif /* DESKTOP */
 
+#if DESKTOP
 /* BACKTRACE START */
 #include <execinfo.h>
 #include <stdio.h>
@@ -95,6 +102,7 @@ inline void print_trace(void)
   free (strings);
 }
 /* BACKTRACE END */
+#endif /* DESKTOP */
 
 
 #endif /* EMUDORE_UTIL_H */
