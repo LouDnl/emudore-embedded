@@ -24,7 +24,6 @@
 #include <cstdint>
 
 
-
 /**
  * @brief MOS 6526 Complex Interface Adapter #1
  *
