@@ -311,7 +311,7 @@ bool Cia2::emulate()
       c64_->mem_->kCIA2MemRd[ICR] |= TIMERA; /* Set timer A in read ICR */
       if (c64_->mem_->kCIA2MemWr[ICR] & TIMERA) { /* Generate interrupt if write mask allows */
         c64_->mem_->kCIA2MemRd[ICR] |= INTERRUPT_HAPPENED; /* Set interrupt bit in read ICR */
-        c64_->cpu_->irq(); /* Trigger interrupt */
+        c64_->cpu_->nmi(); /* Trigger interrupt */
       }
     }
     /* Set new timer A value */
@@ -337,7 +337,7 @@ bool Cia2::emulate()
       c64_->mem_->kCIA2MemRd[ICR] |= TIMERB; /* Set timer B in read ICR */
       if (c64_->mem_->kCIA2MemWr[ICR] & TIMERB) { /* Generate interrupt if write mask allows */
         c64_->mem_->kCIA2MemRd[ICR] |= INTERRUPT_HAPPENED; /* Set interrupt bit in read ICR */
-        c64_->cpu_->irq(); /* Trigger interrupt */
+        c64_->cpu_->nmi(); /* Trigger interrupt */
       }
     }
     /* Set new timer B value */
