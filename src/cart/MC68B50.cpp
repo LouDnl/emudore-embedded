@@ -25,6 +25,13 @@
 #include <MC68B50.h>
 #include <util.h>
 
+#if EMBEDDED
+extern "C" {
+  #include "pico/util/queue.h"  /* Inter core queue */
+  #include "midi.h"
+  extern queue_t cynthcart_queue;
+}
+#endif
 
 /**
  * @brief Constructor setup must happen _after_ memory
@@ -34,8 +41,19 @@
 MC68B50::MC68B50(C64 * c64)
   : c64_(c64)
 {
-  /* TODO: Need to set TDRE to STATUS here
-   * but after memory pointer initalization */
+  /* Initialize device @ page $de00 ~ $deff */
+  mem_rom_mc6850_ = new uint8_t[Memory::kPageSize](); // TODO: We only need 4 bytes, maybe do a wrap around?
+  k6850MemWr = &c64_->mem_->mem_ram()[Memory::kAddrIO1Page]; /* write pointer */
+  k6850MemRd = &mem_rom_mc6850_[0]; /* read data */
+   reset();
+}
+
+/**
+ * @brief Deconstructor
+ */
+MC68B50::~MC68B50()
+{
+  if (c64_->cart_->acia_active) { delete [] mem_rom_mc6850_; }
 }
 
 /**
@@ -43,53 +61,7 @@ MC68B50::MC68B50(C64 * c64)
  */
 void MC68B50::reset()
 {
-  /* ISSUE: Calling this from anywhere else then
-   * from `write_register` seems to break rules
-   * and causes a segmentation fault */
-  c64_->cart_->k6850MemRd[STATUS] = TDRE; /* Set TDRE default to empty */
-}
-
-/**
- * @brief Handle Midi keyboard key down event
- */
-void MC68B50::fake_keydown(void)
-{
-  if (!_keydown && _keyup/*  && n_read >= 3 */) {
-    D("[MC68B50] insert->keydown\n"); /* Temporary workaround hack using insert */
-    _keydown = true;
-    _keyup = false;
-
-    c64_->cart_->k6850MemRd[STATUS] |= (IRQ|RDRF); /* Set IRQ and RDRF */
-    // uint8_t r = read_register(STATUS);
-    // write_register(STATUS, (r |= (IRQ|RDRF)));
-    // uint8_t r = c64_->cart_->read_byte(0xde00|STATUS);
-    // c64_->cart_->write_byte((0xde00|STATUS), (r |= (IRQ|RDRF)));
-
-    if (n_read >= 3) {
-      if (midi_keydown[1] < 127) midi_keydown[1] += 2; /* Two notes up */
-      else midi_keydown[1] = 31; /* Start again at 0x1F */
-    }
-    n_read = 0;
-  }
-}
-
-/**
- * @brief Handle Midi keyboard key up event
- */
-void MC68B50::fake_keyup(void)
-{
-  if (!_keyup && _keydown/*  && n_read >= 3 */) {
-    D("[MC68B50] end->keyup\n"); /* Temporary workaround hack using end */
-    _keyup = true;
-    _keydown = false;
-
-    c64_->cart_->k6850MemRd[STATUS] |= (IRQ|RDRF); /* Set IRQ and RDRF */
-    if (n_read >= 3) {
-      if (midi_keyup[1] < 127) midi_keyup[1] += 2; /* Two notes up */
-      else midi_keyup[1] = 31; /* Start again at 0x1F */
-    }
-    n_read = 0;
-  }
+  k6850MemRd[STATUS] = TDRE; /* Set TDRE default to empty */
 }
 
 /**
@@ -107,26 +79,17 @@ uint8_t MC68B50::read_register(uint8_t r)
     case CONTROL: /* $de04 ~ control register ~ write only */
       break;
     case STATUS:  /* $de06 ~ status register  ~ read only */
-      retval = c64_->cart_->k6850MemRd[r];
+      retval = k6850MemRd[r];
       break;
     case TXDR:    /* $de05 ~ TX register      ~ write only */
       break;;
     /* NOTE: Data in the RXDR should come from a ringbuffer that shifts after reading */
     case RXDR:    /* $de07 ~ RX register      ~ read only */
-      c64_->cart_->k6850MemRd[STATUS] &= ~(IRQ|RDRF); /* Clear IRQ and RDRF on read (if set) */
-      if (n_read < 3) { /* NOTE: This is fake to emulate Midi input */
-        if (_keydown) c64_->cart_->k6850MemRd[RXDR] = midi_keydown[n_read++];
-        if (_keyup) c64_->cart_->k6850MemRd[RXDR] = midi_keyup[n_read++];
-        c64_->cart_->k6850MemRd[STATUS] |= (IRQ|RDRF); /* Set IRQ and RDRF for data available */
-        retval = c64_->cart_->k6850MemRd[RXDR];
-      }
-      if (n_read >= 3)
-      {
-        c64_->cart_->k6850MemRd[STATUS] &= ~(IRQ|RDRF); /* Clear IRQ and RDRF on read (if set) */
-      }
+      k6850MemRd[STATUS] &= ~(IRQ|RDRF); /* Clear IRQ and RDRF on read (if set) */
+      retval = k6850MemRd[RXDR];
       break;
     default:      /* default always return read */
-      retval = c64_->cart_->k6850MemRd[r];
+      retval = k6850MemRd[r];
       break;
   }
 
@@ -147,7 +110,7 @@ void MC68B50::write_register(uint8_t r, uint8_t v)
   switch (r) {
     case CONTROL: /* $de04 ~ control register ~ write only */
       /* Save value to write ram */
-      c64_->cart_->k6850MemWr[r] = v;
+      k6850MemWr[r] = v;
       cr = (v & CR0CR1SEL); /* Counter divide select bits */
       switch (cr) {
         case R1: /* set divide ratio +1 */
@@ -224,14 +187,46 @@ void MC68B50::write_register(uint8_t r, uint8_t v)
     case STATUS:  /* $de06 ~ status register  ~ read only */
       return;
     case TXDR:    /* $de05 ~ TX register      ~ write only */
-      c64_->cart_->k6850MemWr[r] = v; /* Save value to ram */
+      k6850MemWr[r] = v; /* Save value to ram */
       return;
     case RXDR:    /* $de07 ~ RX register      ~ read only */
       return;
     default:      /* default always write to read and write */
-      c64_->cart_->k6850MemWr[r] = c64_->cart_->k6850MemRd[r] = v;
+      k6850MemWr[r] = k6850MemRd[r] = v;
       return;
   }
+}
+
+void MC68B50::process_midi()
+{
+  if (!(k6850MemRd[STATUS] & IRQ) /* If IRQ is not already set */
+   && !(k6850MemRd[STATUS] & RDRF)) { /* And there is no dat waiting to b read */
+    #if EMBEDDED
+    if (!queue_is_empty(&cynthcart_queue)) {
+      cynthcart_queue_entry_t cq_entry;
+      if (queue_try_remove(&cynthcart_queue, &cq_entry)) {
+        k6850MemRd[RXDR] = cq_entry.data; /* Add data to the RXDR */
+        k6850MemRd[STATUS] |= (IRQ|RDRF); /* Set IRQ and RDRF for data available */
+        D("[MC6850 READ] $%02X\n",k6850MemRd[RXDR]);
+      }
+    }
+    #endif
+  }
+  return;
+}
+
+/**
+ * @brief will check if the cpu IRQ is not set
+ * and trigger a cpu IRQ if possible/needed
+ */
+void MC68B50::try_trigger_irq()
+{
+  if(!c64_->cpu_->idf()) { /* If no CPU IRQ already in place */
+    if (k6850MemRd[STATUS] & IRQ) { /* If IRQ is set */
+      c64_->cpu_->irq(); /* Trigger CPU IRQ */
+    }
+  }
+  return;
 }
 
 /**
@@ -242,9 +237,14 @@ void MC68B50::write_register(uint8_t r, uint8_t v)
  */
 void MC68B50::emulate()
 {
-  if(!c64_->cpu_->idf()) { /* If no CPU IRQ already in place */
-    if (c64_->cart_->k6850MemRd[STATUS] & IRQ) { /* If IRQ is set */
-      c64_->cpu_->irq(); /* Trigger CPU IRQ */
-    }
-  }
+  /* try trigger IRQ if data waiting */
+  try_trigger_irq();
+
+  /* process midi if waiting in queue */
+  process_midi();
+
+   /* try trigger IRQ if data waiting */
+  try_trigger_irq();
+
+  return;
 }
