@@ -25,14 +25,14 @@
 
 #include <stdio.h>
 
+#ifndef NDEBUG
 #if DESKTOP
-  #ifndef NDEBUG
-    #define D(...) fprintf (stderr,__VA_ARGS__)
-  #else
-    #define D(...) do {} while (0)
-  #endif
+#define D(...) fprintf (stderr,__VA_ARGS__)
 #elif EMBEDDED
-  #define D(...) printf(__VA_ARGS__) // TODO: Disable if not needed
+#define D(...) printf(__VA_ARGS__)
+#endif
+#else
+#define D(...) do {} while (0)
 #endif
 
 #define PBIT(v) D("%X 0b%d%d%d%d%d%d%d%d\n", \

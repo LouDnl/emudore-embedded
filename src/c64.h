@@ -102,9 +102,8 @@ class C64
   #endif /* DESKTOP */
     bool nosdl = false;
     bool isbinary = false;
+    bool havecart = false; /* Specific for CRT files */
     bool bankswlog = false;
-    /* Specific for CRT files */
-    bool havecart = false;
     std::string cartfile;
     /* Specific for Midi like Cynthcart that uses MC68B50 */
     bool acia = false;
