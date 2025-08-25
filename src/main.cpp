@@ -24,6 +24,7 @@
 
 #include <c64.h>
 #include <loader.h>
+#include <cstring>
 
 
 C64 *c64;
@@ -32,7 +33,7 @@ bool wget_download_finished = false;
 bool file_loaded = false;
 bool nosdl = false, isbinary = false,
      havecart = false,
-     midi = false, bankswlog = false;
+     acia = false, bankswlog = false;
 
 
 bool loader_cb()
@@ -81,13 +82,15 @@ void checkargs(int argc, char **argv)
       /* log on create */
       if(!strcmp(argv[a], "-cli")) {nosdl = true;}
       if(!strcmp(argv[a], "-bin")) {isbinary = true;}
-      if(!strcmp(argv[a], "-midi")) {midi = true;} /* BUG: Segmentation fault when used with loading a .bin file */
-      if(!strcmp(argv[a], "-logbanksw")) {bankswlog = true;}
+      if(!strcmp(argv[a], "-midi")) {acia = true;} /* BUG: Segmentation fault when used with loading a .bin file */
+      if(!strcmp(argv[a], "-logbanksw")) {bankswlog = true;} /* Bankswitching at boot */
 
-      if(!strcmp(argv[a], "-crt")) {loader->iscart = true;}
+      if(!strcmp(argv[a], "-run")) {loader->basic_run = true;} /* Default false */
+      if(!strcmp(argv[a], "-norun")) {loader->autorun = false;} /* Default true */
+      if(!strcmp(argv[a], "-crt")) {loader->iscart = true;} /*  */
       if(!strcmp(argv[a], "-init")) {loader->init_addr = strtol(argv[a+1], NULL, 16);}
-      if(!strcmp(argv[a], "-norun")) {loader->autorun = false;}
       if(!strcmp(argv[a], "-lowercase")) {loader->lowercase = true;}
+
       if(!strcmp(argv[a], "-loginstr")) {Cpu::loginstructions = true;}
       if(!strcmp(argv[a], "-logill")) {Cpu::logillegals = true;}
       if(!strcmp(argv[a], "-logmemrw")) {loader->memrwlog = true;}
@@ -116,7 +119,12 @@ int main(int argc, char **argv)
   }
 
   /* Init Machine start */
-  c64 = new C64(nosdl,isbinary,havecart,bankswlog,midi,loader->filename);
+  if (file_loaded) {
+    c64 = new C64(nosdl,isbinary,havecart,bankswlog,acia,std::string {""});
+  } else {
+    c64 = new C64(nosdl,isbinary,havecart,bankswlog,acia,loader->filename);
+  }
+
 
   if (argc != 1) {
     loader->C64ctr(c64); /* Init machine in Loader */
