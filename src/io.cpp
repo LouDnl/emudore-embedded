@@ -383,14 +383,14 @@ void IO::handle_keydown(SDL_Keycode k)
             c64_->sid_->set_playing(false);
             c64_->mem_->write_byte(0x0001, 0x37);
           }
-          c64_->cpu_->reset();
+          c64_->sid_->reset();
+          c64_->cart_->reset(); /* NOTE: Disables cart contents e.g. MC6850 */
+          c64_->pla_->reset();
+          this->reset(); /* IO */
+          c64_->vic_->reset();
           c64_->cia1_->reset();
           c64_->cia2_->reset();
-          c64_->vic_->reset();
-          this->reset(); /* IO */
-          c64_->pla_->reset();
-          c64_->cart_->reset(); /* NOTE: Disables cart contents e.g. MC6850 */
-          c64_->sid_->reset();
+          c64_->cpu_->reset();
         }
         break;
       default:
