@@ -311,7 +311,7 @@ void PLA::runtime_bank_switching(uint8_t v) /* TODO: UPDATE TO NEW MODE SWITCHIN
   /* Setup bank mode during runtime */
 
   uint8_t b = banks_at_boot; /* Use boot time state as preset */
-  b &= (0x18|v&0x7); /* Preserve _cart bits_ and only set cpu latches */
+  b &= (0x18|(v&0x7)); /* Preserve _cart bits_ and only set cpu latches */
   if(logplabank){
     D("[PLA] Bank switch @ runtime from %02X to: %02X\n",banks_at_boot,b);
     logbanksetup();
