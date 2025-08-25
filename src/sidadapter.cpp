@@ -2,7 +2,7 @@
  * MOS Sound Interface Device (SID) USB hardware communication
  * Copyright (c) 2025, LouD <emudore@mail.loudai.nl>
  *
- * sid.h
+ * sidadapter.h
  *
  * Made for emudore, Commodore 64 emulator
  * Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
@@ -20,23 +20,34 @@
  * limitations under the License.
  */
 
+#if DESKTOP
 #include <time.h>
+#endif
 
 #include <c64.h>
 #include <sidfile.h>
 
+#if EMBEDDED
+extern "C" uint16_t cycled_delay_operation(uint16_t cycles);
+extern "C" void cycled_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
+extern "C" uint16_t cycled_delayed_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
+extern "C" uint8_t cycled_read_operation(uint8_t address, uint16_t cycles);
+extern "C" void reset_sid(void);
+#endif
 
+#if DESKTOP
 #define NANO 1000000000L
 struct timespec m_StartTime, m_LastTime, timenow;
 static double us_CPUcycleDuration               = NANO / (float)cycles_per_sec;          /* CPU cycle duration in nanoseconds */
 static double us_InvCPUcycleDurationNanoSeconds = 1.0 / (NANO / (float)cycles_per_sec);  /* Inverted CPU cycle duration in nanoseconds */
 typedef std::chrono::nanoseconds duration_t;   /* Duration in nanoseconds */
-
 struct timespec m_test1, m_test2; /* TODO: REMOVE */
+#endif
 
 Sid::Sid(C64 * c64) :
   c64_(c64)
 {
+#if USBSID_DRIVER
   // m_StartTime = m_LastTime = now = std::chrono::steady_clock::now();
   // clock_gettime(CLOCK_REALTIME, &m_StartTime);
   timespec_get(&m_StartTime, TIME_UTC);
@@ -49,25 +60,35 @@ Sid::Sid(C64 * c64) :
     usbsid->USBSID_SetClockRate(USBSID_NS::PAL, true);
     us_ = true;
   }
-  sid_main_clk = sid_flush_clk = sid_delay_clk = sid_write_clk = sid_read_clk = sid_write_cycles = 0;
+#endif
+  sid_main_clk = sid_flush_clk = sid_delay_clk = sid_write_clk = sid_read_clk = 0;
+  sid_read_cycles = sid_write_cycles = 0;
 }
 
 Sid::~Sid()
 {
+#if USBSID_DRIVER
   if(us_) {
     usbsid->USBSID_Reset();
     usbsid->USBSID_Close();
     us_ = false;
   }
+#endif
 }
 
 void Sid::reset()
 {
   sid_main_clk = sid_flush_clk = sid_delay_clk = sid_write_clk = sid_read_clk = c64_->cpu_->cycles();
-  sid_write_cycles = 0;
+  sid_read_cycles = sid_write_cycles = 0;
+  // TODO: Reset memory registers to 0
+  #if DESKTOP && USBSID_DRIVER
   if (us_) usbsid->USBSID_Reset();
+  #elif EMBEDDED
+  reset_sid();
+  #endif
 }
 
+#if DESKTOP && !USBSID_DRIVER
 uint_fast64_t Sid::wait_ns(unsigned int cycles)
 { /* TODO: Account for time spent in function calculating */
   timespec_get(&timenow, TIME_UTC);
@@ -107,6 +128,7 @@ uint_fast64_t Sid::wait_ns(unsigned int cycles)
   // return waited_cycles;
   return wait_nano;
 }
+#endif
 
 void Sid::sid_flush()
 {
@@ -115,6 +137,7 @@ void Sid::sid_flush()
   // printf("SID Flush called for %d cycles delay @ %u, last was at %u (diff %u) main clock %u\n",
   //   cycles, now, sid_flush_clk, (now-sid_flush_clk), sid_main_clk);
   if (now < sid_main_clk) { /* Reset / flush */
+    sid_read_cycles = 0;
     sid_write_cycles = 0;
     sid_main_clk = sid_flush_clk = now;
     sid_delay_clk = sid_write_clk = sid_read_clk = now;
@@ -125,26 +148,38 @@ void Sid::sid_flush()
     //   now, sid_flush_clk, cycles, sid_main_clk);
     cycles -= 0xFFFF;
   }
-  if (int(cycles - sid_write_cycles) > 0) {
-    // if (us_) wait_ns(cycles - sid_write_cycles);
-    if (us_) usbsid->USBSID_WaitForCycle(cycles - sid_write_cycles);
+  if (int(cycles - (sid_write_cycles+sid_read_cycles)) > 0) {
+    #if DESKTOP && USBSID_DRIVER
+    if (us_) usbsid->USBSID_WaitForCycle(cycles - (sid_write_cycles+sid_read_cycles));
+    #elif EMBEDDED
+    cycled_delay_operation(cycles - (sid_write_cycles+sid_read_cycles));
+    #else
+    wait_ns(cycles - (sid_write_cycles+sid_read_cycles));
+    #endif
   }
   sid_main_clk = sid_delay_clk = sid_flush_clk = now;
-  sid_write_cycles = 0;
+  sid_read_cycles = sid_write_cycles = 0;
   return;
 }
 
 unsigned int Sid::sid_delay()
 {
+  #if USBSID_DRIVER
   timespec_get(&m_test1, TIME_UTC);
+  #endif
   unsigned int now = c64_->cpu_->cycles();
   unsigned int cycles = (now - /* sid_delay_clk */sid_main_clk);
   while (cycles > 0xFFFF) {
     /* printf("SID delay called @ %u cycles (cycles > 0xFFFF), last was at %u, diff %u, main clock %u\n",
       now, sid_delay_clk, cycles, sid_main_clk); */
     cycles -= 0xFFFF;
-    // if (us_) wait_ns(0xFFFF);
+    #if DESKTOP && USBSID_DRIVER
     if (us_) usbsid->USBSID_WaitForCycle(0xFFFF);
+    #elif EMBEDDED
+    cycled_delay_operation(0xFFFF);
+    #else
+    wait_ns(0xFFFF);
+    #endif
   }
   sid_main_clk = sid_delay_clk = now;
   return cycles;
@@ -153,14 +188,17 @@ unsigned int Sid::sid_delay()
 uint8_t Sid::read_register(uint8_t r, uint8_t sidno)
 {
   uint8_t v = 0;
-  if (us_) {
-    v = c64_->mem_->read_byte_no_io(r); /* No reading for now */
-    if (logsidrw) D("[RD] $%02X:%02X %u\n", r, v, c64_->cpu_->cycles()-sid_read_clk);
-  } else {
-    v = c64_->mem_->read_byte_no_io(r);
-    // printf("[RD] $%02X:%02X\n", r, v);
-    if (logsidrw) D("[RD] $%02X:%02X %u\n", r, v, c64_->cpu_->cycles()-sid_read_clk);
+  r = ((sidno*0x20) | r);
+  unsigned int cycles = sid_delay();
+  #if DESKTOP
+  v = c64_->mem_->read_byte_no_io(r); /* No hardware SID reading */
+  #elif EMBEDDED
+  v = cycled_read_operation(r,cycles); // TODO: cycled delayed read operation?
+  #endif
+  if (c64_->mem_->getlogrw(6)) {
+    D("[RD%d] $%02X:%02X C:%u RDC:%u\n", sidno, r, v, cycles, sid_read_cycles);
   }
+  sid_read_cycles += cycles;
   sid_main_clk = sid_read_clk = c64_->cpu_->cycles();
   return v;
 }
@@ -169,13 +207,18 @@ void Sid::write_register(uint8_t r, uint8_t v, uint8_t sidno)
 {
   r = ((sidno*0x20) | r);
   unsigned int cycles = sid_delay();
+  #if DESKTOP && USBSID_DRIVER
   if (us_) {
-    // wait_ns(cycles);
     usbsid->USBSID_WaitForCycle(cycles);
     usbsid->USBSID_WriteRingCycled(r, v, cycles);
-    if (logsidrw) D("[WR%d] $%02X:%02X C:%u WRC:%u\n", sidno, r, v, cycles, sid_write_cycles);
-  } else {
-    if (logsidrw) D("[WR%d] $%02X:%02X C:%u WRC:%u\n", sidno, r, v, cycles, sid_write_cycles);
+  }
+  #elif EMBEDDED
+  cycled_delayed_write_operation(r,v,cycles);
+  #else
+  wait_ns(cycles);
+  #endif
+  if (c64_->mem_->getlogrw(6)) {
+    D("[WR%d] $%02X:%02X C:%u WRC:%u\n", sidno, r, v, cycles, sid_write_cycles);
   }
   sid_write_cycles += cycles;
   sid_main_clk = sid_write_clk = c64_->cpu_->cycles();

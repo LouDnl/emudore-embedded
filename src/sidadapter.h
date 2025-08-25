@@ -2,7 +2,7 @@
  * MOS Sound Interface Device (SID) USB hardware communication
  * Copyright (c) 2025, LouD <emudore@mail.loudai.nl>
  *
- * sid.h
+ * sidadapter.h
  *
  * Made for emudore, Commodore 64 emulator
  * Copyright (c) 2016, Mario Ballano <mballano@gmail.com>
@@ -30,9 +30,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
-
+#if USBSID_DRIVER /* USBSID_DRIVER=1 */
 #include <USBSID.h>
-
+#endif
 
 /**
  * @brief MOS 6581 SID (Sound Interface Device)
@@ -45,21 +45,25 @@ class Sid
   private:
     C64 *c64_;
 
+    #if USBSID_DRIVER /* USBSID_DRIVER=1 */
     USBSID_NS::USBSID_Class *usbsid;
     bool us_ = false;
+    #endif
 
     unsigned int sid_main_clk = 0;
     unsigned int sid_flush_clk = 0;
     unsigned int sid_delay_clk = 0;
     unsigned int sid_read_clk = 0;
     unsigned int sid_write_clk = 0;
+    unsigned int sid_read_cycles = 0;
     unsigned int sid_write_cycles = 0;
     /* unsigned int sid_alarm_clk = 0; */
 
     bool sid_playing = false;
-    bool logsidrw = false;
 
+    #if DESKTOP && !USBSID_DRIVER
     uint_fast64_t wait_ns(unsigned int cycles);
+    #endif
 
   public:
     Sid(C64 * c64);
@@ -75,9 +79,6 @@ class Sid
     /* SID play workaround */
     void set_playing(bool playing) { sid_playing = playing; };
     bool isSIDplaying() { return sid_playing; };
-
-    /* Utils */
-    void set_sidrwlog(bool v) { logsidrw = v; };
 
 };
 
