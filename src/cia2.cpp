@@ -86,6 +86,8 @@ Cia2::Cia2(C64 *c64) :
 { /* 0xDD00 */
   /* Base */
   prev_cpu_cycles_ = 0;
+
+  D("[EMU] Cia2 initialized.\n");
 }
 
 void Cia2::reset()

@@ -86,6 +86,8 @@ Cia1::Cia1(C64 *c64) :
 { /* 0xDC00 */
   /* Base */
   prev_cpu_cycles_ = 0;
+
+  D("[EMU] Cia1 initialized.\n");
 }
 
 void Cia1::reset()

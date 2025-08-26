@@ -50,6 +50,8 @@ Memory::Memory(C64 * c64) :
   kCIA1MemRd = &mem_rom_cia1_[0];
   kCIA2MemWr = &mem_ram_[kAddrCIA2Page];
   kCIA2MemRd = &mem_rom_cia2_[0];
+
+  D("[EMU] Memory initialized.\n");
 }
 
 Memory::~Memory()

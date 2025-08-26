@@ -91,6 +91,8 @@ IO::IO(C64 *c64,bool sdl) :
   next_key_event_at_ = 0;
   #endif
   prev_frame_was_at_ = std::chrono::high_resolution_clock::now();
+
+  D("[EMU] IO initialized.\n");
 }
 
 IO::~IO()

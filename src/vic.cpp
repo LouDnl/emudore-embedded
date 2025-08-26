@@ -62,6 +62,8 @@ void Vic::reset()
   mem_pointers_ = (1 << 0);
   /* current graphic mode */
   graphic_mode_ = kCharMode;
+
+  D("[EMU] Vic initialized.\n");
 }
 
 // returns true on vertical sync

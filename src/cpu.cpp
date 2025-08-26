@@ -25,7 +25,7 @@
 Cpu::Cpu(C64 * c64) :
   c64_(c64)
 {
-
+  D("[EMU] Cpu initialized.\n");
 }
 
 /**

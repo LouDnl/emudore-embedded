@@ -45,6 +45,8 @@ PLA::PLA(C64 * c64) :
   }
   /* configure data directional bits to default boot setting */
   c64_->memory()->write_byte_no_io(Memory::kAddrDataDirection, data_direction_default);
+
+  D("[EMU] PLA initialized.\n");
 }
 
 PLA::~PLA()

@@ -49,6 +49,8 @@ Cart::Cart(C64 * c64) :
   if (cartactive) {
     load_crt(c64_->cartfile);
   }
+
+  D("[EMU] Cart initialized.\n");
 }
 
 Cart::~Cart()
