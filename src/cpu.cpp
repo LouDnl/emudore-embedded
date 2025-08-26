@@ -1946,6 +1946,7 @@ void Cpu::rti()
  */
 void Cpu::jam(uint8_t insn)
 {
+  (void)insn;
   // if (1) return;
   // printf("JAM! INS: %02X PC @ %04X\nInstr %02X @ %04X\nNext Instr %02X @ %04X\nPrev Instr %02X @ %04X\nPrev Instr %02X @ %04X\nSP:%X A:%X X:%X Y:%X\n",
     // insn,pc(),
