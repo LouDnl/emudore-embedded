@@ -48,6 +48,7 @@ bool SidFile::IsPSIDHeader(const uint8_t *p)
 
 }
 
+#if DESKTOP
 int SidFile::Parse(std::string file)
 {
     FILE *f = fopen(file.c_str(), "rb");
@@ -190,8 +191,7 @@ int SidFile::Parse(std::string file)
 
     return SIDFILE_OK;
 }
-
-#if EMBEDDED
+#elif EMBEDDED
 int SidFile::ParsePtr(uint8_t * f, size_t fsize)
 {
 
@@ -269,6 +269,7 @@ int SidFile::ParsePtr(uint8_t * f, size_t fsize)
     // Load module data
     // dataLength = fread(dataBuffer, 1, 0x10000, f);
     dataLength = (fsize - seek_addr);
+    // dataBuffer = seek_addr;
 
     // flags start at 0x76
     sidFlags = Read16(header, SIDFILE_PSID_FLAGS_H);

@@ -186,8 +186,9 @@ private:
 
 public:
     SidFile();
+    #if DESKTOP
     int Parse(std::string file);
-    #if EMBEDDED
+    #elif EMBEDDED
     int ParsePtr(uint8_t * fileptr,size_t filesize);
     #endif
     std::string GetSidType();
