@@ -23,6 +23,10 @@
 #include <c64.h>
 #include <io.h>
 
+#if EMBEDDED
+extern "C" uint16_t cycled_delay_operation(uint16_t cycles);
+#endif
+
 
 // clas ctor and dtor //////////////////////////////////////////////////////////
 
