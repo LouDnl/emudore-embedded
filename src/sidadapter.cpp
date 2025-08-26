@@ -29,9 +29,13 @@
 
 #if EMBEDDED
 extern "C" uint16_t cycled_delay_operation(uint16_t cycles);
+
+extern "C" uint8_t cycled_read_operation(uint8_t address, uint16_t cycles);
+
+extern "C" void write_operation(uint8_t address, uint8_t data);
 extern "C" void cycled_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
 extern "C" uint16_t cycled_delayed_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
-extern "C" uint8_t cycled_read_operation(uint8_t address, uint16_t cycles);
+
 extern "C" void reset_sid(void);
 #endif
 
@@ -63,6 +67,8 @@ Sid::Sid(C64 * c64) :
 #endif
   sid_main_clk = sid_flush_clk = sid_delay_clk = sid_write_clk = sid_read_clk = 0;
   sid_read_cycles = sid_write_cycles = 0;
+
+  D("[EMU] SID adapter initialized.\n");
 }
 
 Sid::~Sid()
