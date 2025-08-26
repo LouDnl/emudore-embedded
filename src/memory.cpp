@@ -491,6 +491,8 @@ bool Memory::load_rom(const std::string &f, uint16_t baseaddr)
   }
   return false;
   #elif EMBEDDED
+  (void)f;
+  (void)baseaddr;
   return true;
   #endif
 }
@@ -513,6 +515,8 @@ bool Memory::load_ram(const std::string &f, uint16_t baseaddr)
   }
   return false;
   #elif EMBEDDED
+  (void)f;
+  (void)baseaddr;
   return true;
   #endif
 }
@@ -545,5 +549,8 @@ void Memory::dump(uint16_t start, uint16_t end)
     std::cout << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(read_byte_no_io(p)) << " ";
     if (p % 15 == 0 && p != 0) std::cout << std::endl;
   }
+  #else
+  (void)start;
+  (void)end;
   #endif
 }
