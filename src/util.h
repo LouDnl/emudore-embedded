@@ -22,17 +22,22 @@
 #define EMUDORE_UTIL_H
 #pragma once
 
-
 #include <stdio.h>
 
-#ifndef NDEBUG
+
 #if DESKTOP
-#define D(...) fprintf (stderr,__VA_ARGS__)
+  #ifndef NDEBUG
+    #define D(...) fprintf (stderr,__VA_ARGS__)
+  #else
+    #define D(...) do {} while (0)
+  #endif
 #elif EMBEDDED
-#define D(...) printf(__VA_ARGS__)
-#endif
-#else
-#define D(...) do {} while (0)
+  #if defined(EMUDEBUG)
+    #define D(...) printf(__VA_ARGS__)
+
+  #else
+    #define D(...) do {} while (0)
+  #endif
 #endif
 
 #define PBIT(v) D("%X 0b%d%d%d%d%d%d%d%d\n", \
