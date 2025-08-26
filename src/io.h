@@ -141,6 +141,10 @@ inline void IO::screen_update_pixel(int x, int y, int color)
 {
   #if DESKTOP
   frame_[y * cols_  + x] = color_palette[color & 0xf];
+  #elif EMBEDDED
+  (void)x;
+  (void)y;
+  (void)color;
   #endif
 };
 
