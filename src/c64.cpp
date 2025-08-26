@@ -139,6 +139,9 @@ void C64::start()
 unsigned int C64::emulate()
 {
   if (runloop) {
+    #if DESKTOP
+    if(callback_) callback_();
+    #endif
     /* Cart */
     cart_->emulate();
     /* CPU */
@@ -168,6 +171,9 @@ unsigned int  C64::emulate_specified(
 )
 {
   if (runloop) {
+    #if DESKTOP
+    if(callback_) callback_();
+    #endif
     /* Cart */
     if (cart) cart_->emulate();
     /* CPU */
