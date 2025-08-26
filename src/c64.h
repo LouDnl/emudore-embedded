@@ -52,9 +52,6 @@ class Sid;
 #endif
 
 #if EMBEDDED
-extern "C" uint16_t cycled_delay_operation(uint16_t cycles);
-extern "C" void cycled_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
-extern "C" uint16_t cycled_delayed_write_operation(uint8_t address, uint8_t data, uint16_t cycles);
 extern "C" void reset_sid(void);
 #endif
 
@@ -116,8 +113,11 @@ class C64
     uint8_t * binary_;
     #endif
 
-    void emulate();
-    void start();
+    void start(void);
+    unsigned int emulate(void);
+    unsigned int emulate_specified(
+      bool cpu, bool cia1, bool cia2,
+      bool vic, bool io,   bool cart);
 
     bool is_looping(void){return runloop;};
     bool disable_looping(void){runloop=false;return runloop;};

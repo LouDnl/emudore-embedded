@@ -136,7 +136,7 @@ void C64::start()
  * ignores emulation return statements and
  * has no debugger support
  */
-void C64::emulate()
+unsigned int C64::emulate()
 {
   if (runloop) {
     /* Cart */
@@ -151,5 +151,37 @@ void C64::emulate()
     vic_->emulate();
     /* IO (SDL2 keyboard input) */
     io_->emulate();
+    /* return current cpu cycles */
+    return cpu_->cycles();
   }
+  return 0;
+}
+
+/**
+ * @brief run a single c64 emulation loop
+ * ignores emulation return statements and
+ * has no debugger support
+ */
+unsigned int  C64::emulate_specified(
+  bool cpu, bool cia1, bool cia2,
+  bool vic, bool io,   bool cart
+)
+{
+  if (runloop) {
+    /* Cart */
+    if (cart) cart_->emulate();
+    /* CPU */
+    if (cpu) cpu_->emulate();
+    /* CIA1 */
+    if (cia1) cia1_->emulate();
+    /* CIA2 */
+    if (cia2) cia2_->emulate();
+    /* VIC-II */
+    if (vic) vic_->emulate();
+    /* IO (SDL2 keyboard input) */
+    if (io) io_->emulate();
+    /* return current cpu cycles */
+    return cpu_->cycles();
+  }
+  return 0;
 }
