@@ -120,9 +120,9 @@ int main(int argc, char **argv)
 
   /* Init Machine start */
   if (file_loaded) {
-    c64 = new C64(nosdl,isbinary,havecart,bankswlog,acia,std::string {""});
-  } else {
     c64 = new C64(nosdl,isbinary,havecart,bankswlog,acia,loader->filename);
+  } else {
+    c64 = new C64(nosdl,isbinary,havecart,bankswlog,acia,std::string {""});
   }
 
 
