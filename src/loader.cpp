@@ -294,13 +294,51 @@ void Loader::load_sid()
     pl_loadaddr, pl_playaddr, pl_initaddr);
 
   // if (sidfile_->GetSidType() == "PSID")
-  load_sidplayerA(pl_playaddr, pl_initaddr, pl_song_number);
+  load_sidplayer(pl_playaddr, pl_initaddr, pl_song_number);
+  // load_sidplayerA(pl_playaddr, pl_initaddr, pl_song_number);
   // load_sidplayerB(pl_playaddr, pl_initaddr, pl_song_number);
   // load_sidplayerC(pl_playaddr, pl_initaddr, pl_song_number);
 
   c64_->sid_->sid_flush();
   c64_->sid_->set_playing(true);
   c64_->cpu_->pc(c64_->mem_->read_word(Memory::kAddrResetVector));
+}
+
+void Loader::load_sidplayer(uint16_t play, uint16_t init, int songno)
+{
+  // install reset vector for microplayer (0x0202)
+  c64_->mem_->write_byte(0xFFFC, 0x02);
+  c64_->mem_->write_byte(0xFFFD, 0x02);
+
+  // install IRQ vector for play routine launcher (0x020C)
+  c64_->mem_->write_byte(0xFFFE, 0x0C);
+  c64_->mem_->write_byte(0xFFFF, 0x02);
+
+  // clear kernel and basic rom from ram
+  c64_->mem_->write_byte(0x0001, 0x1C); /* 35 */
+
+  // install the micro player, 6502 assembly code
+  c64_->mem_->write_byte(0x0202, 0xA9);               // 0xA9 LDA imm load A with the song number
+  c64_->mem_->write_byte(0x0203, songno);             // 0xNN #NN song number
+
+  c64_->mem_->write_byte(0x0204, 0x20);               // 0x20 JSR abs jump sub to INIT routine
+  c64_->mem_->write_byte(0x0205, init & 0xFF);        // 0xxxNN address lo
+  c64_->mem_->write_byte(0x0206, (init >> 8) & 0xFF); // 0xNNxx address hi
+
+  c64_->mem_->write_byte(0x0207, 0x58);               // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0x0208, 0xEA);               // 0xEA NOP impl
+  c64_->mem_->write_byte(0x0209, 0x4C);               // JMP jump to 0x0006
+  c64_->mem_->write_byte(0x020A, 0x08);               // 0xxxNN address lo
+  c64_->mem_->write_byte(0x020B, 0x02);               // 0xNNxx address hi
+
+  c64_->mem_->write_byte(0x020C, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
+  c64_->mem_->write_byte(0x020D, 0xEA);               // 0xEA NOP // 0x01 #NN
+  c64_->mem_->write_byte(0x020E, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
+  c64_->mem_->write_byte(0x020F, 0x20);               // 0x20 JSR jump sub to play routine
+  c64_->mem_->write_byte(0x0210, play & 0xFF);        // playaddress lo
+  c64_->mem_->write_byte(0x0211, (play >> 8) & 0xFF); // playaddress hi
+  c64_->mem_->write_byte(0x0212, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(0x0213, 0x40);               // 0x40 RTI return from interrupt
 }
 
 void Loader::load_sidplayerA(uint16_t play, uint16_t init, int songno)

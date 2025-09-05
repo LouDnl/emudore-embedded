@@ -80,6 +80,7 @@ class Loader
     void load_prg();
     void load_d64();
     void load_sid();
+    void load_sidplayer(uint16_t play, uint16_t init, int songno);
     void load_sidplayerA(uint16_t play, uint16_t init, int songno);
     void load_sidplayerB(uint16_t play, uint16_t init, int songno);
     void load_sidplayerC(uint16_t play, uint16_t init, int songno);
