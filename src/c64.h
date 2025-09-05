@@ -105,6 +105,8 @@ class C64
     /* Specific for Midi like Cynthcart that uses MC68B50 */
     bool acia = false;
 
+    static bool log_timings;
+
     #if EMBEDDED
     /* Binary pointers */
     uint8_t * basic_;

@@ -100,6 +100,7 @@ void checkargs(int argc, char **argv)
       if(!strcmp(argv[a], "-logiorw")) {loader->iorwlog = true;}
       if(!strcmp(argv[a], "-logplarw")) {loader->plarwlog = true;}
       if(!strcmp(argv[a], "-logcartrw")) {loader->cartrwlog = true;}
+      if(!strcmp(argv[a], "-logtimings")) {C64::log_timings = true;}
 
       /* Check for file */
       if((strchr(argv[a], '.') != NULL)) {loader->filename = argv[a];}
