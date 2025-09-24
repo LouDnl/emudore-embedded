@@ -23,6 +23,7 @@
 #ifndef _C64_TIMER_
 #define _C64_TIMER_
 
+#include <cstdio>
 #include <chrono>
 using namespace std::chrono;
 
