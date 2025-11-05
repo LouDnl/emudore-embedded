@@ -207,8 +207,8 @@ class Memory
     uint16_t kSIDFourMask  = 0xff7f;
     uint16_t kAddrSIDOne   = 0xd400;
     uint16_t kAddrSIDTwo   = 0xd420;
-    uint16_t kAddrSIDThree = 0xd420;
-    uint16_t kAddrSIDFour  = 0xd420;
+    uint16_t kAddrSIDThree = 0xd440;
+    uint16_t kAddrSIDFour  = 0xd460;
 
     /* Public memory pointers set by Memory class */
     /* CIA1 */
