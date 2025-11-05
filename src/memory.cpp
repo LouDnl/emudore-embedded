@@ -110,6 +110,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
       if (page == kAddrSIDFirstPage) { /* No SID's in second page */
         mem_ram_[addr] = v; /* Always write to RAM */
+        if(logsidiorw){D("[SIDIO W] $%04X:%02X\n",addr,v);};
         /* Check SID address in reverse order */
         if (((addr & kSIDFourMask) >= kAddrSIDFour)
           && (addr & kSIDFourMask) < (kAddrSIDFour+0x20)) { /* SID Four */

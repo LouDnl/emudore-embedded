@@ -65,13 +65,14 @@ class Memory
     C64 * c64_;
 
     /* Debug logging */
-    bool logmemrw  = false; /* $0000 ~ $ffff */
-    bool logcia1rw = false; /* $dc00 ~ $dcff */
-    bool logcia2rw = false; /* $dd00 ~ $ddff */
-    bool logiorw   = false; /* $de00 ~ $dfff */
-    bool logplarw  = false; /* unused */
-    bool logcrtrw  = false; /* $8000 ~ $9fff  */
-    bool logsidrw  = false; /* $d400 ~ $d4ff */
+    bool logmemrw   = false; /* $0000 ~ $ffff */
+    bool logcia1rw  = false; /* $dc00 ~ $dcff */
+    bool logcia2rw  = false; /* $dd00 ~ $ddff */
+    bool logiorw    = false; /* $de00 ~ $dfff */
+    bool logplarw   = false; /* unused */
+    bool logcrtrw   = false; /* $8000 ~ $9fff  */
+    bool logsidrw   = false; /* $d400 ~ $d4ff - sidadapter */
+    bool logsidiorw = false; /* $d400 ~ $d4ff - memory */
 
   public:
     Memory(C64 * c64);
@@ -104,23 +105,25 @@ class Memory
     void print_screen_text();
     void setlogrw(int logid) {
       switch(logid)
-      { case 0: logmemrw  = true; break;
-        case 1: logcia1rw = true; break;
-        case 2: logcia2rw = true; break;
-        case 3: logiorw   = true; break;
-        case 4: logplarw  = true; break;
-        case 5: logcrtrw  = true; break;
-        case 6: logsidrw  = true; break; /* logs from SID class */
+      { case 0: logmemrw    = true; break;
+        case 1: logcia1rw   = true; break;
+        case 2: logcia2rw   = true; break;
+        case 3: logiorw     = true; break;
+        case 4: logplarw    = true; break;
+        case 5: logcrtrw    = true; break;
+        case 6: logsidrw    = true; break; /* logs from SID class */
+        case 7: logsidiorw  = true; break; /* logs from SID class */
         default: break; } };
     void unsetlogrw(int logid) {
       switch(logid)
-      { case 0: logmemrw  = false; break;
-        case 1: logcia1rw = false; break;
-        case 2: logcia2rw = false; break;
-        case 3: logiorw   = false; break;
-        case 4: logplarw  = false; break;
-        case 5: logcrtrw  = false; break;
-        case 6: logsidrw  = false; break;
+      { case 0: logmemrw    = false; break;
+        case 1: logcia1rw   = false; break;
+        case 2: logcia2rw   = false; break;
+        case 3: logiorw     = false; break;
+        case 4: logplarw    = false; break;
+        case 5: logcrtrw    = false; break;
+        case 6: logsidrw    = false; break;
+        case 7: logsidiorw  = false; break;
         default: break; } };
     bool getlogrw(int logid) {
       switch(logid)
@@ -131,6 +134,7 @@ class Memory
         case 4: return logplarw;
         case 5: return logcrtrw;
         case 6: return logsidrw;
+        case 7: return logsidiorw;
         default: return false; } };
 
     /* constants */
