@@ -45,7 +45,7 @@ MC68B50::MC68B50(C64 * c64)
   mem_rom_mc6850_ = new uint8_t[Memory::kPageSize](); // TODO: We only need 4 bytes, maybe do a wrap around?
   k6850MemWr = &c64_->mem_->mem_ram()[Memory::kAddrIO1Page]; /* write pointer */
   k6850MemRd = &mem_rom_mc6850_[0]; /* read data */
-   reset();
+  reset();
 }
 
 /**
