@@ -158,7 +158,7 @@ void Sid::sid_flush()
     #if DESKTOP && USBSID_DRIVER
     if (us_) usbsid->USBSID_WaitForCycle(cycles - (sid_write_cycles+sid_read_cycles));
     #elif EMBEDDED
-    cycled_delay_operation(cycles - (sid_write_cycles+sid_read_cycles));
+    // cycled_delay_operation(cycles - (sid_write_cycles+sid_read_cycles)); /* do nothing for now */
     #else
     wait_ns(cycles - (sid_write_cycles+sid_read_cycles));
     #endif
@@ -182,7 +182,7 @@ unsigned int Sid::sid_delay()
     #if DESKTOP && USBSID_DRIVER
     if (us_) usbsid->USBSID_WaitForCycle(0xFFFF);
     #elif EMBEDDED
-    cycled_delay_operation(0xFFFF);
+    // cycled_delay_operation(0xFFFF); /* do nothing for now */
     #else
     wait_ns(0xFFFF);
     #endif
@@ -199,6 +199,7 @@ uint8_t Sid::read_register(uint8_t r, uint8_t sidno)
   #if DESKTOP
   v = c64_->mem_->read_byte_no_io(r); /* No hardware SID reading */
   #elif EMBEDDED
+  cycles = 0; /* do nothing for now */
   v = cycled_read_operation(r,cycles); // TODO: cycled delayed read operation?
   #endif
   if (c64_->mem_->getlogrw(6)) {
@@ -219,7 +220,9 @@ void Sid::write_register(uint8_t r, uint8_t v, uint8_t sidno)
     usbsid->USBSID_WriteRingCycled(r, v, cycles);
   }
   #elif EMBEDDED
-  cycled_delayed_write_operation(r,v,cycles);
+  cycles = 0; /* do nothing for now */
+  cycled_write_operation(r,v,cycles);
+  // cycled_delayed_write_operation(r,v,cycles);
   #else
   wait_ns(cycles);
   #endif
