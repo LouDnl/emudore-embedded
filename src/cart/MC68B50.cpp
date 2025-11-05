@@ -27,6 +27,7 @@
 
 #if EMBEDDED
 extern "C" {
+  #include "globals.h"
   #include "pico/util/queue.h"  /* Inter core queue */
   #include "midi.h"
   extern queue_t cynthcart_queue;
