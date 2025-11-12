@@ -68,7 +68,7 @@ class Loader
     int pl_chiptype;
     int pl_clockspeed;
     int pl_sidversion;
-
+    int pl_isrsid;
     int pl_clock_speed;
     int pl_raster_lines;
     int pl_rasterrow_cycles;
@@ -80,10 +80,7 @@ class Loader
     void load_prg();
     void load_d64();
     void load_sid();
-    void load_sidplayer(uint16_t play, uint16_t init, int songno);
-    void load_sidplayerA(uint16_t play, uint16_t init, int songno);
-    void load_sidplayerB(uint16_t play, uint16_t init, int songno);
-    void load_sidplayerC(uint16_t play, uint16_t init, int songno);
+    void load_Psidplayer(uint16_t play, uint16_t init, uint16_t load, uint16_t length, int songno);
     void print_sid_info(); /* TODO: Print on C64 screen */
     uint16_t read_short_le();
   public:
@@ -99,6 +96,8 @@ class Loader
     void handle_args();
     bool handle_file();
     bool emulate();
+
+    bool isrsid() { return pl_isrsid; };
 
     /* Startup arguments */
     uint16_t init_addr = 0x0; /* Zero as signal it hasn't been changed */

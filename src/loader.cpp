@@ -290,170 +290,67 @@ void Loader::load_sid()
   for (unsigned int i = 0; i < pl_datalength; i++) {
     c64_->mem_->write_byte((pl_loadaddr+i),pl_databuffer[i]);
   }
-  printf("load: $%04X play: $%04X init: $%04X\n",
-    pl_loadaddr, pl_playaddr, pl_initaddr);
-
-  // if (sidfile_->GetSidType() == "PSID")
-  load_sidplayer(pl_playaddr, pl_initaddr, pl_song_number);
-  // load_sidplayerA(pl_playaddr, pl_initaddr, pl_song_number);
-  // load_sidplayerB(pl_playaddr, pl_initaddr, pl_song_number);
-  // load_sidplayerC(pl_playaddr, pl_initaddr, pl_song_number);
+  printf("load: $%04X play: $%04X init: $%04X\n", pl_loadaddr, pl_playaddr, pl_initaddr);
+  pl_isrsid = (sidfile_->GetSidType() == "PSID");
+  if (pl_isrsid) {
+    load_Psidplayer(pl_playaddr, pl_initaddr, pl_loadaddr, pl_datalength, pl_song_number);
+  } else {
+    printf("RSID not implemented yet! Try as PRG :)\n");
+  }
 
   c64_->sid_->sid_flush();
   c64_->sid_->set_playing(true);
   c64_->cpu_->pc(c64_->mem_->read_word(Memory::kAddrResetVector));
 }
 
-void Loader::load_sidplayer(uint16_t play, uint16_t init, int songno)
+void Loader::load_Psidplayer(uint16_t play, uint16_t init, uint16_t load, uint16_t length, int songno)
 {
-  // install reset vector for microplayer (0x0202)
-  c64_->mem_->write_byte(0xFFFC, 0x02);
-  c64_->mem_->write_byte(0xFFFD, 0x02);
+  D("Starting PSID player\n");
+  uint16_t playerstart = (init+length+1);
+  uint8_t p_hi = ((playerstart >> 8) & 0xFF);
+  uint8_t p_lo = (playerstart & 0xFF);
+  printf("playerstart: $%04X p_lo: $%02X p_hi: $%02X\n", playerstart, p_lo, p_hi);
 
-  // install IRQ vector for play routine launcher (0x020C)
-  c64_->mem_->write_byte(0xFFFE, 0x0C);
-  c64_->mem_->write_byte(0xFFFF, 0x02);
+  /* install reset vector for microplayer */
+  c64_->mem_->write_byte(0xFFFC, p_lo); // lo
+  c64_->mem_->write_byte(0xFFFD, p_hi); // hi
 
-  // clear kernel and basic rom from ram
-  c64_->mem_->write_byte(0x0001, 0x1C); /* 35 */
+  /* install IRQ vector for play routine launcher */
+  c64_->mem_->write_byte(0xFFFE, (p_lo+0x13)); // lo
+  c64_->mem_->write_byte(0xFFFF, p_hi); // hi
 
-  // install the micro player, 6502 assembly code
-  c64_->mem_->write_byte(0x0202, 0xA9);               // 0xA9 LDA imm load A with the song number
-  c64_->mem_->write_byte(0x0203, songno);             // 0xNN #NN song number
+  /* clear everything from from ram except IO 'm13' */
+  c64_->pla_->switch_banks(13);
 
-  c64_->mem_->write_byte(0x0204, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  c64_->mem_->write_byte(0x0205, init & 0xFF);        // 0xxxNN address lo
-  c64_->mem_->write_byte(0x0206, (init >> 8) & 0xFF); // 0xNNxx address hi
+  /* install the micro player, 6502 assembly code */
+  c64_->mem_->write_byte(playerstart, 0xA9);                     // 0xA9 LDA imm load A with the song number
+  c64_->mem_->write_byte(playerstart+1, songno);                 // 0xNN #NN song number
 
-  c64_->mem_->write_byte(0x0207, 0x58);               // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0x0208, 0xEA);               // 0xEA NOP impl
-  c64_->mem_->write_byte(0x0209, 0x4C);               // JMP jump to 0x0006
-  c64_->mem_->write_byte(0x020A, 0x08);               // 0xxxNN address lo
-  c64_->mem_->write_byte(0x020B, 0x02);               // 0xNNxx address hi
+  /* jump to init address */
+  c64_->mem_->write_byte(playerstart+2, 0x20);                   // 0x20 JSR abs jump sub to INIT routine
+  c64_->mem_->write_byte(playerstart+3, (init & 0xFF));          // 0xxxNN address lo
+  c64_->mem_->write_byte(playerstart+4, (init >> 8) & 0xFF);     // 0xNNxx address hi
 
-  c64_->mem_->write_byte(0x020C, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  c64_->mem_->write_byte(0x020D, 0xEA);               // 0xEA NOP // 0x01 #NN
-  c64_->mem_->write_byte(0x020E, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  c64_->mem_->write_byte(0x020F, 0x20);               // 0x20 JSR jump sub to play routine
-  c64_->mem_->write_byte(0x0210, play & 0xFF);        // playaddress lo
-  c64_->mem_->write_byte(0x0211, (play >> 8) & 0xFF); // playaddress hi
-  c64_->mem_->write_byte(0x0212, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0x0213, 0x40);               // 0x40 RTI return from interrupt
-}
+  c64_->mem_->write_byte(playerstart+5, 0x58);                   // 0x58 CLI enable interrupt
+  c64_->mem_->write_byte(playerstart+6, 0xEA);                   // 0xEA NOP impl
+  c64_->mem_->write_byte(playerstart+7, 0x4C);                   // JMP jump to 0x0006
+  c64_->mem_->write_byte(playerstart+8, p_lo+6);                 // 0xxxNN address lo
+  c64_->mem_->write_byte(playerstart+9, p_hi);                   // 0xNNxx address hi
 
-void Loader::load_sidplayerA(uint16_t play, uint16_t init, int songno)
-{
-  // install reset vector for microplayer (0x0000)
-  c64_->mem_->write_byte(0xFFFD, 0x00);
-  c64_->mem_->write_byte(0xFFFC, 0x02);
+  /* play routine launcher */
+  c64_->mem_->write_byte(playerstart+0x13, 0xEA);                // 0xEA NOP
+  c64_->mem_->write_byte(playerstart+0x14, 0xEA);                // 0xEA NOP
+  c64_->mem_->write_byte(playerstart+0x15, 0xEA);                // 0xEA NOP
+  c64_->mem_->write_byte(playerstart+0x16, 0x20);                // 0x20 JSR jump sub to play routine
+  c64_->mem_->write_byte(playerstart+0x17, (play & 0xFF));       // playaddress lo
+  c64_->mem_->write_byte(playerstart+0x18, (play >> 8) & 0xFF);  // playaddress hi
+  c64_->mem_->write_byte(playerstart+0x19, 0xEA);                // 0xEA NOP
+  c64_->mem_->write_byte(playerstart+0x1A, 0x40);                // 0x40 RTI return from interruptrupt
 
-  // install IRQ vector for play routine launcher (0x000C)
-  c64_->mem_->write_byte(0xFFFF, 0x00);
-  c64_->mem_->write_byte(0xFFFE, 0x0C);
-
-  // clear kernel and basic rom from ram
-  c64_->mem_->write_byte(0x0001, 0x35);
-
-  // install the micro player, 6502 assembly code
-  c64_->mem_->write_byte(0x0002, 0xA9);               // 0xA9 LDA imm load A with the song number
-  c64_->mem_->write_byte(0x0003, songno);             // 0xNN #NN song number
-
-  c64_->mem_->write_byte(0x0004, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  c64_->mem_->write_byte(0x0005, init & 0xFF);        // 0xxxNN address lo
-  c64_->mem_->write_byte(0x0006, (init >> 8) & 0xFF); // 0xNNxx address hi
-
-  c64_->mem_->write_byte(0x0007, 0x58);               // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0x0008, 0xEA);               // 0xEA NOP impl
-  c64_->mem_->write_byte(0x0009, 0x4C);               // JMP jump to 0x0006
-  c64_->mem_->write_byte(0x000A, 0x08);               // 0xxxNN address lo
-  c64_->mem_->write_byte(0x000B, 0x00);               // 0xNNxx address hi
-
-  c64_->mem_->write_byte(0x000C, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  c64_->mem_->write_byte(0x000D, 0xEA);               // 0xEA NOP // 0x01 #NN
-  c64_->mem_->write_byte(0x000E, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  c64_->mem_->write_byte(0x000F, 0x20);               // 0x20 JSR jump sub to play routine
-  c64_->mem_->write_byte(0x0010, play & 0xFF);        // playaddress lo
-  c64_->mem_->write_byte(0x0011, (play >> 8) & 0xFF); // playaddress hi
-  c64_->mem_->write_byte(0x0012, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0x0013, 0x40);               // 0x40 RTI return from interrupt
-}
-
-void Loader::load_sidplayerB(uint16_t play, uint16_t init, int songno)
-{ /* BUG: Doesn't work at all! */
-  // install reset vector for microplayer (0x0000)
-  c64_->mem_->write_byte(0xFFFD, 0x00);
-  c64_->mem_->write_byte(0xFFFC, 0x02);
-
-  // install IRQ vector for play routine launcher (0x0813)
-  c64_->mem_->write_byte(0xFFFF, 0xD7);
-  c64_->mem_->write_byte(0xFFFE, 0xE0);
-
-  // clear kernel and basic rom from ram
-  // c64_->mem_->write_byte(0x0001, 0x35);
-
-  // install the micro pl`ayer, 6502 assembly code
-  c64_->mem_->write_byte(0xD7E0, 0xA9);               // 0xA9 LDA imm load A with the song number
-  c64_->mem_->write_byte(0xD7E1, songno);             // 0xNN #NN song number
-
-  c64_->mem_->write_byte(0xD7E2, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  c64_->mem_->write_byte(0xD7E3, init & 0xFF);        // 0xxxNN address lo
-  c64_->mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
-
-  // infinite loop?
-  c64_->mem_->write_byte(0xD7E5, 0x58);               // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0xD7E6, 0xEA);               // 0xEA NOP impl
-  c64_->mem_->write_byte(0xD7E7, 0x4C);               // JMP jump to 0x0006
-  c64_->mem_->write_byte(0xD7E8, 0x08);               // 0xxxNN address lo
-  c64_->mem_->write_byte(0xD7E9, 0x00);               // 0xNNxx address hi
-
-  // install the play routine launcher
-  c64_->mem_->write_byte(0xD7EA, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  c64_->mem_->write_byte(0xD7EB, 0xEA);               // 0xEA NOP // 0x01 #NN
-  c64_->mem_->write_byte(0xD7EC, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  c64_->mem_->write_byte(0xD7ED, 0x20);               // 0x20 JSR jump sub to play routine
-  c64_->mem_->write_byte(0xD7EE, play & 0xFF);        // playaddress lo
-  c64_->mem_->write_byte(0xD7EF, (play >> 8) & 0xFF); // playaddress hi
-  c64_->mem_->write_byte(0xD7F0, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0xD7F1, 0x40);               // 0x40 RTI return from interrupt
-}
-
-void Loader::load_sidplayerC(uint16_t play, uint16_t init, int songno)
-{ /* BUG: Causes turbo play and other issues, do not use */
-  // install reset vector for microplayer (0x0000)
-  c64_->mem_->write_byte(0xFFFD, 0x00);
-  c64_->mem_->write_byte(0xFFFC, 0x02);
-
-  // install IRQ vector for play routine launcher (0x0813)
-  c64_->mem_->write_byte(0xFFFF, 0x00);
-  c64_->mem_->write_byte(0xFFFE, 0x13);
-
-  // clear kernel and basic rom from ram
-  // c64_->mem_->write_byte(0x0001, 0x35);
-
-  // install the micro player, 6502 assembly code
-  c64_->mem_->write_byte(0x0000, 0xA9);               // 0xA9 LDA imm load A with the song number
-  c64_->mem_->write_byte(0x0001, songno);             // 0xNN #NN song number
-
-  c64_->mem_->write_byte(0x0002, 0x20);               // 0x20 JSR abs jump sub to INIT routine
-  c64_->mem_->write_byte(0x0003, init & 0xFF);        // 0xxxNN address lo
-  c64_->mem_->write_byte(0x0004, (init >> 8) & 0xFF); // 0xNNxx address hi
-
-  // infinite loop?
-  c64_->mem_->write_byte(0x0005, 0x58);               // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0x0006, 0xEA);               // 0xEA NOP impl
-  c64_->mem_->write_byte(0x0007, 0x4C);               // JMP jump to 0x0006
-  c64_->mem_->write_byte(0x0008, 0x08);               // 0xxxNN address lo
-  c64_->mem_->write_byte(0x0009, 0x00);               // 0xNNxx address hi
-
-  // install the play routine launcher
-  c64_->mem_->write_byte(0x0013, 0xEA);               // 0xEA NOP // 0xA9 LDA imm // A = 1
-  c64_->mem_->write_byte(0x0014, 0xEA);               // 0xEA NOP // 0x01 #NN
-  c64_->mem_->write_byte(0x0015, 0xEA);               // 0xEA NOP // 0x78 SEI disable interrupt
-  c64_->mem_->write_byte(0x0016, 0x20);               // 0x20 JSR jump sub to play routine
-  c64_->mem_->write_byte(0x0017, play & 0xFF);        // playaddress lo
-  c64_->mem_->write_byte(0x0018, (play >> 8) & 0xFF); // playaddress hi
-  c64_->mem_->write_byte(0x0019, 0xEA);               // 0xEA NOP // 0x58 CLI enable interrupt
-  c64_->mem_->write_byte(0x001A, 0x40);               // 0x40 RTI return from interrupt
+  // for (uint16_t i = playerstart ; i <= playerstart+0x1A ; i++) {
+  //   printf("addr: $%04X data: $%02X\n",
+  //     i, c64_->mem_->read_byte_no_io(i));
+  // }
 }
 
 void Loader::print_sid_info() /* TODO: THIS MUST GO TO C64 SCREEN */
