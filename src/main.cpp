@@ -33,7 +33,8 @@ bool wget_download_finished = false;
 bool file_loaded = false;
 bool nosdl = false, isbinary = false,
      havecart = false,
-     acia = false, bankswlog = false;
+     acia = false, bankswlog = false,
+     sidfile = false;
 
 
 bool loader_cb()
@@ -70,6 +71,7 @@ bool load_file(const char *file) /* TODO: ADD ARGUMENTS FOR SIDFILE PLAY */
     }
     else if(ext == "sid"){
       loader->sid(f);
+      sidfile = true;
     }
   }
   return true;
@@ -140,6 +142,23 @@ int main(int argc, char **argv)
   }
 
   /* Continue machine startup */
-  c64->start();
+  if (!sidfile) {
+    c64->start();
+  } else {
+    if (!loader->isrsid()) {
+      while (c64->is_looping()) {
+        c64->emulate_specified(
+          true,   /* CPU */
+          true,   /* CIA1 */
+          true,   /* CIA2 */
+          true,   /* VIC */
+          true,   /* IO */
+          false); /* CART */
+      }
+    } else {
+
+    }
+  }
+  delete c64;
   return 0;
 }
