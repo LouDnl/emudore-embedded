@@ -23,6 +23,10 @@
 #include <c64.h>
 #include <util.h>
 
+#if EMBEDDED
+#include "globals.h"
+#endif
+
 bool C64::log_timings = false;
 
 C64::C64(
@@ -171,6 +175,10 @@ void C64::start()
  * ignores emulation return statements and
  * has no debugger support
  */
+// uint64_t cart_c = 0, cpu_c = 0, cia1_c = 0, cia2_c = 0, vic_c = 0, io_c = 0;
+uint64_t cart_b = 0, cpu_b = 0, cia1_b = 0, cia2_b = 0, vic_b = 0, io_b = 0;
+unsigned int cart_a = 0, cpu_a = 0, cia1_a = 0, cia2_a = 0, vic_a = 0, io_a = 0;
+char enemy = '0';
 unsigned int C64::emulate()
 {
   if (runloop) {
@@ -178,17 +186,59 @@ unsigned int C64::emulate()
     if(callback_) callback_();
     #endif
     /* Cart */
+    #if EMBEDDED
+    cart_b = to_us_since_boot(get_absolute_time());
+    #endif
     cart_->emulate();
+    #if EMBEDDED
+    cart_a = (to_us_since_boot(get_absolute_time()) - cart_b);
+    if (cart_a > 3) enemy = 'T';
+    #endif
     /* CPU */
+    #if EMBEDDED
+    cpu_b = to_us_since_boot(get_absolute_time());
+    #endif
     cpu_->emulate();
+    #if EMBEDDED
+    cpu_a = (to_us_since_boot(get_absolute_time()) - cpu_b);
+    if (cpu_a > 3) enemy = 'C';
+    #endif
     /* CIA1 */
+    #if EMBEDDED
+    cia1_b = to_us_since_boot(get_absolute_time());
+    #endif
     cia1_->emulate();
+    #if EMBEDDED
+    cia1_a = (to_us_since_boot(get_absolute_time()) - cia1_b);
+    if (cia1_a > 3) enemy = '1';
+    #endif
     /* CIA2 */
+    #if EMBEDDED
+    cia2_b = to_us_since_boot(get_absolute_time());
+    #endif
     cia2_->emulate();
+    #if EMBEDDED
+    cia2_a = (to_us_since_boot(get_absolute_time()) - cia2_b);
+    if (cia2_a > 3) enemy = '2';
+    #endif
     /* VIC-II */
+    #if EMBEDDED
+    vic_b = to_us_since_boot(get_absolute_time());
+    #endif
     vic_->emulate();
+    #if EMBEDDED
+    vic_a = (to_us_since_boot(get_absolute_time()) - vic_b);
+    if (vic_a > 3) enemy = 'V';
+    #endif
     /* IO (SDL2 keyboard input) */
+    #if EMBEDDED
+    io_b = to_us_since_boot(get_absolute_time());
+    #endif
     io_->emulate();
+    #if EMBEDDED
+    io_a = (to_us_since_boot(get_absolute_time()) - io_b);
+    if (io_a > 3) enemy = 'I';
+    #endif
     /* return current cpu cycles */
     return cpu_->cycles();
   }
@@ -220,7 +270,20 @@ unsigned int  C64::emulate_specified(
     /* VIC-II */
     if (vic) vic_->emulate();
     /* IO (SDL2 keyboard input) */
-    if (io) io_->emulate();
+    if (io) {
+      #if DESKTOP
+      if (!
+      #endif
+        io_->emulate()
+      #if EMBEDDED
+        ;
+      #endif
+      #if DESKTOP
+      ) {
+        runloop = false;
+      }
+      #endif
+    }
     /* return current cpu cycles */
     return cpu_->cycles();
   }
