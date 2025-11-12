@@ -97,6 +97,7 @@ bool Vic::emulate()
     if (rstr >= kFirstVisibleLine &&
         rstr < kLastVisibleLine)
     {
+      #if DESKTOP
       /* draw border */
       int screen_y = rstr - kFirstVisibleLine;
       c64_->io_->screen_draw_border(screen_y,border_color_);
@@ -118,6 +119,7 @@ bool Vic::emulate()
       }
       /* draw sprites */
       draw_raster_sprites();
+      #endif
     }
     /* next raster */
     if(is_bad_line()) {
@@ -325,7 +327,9 @@ void Vic::write_register(uint8_t r, uint8_t v)
   case 0xc:
   case 0xe:
     mx_[r >> 1] = v;
+    #if DESKTOP
     detect_sprite_sprite_collision(r>>1);
+    #endif
     break;
   /* store Y coord of sprite n */
   case 0x1:
@@ -337,7 +341,9 @@ void Vic::write_register(uint8_t r, uint8_t v)
   case 0xd:
   case 0xf:
     my_[r >> 1] = v;
+    #if DESKTOP
     detect_sprite_sprite_collision(r>>1);
+    #endif
     break;
   /* MSBs of X coordinates */
   case 0x10:
@@ -348,6 +354,7 @@ void Vic::write_register(uint8_t r, uint8_t v)
     cr1_ = (v&0x7f);
     raster_irq_ &= 0xff;
     raster_irq_ |= (v&0x80) << 1;
+    // Cynthcart does not work without graphic mode set
     set_graphic_mode();
     break;
   /* raster irq */
@@ -361,6 +368,7 @@ void Vic::write_register(uint8_t r, uint8_t v)
   /* control register 2 */
   case 0x16:
     cr2_ = v;
+    // Cynthcart does not work without graphic mode set
     set_graphic_mode();
     break;
   /* sprite double height */
