@@ -48,6 +48,15 @@ typedef std::chrono::nanoseconds duration_t;   /* Duration in nanoseconds */
 struct timespec m_test1, m_test2; /* TODO: REMOVE */
 #endif
 
+unsigned int Sid::sid_main_clk = 0;
+unsigned int Sid::sid_flush_clk = 0;
+unsigned int Sid::sid_delay_clk = 0;
+unsigned int Sid::sid_read_clk = 0;
+unsigned int Sid::sid_write_clk = 0;
+unsigned int Sid::sid_read_cycles = 0;
+unsigned int Sid::sid_write_cycles = 0;
+
+
 Sid::Sid(C64 * c64) :
   c64_(c64)
 {

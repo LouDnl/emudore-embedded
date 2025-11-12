@@ -50,13 +50,13 @@ class Sid
     bool us_ = false;
     #endif
 
-    unsigned int sid_main_clk = 0;
-    unsigned int sid_flush_clk = 0;
-    unsigned int sid_delay_clk = 0;
-    unsigned int sid_read_clk = 0;
-    unsigned int sid_write_clk = 0;
-    unsigned int sid_read_cycles = 0;
-    unsigned int sid_write_cycles = 0;
+    static unsigned int sid_main_clk;
+    static unsigned int sid_flush_clk;
+    static unsigned int sid_delay_clk;
+    static unsigned int sid_read_clk;
+    static unsigned int sid_write_clk;
+    static unsigned int sid_read_cycles;
+    static unsigned int sid_write_cycles;
     /* unsigned int sid_alarm_clk = 0; */
 
     bool sid_playing = false;
