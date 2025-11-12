@@ -24,6 +24,7 @@
 #define _C64_TIMER_
 
 #include <cstdio>
+#include <cstring>
 #include <chrono>
 using namespace std::chrono;
 
