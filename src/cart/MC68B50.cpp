@@ -198,17 +198,18 @@ void MC68B50::write_register(uint8_t r, uint8_t v)
   }
 }
 
-void MC68B50::process_midi()
+inline void MC68B50::process_midi()
 {
-  if (!(k6850MemRd[STATUS] & IRQ) /* If IRQ is not already set */
-   && !(k6850MemRd[STATUS] & RDRF)) { /* And there is no dat waiting to b read */
+  if (//!(k6850MemRd[STATUS] & IRQ) /* If IRQ is not already set */
+   /* && */ !(k6850MemRd[STATUS] & RDRF)) { /* And there is not already data waiting to be read */
     #if EMBEDDED
     if (!queue_is_empty(&cynthcart_queue)) {
       cynthcart_queue_entry_t cq_entry;
       if (queue_try_remove(&cynthcart_queue, &cq_entry)) {
         k6850MemRd[RXDR] = cq_entry.data; /* Add data to the RXDR */
         k6850MemRd[STATUS] |= (IRQ|RDRF); /* Set IRQ and RDRF for data available */
-        D("[MC6850 READ] $%02X\n",k6850MemRd[RXDR]);
+        c64_->cpu_->irq(); /* Trigger CPU IRQ */
+        /* D("[MC6850 READ] $%02X\n",k6850MemRd[RXDR]); */
       }
     }
     #endif
@@ -220,7 +221,7 @@ void MC68B50::process_midi()
  * @brief will check if the cpu IRQ is not set
  * and trigger a cpu IRQ if possible/needed
  */
-void MC68B50::try_trigger_irq()
+inline void MC68B50::try_trigger_irq()
 {
   if(!c64_->cpu_->idf()) { /* If no CPU IRQ already in place */
     if (k6850MemRd[STATUS] & IRQ) { /* If IRQ is set */
@@ -239,7 +240,7 @@ void MC68B50::try_trigger_irq()
 void MC68B50::emulate()
 {
   /* try trigger IRQ if data waiting */
-  try_trigger_irq();
+  // try_trigger_irq();
 
   /* process midi if waiting in queue */
   process_midi();
