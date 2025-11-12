@@ -39,13 +39,9 @@ extern "C" uint16_t cycled_delayed_write_operation(uint8_t address, uint8_t data
 extern "C" void reset_sid(void);
 #endif
 
-#if DESKTOP
+#if DESKTOP && !USBSID_DRIVER
 #define NANO 1000000000L
-struct timespec m_StartTime, m_LastTime, timenow;
 static double us_CPUcycleDuration               = NANO / (float)cycles_per_sec;          /* CPU cycle duration in nanoseconds */
-static double us_InvCPUcycleDurationNanoSeconds = 1.0 / (NANO / (float)cycles_per_sec);  /* Inverted CPU cycle duration in nanoseconds */
-typedef std::chrono::nanoseconds duration_t;   /* Duration in nanoseconds */
-struct timespec m_test1, m_test2; /* TODO: REMOVE */
 #endif
 
 unsigned int Sid::sid_main_clk = 0;
@@ -61,11 +57,6 @@ Sid::Sid(C64 * c64) :
   c64_(c64)
 {
 #if USBSID_DRIVER
-  // m_StartTime = m_LastTime = now = std::chrono::steady_clock::now();
-  // clock_gettime(CLOCK_REALTIME, &m_StartTime);
-  timespec_get(&m_StartTime, TIME_UTC);
-  m_LastTime = m_StartTime;
-  m_test1 = m_test2 = m_StartTime; /* TODO: REMOVE */
   usbsid = new USBSID_NS::USBSID_Class();
   if(usbsid->USBSID_Init(true, true) != 0) {
     us_ = false;
@@ -105,43 +96,16 @@ void Sid::reset()
 
 #if DESKTOP && !USBSID_DRIVER
 uint_fast64_t Sid::wait_ns(unsigned int cycles)
-{ /* TODO: Account for time spent in function calculating */
-  timespec_get(&timenow, TIME_UTC);
-  long int dur = cycles * us_CPUcycleDuration;  /* duration in nanoseconds */
-  int_fast64_t wait_nano = (dur - (m_test2.tv_nsec-m_test1.tv_nsec));
-  struct timespec rem;
-  struct timespec req= {
-      // 0, (dur)
-      0, wait_nano
-      //  (int)(miliseconds / 1000),     /* secs (Must be Non-Negative) */
-      //  (miliseconds % 1000) * 1000000 /* nano (Must be in range of 0 to 999999999) */
-   };
-  // HAS NEGATIVE CYCLES, OOPS
-  // auto target_time = m_LastTime.tv_nsec + dur;  /* ns to wait since m_LastTime (now + duration for actual wait time minus time spent) */
-  // GOOD BUT TOO SLOW FOR DIGI
-  auto target_time = timenow.tv_nsec + dur;  /* ns to wait since m_LastTime (now + duration for actual wait time) */
-  duration_t target_delta = (duration_t)(int_fast64_t)(target_time - timenow.tv_nsec);
-  auto wait_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(target_delta);
-  // printf("%ld\n",wait_nsec.count());
-  timespec_get(&m_test2, TIME_UTC);
-  // if (wait_nsec.count() > 0) {
-  //   std::this_thread::sleep_for(wait_nsec-m_test2.tv_nsec);
-  // }
-  // nanosleep((const struct timespec[]){{0, dur}}, NULL);
-  // nanosleep(&req,&req);
-  nanosleep(&rem,&req);
-  // int_fast64_t waited_cycles = (wait_nsec.count() * us_InvCPUcycleDurationNanoSeconds);
-  // int_fast64_t waited_cycles = (dur - (m_test2.tv_nsec-m_test1.tv_nsec));
-  // int_fast64_t waited_cycles = dur;
-  timespec_get(&m_LastTime, TIME_UTC);
+{ auto start = std::chrono::steady_clock::now();
+  auto duration_ns = duration_t((long)(cycles * us_CPUcycleDuration));
+  auto target_time = (start + duration_ns);
 
-  // printf("T1 %lu T2 %lu DIFF %lu N %lu C %lu\n",
-  //   m_test1.tv_nsec,m_test2.tv_nsec,
-  //   (m_test2.tv_nsec-m_test1.tv_nsec),
-  //   wait_nsec.count(),
-  //   cycles);
-  // return waited_cycles;
-  return wait_nano;
+  do {
+  } while (std::chrono::steady_clock::now() < target_time);
+
+  auto end = std::chrono::steady_clock::now();
+  auto actual_ns = static_cast<long long>(std::chrono::duration_cast<duration_t>(end - start).count());
+  return (uint_fast64_t)actual_ns;
 }
 #endif
 
@@ -164,11 +128,7 @@ void Sid::sid_flush()
     cycles -= 0xFFFF;
   }
   if (int(cycles - (sid_write_cycles+sid_read_cycles)) > 0) {
-    #if DESKTOP && USBSID_DRIVER
-    if (us_) usbsid->USBSID_WaitForCycle(cycles - (sid_write_cycles+sid_read_cycles));
-    #elif EMBEDDED
-    // cycled_delay_operation(cycles - (sid_write_cycles+sid_read_cycles)); /* do nothing for now */
-    #else
+    #if DESKTOP && !USBSID_DRIVER
     wait_ns(cycles - (sid_write_cycles+sid_read_cycles));
     #endif
   }
@@ -180,7 +140,6 @@ void Sid::sid_flush()
 unsigned int Sid::sid_delay()
 {
   #if USBSID_DRIVER
-  timespec_get(&m_test1, TIME_UTC);
   #endif
   unsigned int now = c64_->cpu_->cycles();
   unsigned int cycles = (now - /* sid_delay_clk */sid_main_clk);
@@ -188,15 +147,11 @@ unsigned int Sid::sid_delay()
     /* printf("SID delay called @ %u cycles (cycles > 0xFFFF), last was at %u, diff %u, main clock %u\n",
       now, sid_delay_clk, cycles, sid_main_clk); */
     cycles -= 0xFFFF;
-    #if DESKTOP && USBSID_DRIVER
-    if (us_) usbsid->USBSID_WaitForCycle(0xFFFF);
-    #elif EMBEDDED
-    // cycled_delay_operation(0xFFFF); /* do nothing for now */
-    #else
+    #if DESKTOP && !USBSID_DRIVER
     wait_ns(0xFFFF);
     #endif
   }
-  sid_main_clk = sid_delay_clk = now;
+  sid_main_clk /* = sid_delay_clk */ = now;
   return cycles;
 }
 
@@ -206,10 +161,11 @@ uint8_t Sid::read_register(uint8_t r, uint8_t sidno)
   r = ((sidno*0x20) | r);
   unsigned int cycles = sid_delay();
   #if DESKTOP
-  v = c64_->mem_->read_byte_no_io(r); /* No hardware SID reading */
+  v = c64_->mem_->read_byte_no_io(r);  /* No hardware SID reading */
   #elif EMBEDDED
-  cycles = 0; /* do nothing for now */
-  v = cycled_read_operation(r,cycles); // TODO: cycled delayed read operation?
+  v = cycled_read_operation(r,0);  /* no delay cycles */
+  #else
+  wait_ns(cycles);
   #endif
   if (c64_->mem_->getlogrw(6)) {
     D("[RD%d] $%02X:%02X C:%u RDC:%u\n", sidno, r, v, cycles, sid_read_cycles);
@@ -221,17 +177,16 @@ uint8_t Sid::read_register(uint8_t r, uint8_t sidno)
 
 void Sid::write_register(uint8_t r, uint8_t v, uint8_t sidno)
 {
+  // sid_main_clk = sid_write_clk = c64_->cpu_->cycles();
   r = ((sidno*0x20) | r);
   unsigned int cycles = sid_delay();
   #if DESKTOP && USBSID_DRIVER
   if (us_) {
-    usbsid->USBSID_WaitForCycle(cycles);
+    // usbsid->USBSID_WaitForCycle(cycles);
     usbsid->USBSID_WriteRingCycled(r, v, cycles);
   }
   #elif EMBEDDED
-  cycles = 0; /* do nothing for now */
-  cycled_write_operation(r,v,cycles);
-  // cycled_delayed_write_operation(r,v,cycles);
+  cycled_write_operation(r,v,0);  /* no delay cycles */
   #else
   wait_ns(cycles);
   #endif
