@@ -23,6 +23,9 @@
 
 #include <c64.h> /* All classes are loaded through c64.h */
 
+#if EMBEDDED
+extern uint8_t c64memory[0x10000];
+#endif
 
 Memory::Memory(C64 * c64) :
   c64_(c64)
@@ -34,8 +37,10 @@ Memory::Memory(C64 * c64) :
    * any write to a ROM-mapped location will in turn store data on the
    * hidden RAM, this trickery is used in certain graphic modes.
    */
+  #if EMBEDDED
+  mem_ram_ = c64memory;
+  #else
   mem_ram_ = new uint8_t[kMemSize]();
-  #if DESKTOP
   mem_rom_ = new uint8_t[kMemSize]();
   #endif
 
@@ -56,8 +61,10 @@ Memory::Memory(C64 * c64) :
 
 Memory::~Memory()
 {
+  #if EMBEDDED
+  mem_ram_ = NULL;
+  #else
   delete [] mem_ram_;
-  #if DESKTOP
   delete [] mem_rom_;
   #endif
   delete [] mem_rom_cia1_;
