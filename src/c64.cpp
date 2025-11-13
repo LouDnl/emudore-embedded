@@ -116,55 +116,55 @@ void C64::start()
 {
   BenchmarkTimer * BT;
   if (log_timings) BT = new BenchmarkTimer();
-  static uint64_t dbg,cb,cart,cpu,cia1,cia2,vic,io,delay,delay_c;
+  static uint64_t _dbg,_cb,_cart,_cpu,_cia1,_cia2,_vic,_io,delay,delay_c;
   static unsigned int _prev_cycles;
   /* main emulator loop */
   while(runloop)
   {
-    if (log_timings) BT->receive_data(cpu_->cycles(),delay,delay_c,dbg,cb,cart,cpu,cia1,cia2,vic,io);
+    if (log_timings) BT->receive_data(cpu_->cycles(),delay,delay_c,_dbg,_cb,_cart,_cpu,_cia1,_cia2,_vic,_io);
     #if DEBUGGER_SUPPORT
     if (log_timings) BT->MeasurementStart();
     if(!debugger_->emulate()) break;
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) dbg = BT->MeasurementResult();
+    if (log_timings) _dbg = BT->MeasurementResult();
     #endif
     #if DESKTOP
     if (log_timings) BT->MeasurementStart();
     /* callback executes _before_ first emulation run */
-    if(callback_ && !callback_()) break;
+    if(callback_ && cpu_->pc() == 0xa65c) callback_();
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) cb = BT->MeasurementResult();
+    if (log_timings) _cb = BT->MeasurementResult();
     #endif
     /* Cart */
     if (log_timings) BT->MeasurementStart();
     if(!cart_->emulate()) break;
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) cart = BT->MeasurementResult();
+    if (log_timings) _cart = BT->MeasurementResult();
     /* CPU */
     if (log_timings) BT->MeasurementStart();
     if(!cpu_->emulate()) break;
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) cpu = BT->MeasurementResult();
+    if (log_timings) _cpu = BT->MeasurementResult();
     /* CIA1 */
     if (log_timings) BT->MeasurementStart();
     if(!cia1_->emulate()) break;
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) cia1 = BT->MeasurementResult();
+    if (log_timings) _cia1 = BT->MeasurementResult();
     /* CIA2 */
     if (log_timings) BT->MeasurementStart();
     if(!cia2_->emulate()) break;
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) cia2 = BT->MeasurementResult();
+    if (log_timings) _cia2 = BT->MeasurementResult();
     /* VIC-II */
     if (log_timings) BT->MeasurementStart();
     if(!vic_->emulate()) break;
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) vic = BT->MeasurementResult();
+    if (log_timings) _vic = BT->MeasurementResult();
     /* IO (SDL2 keyboard input) */
     if (log_timings) BT->MeasurementStart();
     if(!io_->emulate()) break;
     if (log_timings) BT->MeasurementEnd();
-    if (log_timings) io = BT->MeasurementResult();
+    if (log_timings) _io = BT->MeasurementResult();
 
     _prev_cycles = cpu_->cycles();
   }
