@@ -115,7 +115,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
         && page <= kAddrSIDLastPage)
   {
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
-      if (page == kAddrSIDFirstPage) { /* No SID's in second page */
+      if (page == kAddrSIDFirstPage) {
         mem_ram_[addr] = v; /* Always write to RAM */
         if(logsidiorw){D("[SIDIO W] $%04X:%02X\n",addr,v);};
         /* Check SID address in reverse order */
@@ -134,6 +134,12 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
         if (((addr & kSIDOneMask) >= kAddrSIDOne)
           && (addr & kSIDOneMask) < kAddrSIDTwo) { /* SID One */
             c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 0);
+        }
+      } else
+      if (page == kAddrSIDSecondPage) {
+        if (((addr & kSIDOneMask) >= kAddrSIDOdd1)
+          && (addr & kSIDOneMask) < (kAddrSIDOdd1+0x20)) { /* SID Odd 1 == Second SID */
+            c64_->sid_->write_register((uint8_t)(addr&0x1F), v, 1);
         }
       } else {
         mem_ram_[addr] = v; /* Write to RAM */
@@ -285,6 +291,12 @@ uint8_t Memory::read_byte(uint16_t addr)
             retval = c64_->sid_->read_register((uint8_t)(addr&0x1F), 0);
         } else {
           retval = mem_ram_[addr]; /* Read from RAM */
+        }
+      } else
+      if (page == kAddrSIDSecondPage) {
+        if (((addr & kSIDOneMask) >= kAddrSIDOdd1)
+          && (addr & kSIDOneMask) < (kAddrSIDOdd1+0x20)) { /* SID Odd 1 == Second SID */
+            retval = c64_->sid_->read_register((uint8_t)(addr&0x1F), 1);
         }
       } else {
         retval = mem_ram_[addr]; /* Read from RAM */

@@ -178,6 +178,7 @@ class Memory
     static const uint16_t kAddrVicLastPage     = 0xd300;
     /* SID */
     static const uint16_t kAddrSIDFirstPage    = 0xd400;
+    static const uint16_t kAddrSIDSecondPage   = 0xd500;
     static const uint16_t kAddrSIDLastPage     = 0xd700;
     /* Color RAM */
     static const uint16_t kAddrColorFirstPage  = 0xd800;
@@ -209,6 +210,7 @@ class Memory
     uint16_t kAddrSIDTwo   = 0xd420;
     uint16_t kAddrSIDThree = 0xd440;
     uint16_t kAddrSIDFour  = 0xd460;
+    uint16_t kAddrSIDOdd1  = 0xd500;
 
     /* Public memory pointers set by Memory class */
     /* CIA1 */
