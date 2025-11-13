@@ -93,8 +93,8 @@ void checkargs(int argc, char **argv)
       if(!strcmp(argv[a], "-init")) {loader->init_addr = strtol(argv[a+1], NULL, 16);}
       if(!strcmp(argv[a], "-lowercase")) {loader->lowercase = true;}
 
-      if(!strcmp(argv[a], "-loginstr")) {Cpu::loginstructions = true;}
-      if(!strcmp(argv[a], "-logill")) {Cpu::logillegals = true;}
+      if(!strcmp(argv[a], "-logcpu")) {Cpu::loginstructions = true;}
+      if(!strcmp(argv[a], "-loginstr")) {loader->instrlog = true;}
       if(!strcmp(argv[a], "-logmemrw")) {loader->memrwlog = true;}
       if(!strcmp(argv[a], "-logcia1rw")) {loader->cia1rwlog = true;}
       if(!strcmp(argv[a], "-logcia2rw")) {loader->cia2rwlog = true;}
