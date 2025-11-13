@@ -102,6 +102,19 @@ void Cia2::reset()
   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[PRA],0xFF); /* Wr */
   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemRd[PRB],0xFF); /* Rd */
   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[PRB],0xFF); /* Wr */
+  /* Tests based on websid */
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemRd[TAL],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TAL],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemRd[TAH],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TAH],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemRd[TBL],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TBL],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemRd[TBH],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TBH],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemRd[CRA],0x08);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[CRA],0x08);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemRd[CRB],0x08);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[CRB],0x08);
 }
 
 // DMA register access  //////////////////////////////////////////////////////

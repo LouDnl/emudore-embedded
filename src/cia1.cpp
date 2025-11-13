@@ -99,29 +99,30 @@ void Cia1::reset()
     c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[i],0x00);
   }
   /* PRA and PRB are 0xFF at boot */
-  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[PRA],0xFF);
-  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[PRA],0xFF);
+  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[PRA],0xFF);
+  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[PRA],0xFF);
+  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[PRB],0xFF);
+  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[PRB],0xFF);
+
+  /* Tests based on websid */
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[PRA],0x7F);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[PRA],0x7F);
   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[PRB],0xFF);
-  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[PRB],0xFF);
-
-  /* Tests based on cRSID */
-
-  // /* Imitate CIA1 keyboard/joy port, some tunes check if buttons are not pressed */
-  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[PRA],0x10);
-  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[PRB],0xBB);
-  // if (1) {  /* PAL */
-  //   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[TAL],0x24);
-  //   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[TAH],0x40);
-  // } else { /* NTSC */
-  //   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[TAL],0x95);
-  //   c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[TAH],0x42);
-  // }
-  // /* Reset-default, but for PSID CIA1 TimerA IRQ should be enabled anyway if SID is CIA-timed */
-  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[ICR],0x81);
-  // /* Some tunes (and PSID doc) expect already running CIA (Reset-default) */
-  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[CRA],0x01);
-  // /* All counters other than CIA1 TimerA should be disabled and set to 0xFF for PSID: */
-  // c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemWr[CRB],0x00);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[PRB],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[TAL],0x25);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TAL],0x25);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[TAH],0x40);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TAH],0x40);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[TBL],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TBL],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[TBH],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[TBH],0xFF);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[ICR],0x81);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[ICR],0x81);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[CRA],0x01);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[CRA],0x01);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA1MemRd[CRB],0x08);
+  c64_->mem_->write_byte_no_io(c64_->mem_->kCIA2MemWr[CRB],0x08);
 
 }
 
