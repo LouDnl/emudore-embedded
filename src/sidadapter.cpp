@@ -77,6 +77,7 @@ Sid::~Sid()
   if(us_) {
     usbsid->USBSID_Reset();
     usbsid->USBSID_Close();
+    delete usbsid;
     us_ = false;
   }
 #endif
