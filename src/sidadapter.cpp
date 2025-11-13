@@ -115,7 +115,7 @@ void Sid::sid_flush()
   unsigned int cycles = (now - /* sid_flush_clk */sid_main_clk);
   // printf("SID Flush called for %d cycles delay @ %u, last was at %u (diff %u) main clock %u\n",
   //   cycles, now, sid_flush_clk, (now-sid_flush_clk), sid_main_clk);
-  if (now < sid_main_clk) { /* Reset / flush */
+  if (now < sid_main_clk || sid_write_cycles == 0) { /* Reset / flush */
     sid_read_cycles = 0;
     sid_write_cycles = 0;
     sid_main_clk = sid_flush_clk = now;
