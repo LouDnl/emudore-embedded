@@ -456,16 +456,8 @@ bool Loader::handle_file()
 bool Loader::emulate()
 {
   handle_args();
-  if(booted_up_)
-  {
-    handle_file();
-    return false;
-  }
-  else
-  {
-    /* at this point BASIC is ready */
-    if(c64_->cpu_->pc() == 0xa65c)
-      booted_up_ = true;
-  }
-  return true;
+  handle_file();
+  if (instrlog) Cpu::loginstructions = true;
+  // if (instrlog) c64_->mem_->setlogrw(1);
+  return false;
 }

@@ -108,6 +108,7 @@ class Loader
     bool iscart = false; /* For binary (.bin) cart files */
 
     bool memrwlog = false;
+    bool instrlog = false;
     bool cia1rwlog = false;
     bool cia2rwlog = false;
     bool sidrwlog = false;
