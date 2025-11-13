@@ -44,6 +44,7 @@ class Sid
 {
   private:
     C64 *c64_;
+    typedef std::chrono::nanoseconds duration_t;   /* Duration in nanoseconds */
 
     #if USBSID_DRIVER /* USBSID_DRIVER=1 */
     USBSID_NS::USBSID_Class *usbsid;
