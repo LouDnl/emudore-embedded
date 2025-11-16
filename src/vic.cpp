@@ -53,7 +53,7 @@ void Vic::reset()
   /* control regs */
   cr1_ = cr2_ = 0;
   /* frame counter */
-  frame_c_ = 0;
+  frame_c = frame_c_ = prev_frame_c_ = 0;
   /* default memory pointers */
   screen_mem_ = Memory::kBaseAddrScreen;
   char_mem_   = Memory::kBaseAddrChars;
@@ -124,7 +124,7 @@ bool Vic::emulate()
     /* next raster */
     if(is_bad_line()) {
       next_raster_at_+= kBadLineCycles;
-      /* c64_->cpu_->cyclestick(kBadLineCycles); */
+      /* TODO: CPU Stun on bad lines */
     } else {
       next_raster_at_+= kLineCycles;
     }
@@ -141,10 +141,9 @@ bool Vic::emulate()
       //   (rstr >= kScreenLines), rstr, prev_rstr, raster_counter(), raster_c_,
       //   raster_irq_, raster_irq_enabled(), (raster_irq_enabled()?(rstr == raster_irq_):0), kScreenLines, cycles);
       verticalSync=true;
-      c64_->sid_->sid_flush(); /* FLUSH */
+      /* c64_->sid_->sid_flush(); */ /* FLUSH */
       c64_->io_->screen_refresh();
       cycles=0;
-      frame_c_++;
       raster_counter(0);
       if(sprite_sprite_collision_) ISSET_BIT(irq_enabled_,bitMMC); //checkInterrupt(1);
       if(sprite_bgnd_collision_)   ISSET_BIT(irq_enabled_,bitMBC); //checkInterrupt(2);
@@ -155,8 +154,14 @@ bool Vic::emulate()
       c64_->sid_->sid_flush();
       cycles=0;
     } */
+    frame_c_+=rstr; /* Add raster cycles to frame cycle count */
+    frame_c=(frame_c_/kRefrehRate); /* Divide frame cycle count by refreshrate */
     prev_rstr = rstr;
     vic_cpu_clock = c64_->cpu_->cycles();
+    // printf("cpu: %u frame_c_ %d frame_c %d(%d) next_raster_at_ %d diff %d rstr %d\n",
+    //       c64_->cpu_->cycles(),frame_c_,frame_c,prev_frame_c_,next_raster_at_,(next_raster_at_-prev_next_raster_at_),rstr);
+    // if(prev_frame_c_ != frame_c) c64_->sid_->sid_flush(); /* FLUSH */
+    prev_frame_c_ = frame_c;
   }
   return true;
 }

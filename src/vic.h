@@ -55,6 +55,8 @@ class Vic
     unsigned int next_raster_at_;
     unsigned int prev_next_raster_at_;
     /* frame counter */
+    unsigned int frame_c;
+    unsigned int prev_frame_c_;
     unsigned int frame_c_;
     /* control registers */
     uint8_t cr1_;
@@ -119,7 +121,7 @@ class Vic
     void write_register(uint8_t r, uint8_t v);
     uint8_t read_register(uint8_t r);
 
-    unsigned int frames(){return frame_c_;};
+    unsigned int frames(){return frame_c;};
     uint16_t get_sprite_ptr(int n);
     int raster_counter();
     void setLightPen(uint16_t x,uint8_t y);
@@ -131,6 +133,7 @@ class Vic
     static const int kVisibleScreenHeight = 284;
     static const int kFirstVisibleLine = 14;
     static const int kLastVisibleLine = 298;
+    static const int kRefrehRate = 19656; /* Fixed PAL refreshrate */
     static const int kLineCycles = 63; /* PAL 63*312 ~19656 raster cycles */
     static const int kBadLineCycles = 23;
     /* TODO: FIX REFRESH RATE TO SETTING */
