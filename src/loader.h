@@ -94,7 +94,7 @@ class Loader
     const unsigned int NUM_EXTDRV_PAGES = 5; // driver with screen display
     const unsigned int NUM_CHAR_PAGES = 4; // size of charset in pages
     const unsigned int MAX_PAGES = 256;
-    const int SIDTUNE_COMPATIBILITY_R64   = 0x02; // File is Real C64 only
+    const int SIDTUNE_COMPATIBILITY_R64 = 0x02; // File is Real C64 only
   public:
     Loader();
     ~Loader(){};
