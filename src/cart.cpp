@@ -39,6 +39,11 @@ Cart::Cart(C64 * c64) :
   cartactive = c64_->havecart;
   midi = c64_->acia;
 
+  /* Initialize default pointers */
+  c64_->mem_->kCARTRomLo  = &c64_->mem_->mem_ram()[Memory::kAddrCartLoFirstPage];
+  c64_->mem_->kCARTRomHi1 = &c64_->mem_->mem_ram()[Memory::kAddrCartH1FirstPage];;
+  c64_->mem_->kCARTRomHi2 = &c64_->mem_->mem_ram()[Memory::kAddrCartH2FirstPage];;
+
   /* enable mc68B50 if requested */
   if (midi && !acia_active) {
     /* init_mc6850(); */
@@ -79,18 +84,27 @@ bool Cart::emulate(void)
   return true;
 }
 
-void Cart::write_register(uint8_t r, uint8_t v)
+void Cart::write_register(uint16_t addr, uint8_t v)
 {
-  if (acia_active) {
-    mc6850_->write_register(r,v);
+  if (((addr&Memory::HiAddrMask)==Memory::kAddrIO1Page) && acia_active) {
+    mc6850_->write_register((addr&Memory::LoAddrMask),v);
   }
 }
 
-uint8_t Cart::read_register(uint8_t r)
+uint8_t Cart::read_register(uint16_t addr)
 {
   uint8_t retval = 0;
-  if (acia_active) {
-    retval = mc6850_->read_register(r);
+  if (((addr&Memory::HiAddrMask)==Memory::kAddrIO1Page) && acia_active) {
+    retval = mc6850_->read_register((addr&Memory::LoAddrMask));
+  } else if (((addr&Memory::HiAddrMask)>=Memory::kAddrCartLoFirstPage)
+      && ((addr&Memory::HiAddrMask)<=Memory::kAddrCartLoLastPage)) {
+    retval = c64_->mem_->kCARTRomLo[(addr-Memory::kAddrCartLoFirstPage)];
+  } else if (((addr&Memory::HiAddrMask)>=Memory::kAddrCartH1FirstPage)
+      && ((addr&Memory::HiAddrMask)<=Memory::kAddrCartH1FirstPage)) {
+    retval = c64_->mem_->kCARTRomHi1[(addr-Memory::kAddrCartH1FirstPage)];
+  } else if (((addr&Memory::HiAddrMask)>=Memory::kAddrCartH2FirstPage)
+      && ((addr&Memory::HiAddrMask)<=Memory::kAddrCartH2LastPage)) {
+    retval = c64_->mem_->kCARTRomHi2[(addr-Memory::kAddrCartH2FirstPage)];
   }
   return retval;
 }
@@ -248,7 +262,7 @@ NOCHIP:;
 
     // TODO: Set rom locations based on chips on cart!
     // TODO: Move this to PLA for bank switching!?
-    c64_->mem_->kCARTRomLo  = &chips[0].rom[0];
+    c64_->mem_->kCARTRomLo = &chips[0].rom[0];
     D("4BYTES ROMLO: $%02X $%02X $%02X $%02X\n",
       c64_->mem_->kCARTRomLo[0],
       c64_->mem_->kCARTRomLo[1],

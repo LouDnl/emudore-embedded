@@ -177,7 +177,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) { /* TODO: CHECK IF THIS IS THE RIGHT BANK CHECK */
       /* hack for mc68b60 acia on cart */
       if (c64_->acia && c64_->cart_en()) {
-        c64_->cart_->write_register((addr&0xFF),v);
+        c64_->cart_->write_register(addr,v);
       } else {
         mem_ram_[addr] = v; /* Write to RAM */
       }
@@ -221,6 +221,8 @@ uint8_t Memory::read_byte(uint16_t addr)
         && page <= kAddrCartLoLastPage)
   {
     if(c64_->pla_->memory_banks(PLA::kBankCart) == PLA::kCLO && c64_->cart_en()) {
+      // retval = kCARTRomLo[(addr-kAddrCartLoFirstPage)]; /* TODO: Move to Cart? */
+      retval = c64_->cart_->read_register(addr);
       if (logcrtrw) {D("[CART R] $%04X:%02X\n",addr,retval);};
     } else {
       retval = mem_ram_[addr];
@@ -237,6 +239,9 @@ uint8_t Memory::read_byte(uint16_t addr)
       retval = c64_->basic_[(addr-kAddrBasicFirstPage)]; /* Read from ROM */
       #endif
     } else if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kCHI && c64_->cart_en()) {
+      // retval = kCARTRomHi1[(addr-kAddrCartH1FirstPage)]; /* TODO: Move to Cart? */
+      retval = c64_->cart_->read_register(addr);
+      if (logcrtrw) {D("[CART R] $%04X:%02X\n",addr,retval);};
     } else {
       retval = mem_ram_[addr];
     }
@@ -369,6 +374,8 @@ uint8_t Memory::read_byte(uint16_t addr)
     } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
       /* hack for mc68b60 acia on cart */
       if (c64_->acia && c64_->cart_en()) {
+        retval = c64_->cart_->read_register(addr);
+        if (logcrtrw) {D("[CART R] $%04X:%02X\n",addr,retval);};
       } else {
         retval = mem_ram_[addr];
       }
@@ -402,6 +409,9 @@ uint8_t Memory::read_byte(uint16_t addr)
       retval = c64_->kernal_[(addr-kAddrKernalFirstPage)]; /* Read from ROM */
       #endif
     } else if (c64_->pla_->memory_banks(PLA::kBankKernal) == PLA::kCHI && c64_->cart_en()) { /* Was kBankBasic ?? */
+      // retval = kCARTRomHi2[(addr-kAddrCartH2FirstPage)]; /* TODO: Move to Cart? */
+      retval = c64_->cart_->read_register(addr);
+      if (logcrtrw) {D("[CART R] $%04X:%02X\n",addr,retval);};
     } else {
       retval = mem_ram_[addr];
     }

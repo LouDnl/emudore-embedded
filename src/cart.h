@@ -49,8 +49,8 @@ class Cart
     void reset(void);
     bool emulate(void);
 
-    void write_register(uint8_t r, uint8_t v);
-    uint8_t read_register(uint8_t r);
+    void write_register(uint16_t addr, uint8_t v);
+    uint8_t read_register(uint16_t addr);
 
     /* Emulated cart ic's */
     MC68B50 *mc6850_;

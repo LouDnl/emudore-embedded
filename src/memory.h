@@ -224,11 +224,14 @@ class Memory
     uint8_t *kCIA2MemWr; /* $dd00 */
     uint8_t *kCIA2MemRd; /* $(dd)00 */
 
-    /* Cart ROM pointers */ // TODO: Move pointers to Cart?
+    /* Cart ROM pointers */
     uint8_t *kCARTRomLo;  /* $8000 ~ $9fff */
     uint8_t *kCARTRomHi1; /* $a000 ~ $bfff */
     uint8_t *kCARTRomHi2; /* $e000 ~ $ffff */
 
+    /* Memory reusable masks */
+    static const uint16_t HiAddrMask = 0xFF00;
+    static const uint16_t LoAddrMask = 0xFF;
 };
 
 
