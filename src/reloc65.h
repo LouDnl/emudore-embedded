@@ -44,6 +44,6 @@ typedef std::map<std::string,int> globals_t;
 //                  F U N C T I O N   D E C L A R A T O R S
 //////////////////////////////////////////////////////////////////////////////
 
-extern int              reloc65 (char **buf, int *fsize, int addr, globals_t *globals);
+extern int reloc65 (char **buf, int *fsize, int addr, globals_t *globals);
 
 #endif // RELOC65_H
