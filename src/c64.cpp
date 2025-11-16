@@ -237,7 +237,18 @@ unsigned int C64::emulate()
     #if EMBEDDED
     io_b = to_us_since_boot(get_absolute_time());
     #endif
-    io_->emulate();
+    #if DESKTOP
+    if (!
+    #endif
+      io_->emulate()
+    #if EMBEDDED
+      ;
+    #endif
+    #if DESKTOP
+    ) {
+      runloop = false;
+    }
+    #endif
     #if EMBEDDED
     io_a = (to_us_since_boot(get_absolute_time()) - io_b);
     if (io_a > 3) enemy = 'I';
