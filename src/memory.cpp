@@ -104,7 +104,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
   else if (page >= kAddrVicFirstPage
         && page <= kAddrVicLastPage)
   {
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->vic_en()) {
       c64_->vic_->write_register(addr&0x7f,v); /* VIC-II write */
     } else {
       mem_ram_[addr] = v; /* Write to RAM */
@@ -153,7 +153,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
   else if (page == kAddrCIA1Page)
   {
     if(logcia1rw){D("[CIA1 W] $%04X:%02X\n",addr,v);};
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->cia1_en()) {
       c64_->cia1_->write_register(addr&0x0f,v);
     } else {
       mem_ram_[addr] = v; /* Write to RAM */
@@ -163,7 +163,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
   else if (page == kAddrCIA2Page)
   {
     if(logcia2rw){D("[CIA2 W] $%04X:%02X\n",addr,v);};
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->cia2_en()) {
       c64_->cia2_->write_register(addr&0x0f,v);
     } else {
       mem_ram_[addr] = v; /* Write to RAM */
@@ -175,7 +175,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
     if(logiorw){D("[IO1  W] $%04X:%02X ($%02x)\n",addr,v,c64_->pla_->memory_banks(PLA::kBankChargen));};
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) { /* TODO: CHECK IF THIS IS THE RIGHT BANK CHECK */
       /* hack for mc68b60 acia on cart */
-      if (c64_->acia) {
+      if (c64_->acia && c64_->cart_en()) {
         c64_->cart_->write_register((addr&0xFF),v);
       } else {
         mem_ram_[addr] = v; /* Write to RAM */
@@ -219,8 +219,7 @@ uint8_t Memory::read_byte(uint16_t addr)
   else if (page >= kAddrCartLoFirstPage
         && page <= kAddrCartLoLastPage)
   {
-    if(c64_->pla_->memory_banks(PLA::kBankCart) == PLA::kCLO) {
-      retval = kCARTRomLo[(addr-kAddrCartLoFirstPage)]; /* TODO: Move to Cart? */
+    if(c64_->pla_->memory_banks(PLA::kBankCart) == PLA::kCLO && c64_->cart_en()) {
       if (logcrtrw) {D("[CART R] $%04X:%02X\n",addr,retval);};
     } else {
       retval = mem_ram_[addr];
@@ -236,8 +235,7 @@ uint8_t Memory::read_byte(uint16_t addr)
       #elif EMBEDDED
       retval = c64_->basic_[(addr-kAddrBasicFirstPage)]; /* Read from ROM */
       #endif
-    } else if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kCHI) {
-      retval = kCARTRomHi1[(addr-kAddrCartH1FirstPage)]; /* TODO: Move to Cart? */
+    } else if (c64_->pla_->memory_banks(PLA::kBankBasic) == PLA::kCHI && c64_->cart_en()) {
     } else {
       retval = mem_ram_[addr];
     }
@@ -255,7 +253,7 @@ uint8_t Memory::read_byte(uint16_t addr)
   else if (page >= kAddrVicFirstPage
    && page <= kAddrVicLastPage)
   {
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->vic_en()) {
       retval = c64_->vic_->read_register(addr&0x7f);
     } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
       #if DESKTOP
@@ -328,7 +326,7 @@ uint8_t Memory::read_byte(uint16_t addr)
   /* CIA1 ~ $dc00/$dcff */
   else if (page == kAddrCIA1Page)
   {
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->cia1_en()) {
       retval = c64_->cia1_->read_register(addr&0x0f);
     } else if (c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
       #if DESKTOP
@@ -344,7 +342,7 @@ uint8_t Memory::read_byte(uint16_t addr)
   /* CIA2 ~ $dd00/$ddff */
   else if (page == kAddrCIA2Page)
   {
-    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
+    if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->cia2_en()) {
       retval = c64_->cia2_->read_register(addr&0x0f);
     } else if (c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
       #if DESKTOP
@@ -368,8 +366,7 @@ uint8_t Memory::read_byte(uint16_t addr)
       #endif
     } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO) {
       /* hack for mc68b60 acia on cart */
-      if (c64_->acia) {
-        retval = c64_->cart_->read_register((addr&0xFF));
+      if (c64_->acia && c64_->cart_en()) {
       } else {
         retval = mem_ram_[addr];
       }
@@ -402,8 +399,7 @@ uint8_t Memory::read_byte(uint16_t addr)
       #elif EMBEDDED
       retval = c64_->kernal_[(addr-kAddrKernalFirstPage)]; /* Read from ROM */
       #endif
-    } else if (c64_->pla_->memory_banks(PLA::kBankKernal) == PLA::kCHI) { /* Was kBankBasic ?? */
-      retval = kCARTRomHi2[(addr-kAddrCartH2FirstPage)]; /* TODO: Move to Cart? */
+    } else if (c64_->pla_->memory_banks(PLA::kBankKernal) == PLA::kCHI && c64_->cart_en()) { /* Was kBankBasic ?? */
     } else {
       retval = mem_ram_[addr];
     }
