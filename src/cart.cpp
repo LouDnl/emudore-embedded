@@ -39,6 +39,8 @@ Cart::Cart(C64 * c64) :
   cartactive = c64_->havecart;
   midi = c64_->acia;
 
+  D("C:%d M:%d\n",cartactive,midi);
+
   /* Initialize default pointers */
   c64_->mem_->kCARTRomLo  = &c64_->mem_->mem_ram()[Memory::kAddrCartLoFirstPage];
   c64_->mem_->kCARTRomHi1 = &c64_->mem_->mem_ram()[Memory::kAddrCartH1FirstPage];;
@@ -137,10 +139,12 @@ uint16_t Cart::read_short_be()
 void Cart::load_crt(const std::string &f)
 {
   is_.open(f,std::ios::in|std::ios::binary);
+  D("F: %s\n",f.c_str());
   Cart::crt_header_t cart_header;
   Cart::crt_chip_t   chip_header;
   char b;
   uint16_t cbuf;
+  D("OPEN: %d\n",is_.is_open());
   if (is_.is_open()) {
     is_.seekg(0, is_.end);
     std::streamoff length = is_.tellg();
@@ -199,52 +203,63 @@ NOCHIP:;
     /* Get chip data */
     is_.seekg(cart_header.cart_data);
     // cart_chip_t chips[n_chips]; /* Must be public to switch bank into */
-    chips = new Cart::cart_chip_t[n_chips](); /* Must be public to switch bank into */
-    for (size_t n = 0; n < n_chips; n++) {
-      D("CHIP%lu\n",n+1);
-      is_.get(b);
-      chips[n].signature |= (b<<24);
-      is_.get(b);
-      chips[n].signature |= (b<<16);
-      is_.get(b);
-      chips[n].signature |= (b<<8);
-      is_.get(b);
-      chips[n].signature |= (b);
-      D("SIGNATURE: 0x%X\n",chips[n].signature);
-      is_.get(b);
-      chips[n].packetlength |= (b<<24);
-      is_.get(b);
-      chips[n].packetlength |= (b<<16);
-      is_.get(b);
-      chips[n].packetlength |= (b<<8);
-      is_.get(b);
-      chips[n].packetlength |= (b);
-      D("PACKETLENGTH: 0x%X %u\n",chips[n].packetlength,chips[n].packetlength);
-      is_.get(b);
-      chips[n].chiptype |= (b<<8);
-      is_.get(b);
-      chips[n].chiptype |= (b);
-      D("CHIPTYPE: 0x%X %u\n",chips[n].chiptype,chips[n].chiptype);
-      is_.get(b);
-      chips[n].banknumber |= (b<<8);
-      is_.get(b);
-      chips[n].banknumber |= (b);
-      D("BANKNUMBER: 0x%X %u\n",chips[n].banknumber,chips[n].banknumber);
-      is_.get(b);
-      chips[n].addr |= (b<<8);
-      is_.get(b);
-      chips[n].addr |= (b);
-      D("START LOAD ADDRESS: 0x%X %u\n",chips[n].addr,chips[n].addr);
-      is_.get(b);
-      chips[n].romsize |= (b<<8);
-      is_.get(b);
-      chips[n].romsize |= (b);
-      D("ROM SIZE 0x%X %u\n",chips[n].romsize,chips[n].romsize);
-      /* Needed!? */
-      chips[n].rom = new uint8_t[chips[n].romsize]();
-      is_.read ((char *) &chips[n].rom[0],chips[n].romsize);
-      // c64_->mem_->kCARTRomLo = &chips[n].rom[0];
-      /* D("kCARTRomLo @ 0x%x\n",&c64_->mem_->kCARTRomLo); */
+    if (n_chips != 0) {
+      chips = new Cart::cart_chip_t[n_chips](); /* Must be public to switch bank into */
+      for (size_t n = 0; n < n_chips; n++) {
+        D("CHIP%lu\n",n+1);
+        is_.get(b);
+        chips[n].signature |= (b<<24);
+        is_.get(b);
+        chips[n].signature |= (b<<16);
+        is_.get(b);
+        chips[n].signature |= (b<<8);
+        is_.get(b);
+        chips[n].signature |= (b);
+        D("SIGNATURE: 0x%X\n",chips[n].signature);
+        is_.get(b);
+        chips[n].packetlength |= (b<<24);
+        is_.get(b);
+        chips[n].packetlength |= (b<<16);
+        is_.get(b);
+        chips[n].packetlength |= (b<<8);
+        is_.get(b);
+        chips[n].packetlength |= (b);
+        D("PACKETLENGTH: 0x%X %u\n",chips[n].packetlength,chips[n].packetlength);
+        is_.get(b);
+        chips[n].chiptype |= (b<<8);
+        is_.get(b);
+        chips[n].chiptype |= (b);
+        D("CHIPTYPE: 0x%X %u\n",chips[n].chiptype,chips[n].chiptype);
+        is_.get(b);
+        chips[n].banknumber |= (b<<8);
+        is_.get(b);
+        chips[n].banknumber |= (b);
+        D("BANKNUMBER: 0x%X %u\n",chips[n].banknumber,chips[n].banknumber);
+        is_.get(b);
+        chips[n].addr |= (b<<8);
+        is_.get(b);
+        chips[n].addr |= (b);
+        D("START LOAD ADDRESS: 0x%X %u\n",chips[n].addr,chips[n].addr);
+        is_.get(b);
+        chips[n].romsize |= (b<<8);
+        is_.get(b);
+        chips[n].romsize |= (b);
+        D("ROM SIZE 0x%X %u\n",chips[n].romsize,chips[n].romsize);
+        /* Needed!? */
+        chips[n].rom = new uint8_t[chips[n].romsize]();
+        is_.read ((char *) &chips[n].rom[0],chips[n].romsize);
+        // c64_->mem_->kCARTRomLo = &chips[n].rom[0];
+        /* D("kCARTRomLo @ 0x%x\n",&c64_->mem_->kCARTRomLo); */
+      }
+    } else {
+      n_chips = 1;
+      chips = new Cart::cart_chip_t[1]();
+      chips[0].addr = 0x8000;
+      chips[0].romsize = 0x2000;
+      is_.seekg(0x0);
+      chips[0].rom = new uint8_t[chips[0].romsize]();
+      is_.read ((char *) &chips[0].rom[0],chips[0].romsize);
+      D("BINARY CART\n");
     }
 
     /* Start with default */
@@ -262,7 +277,10 @@ NOCHIP:;
 
     // TODO: Set rom locations based on chips on cart!
     // TODO: Move this to PLA for bank switching!?
-    c64_->mem_->kCARTRomLo = &chips[0].rom[0];
+    if (n_chips > 0) {
+      c64_->mem_->kCARTRomLo = &chips[0].rom[0];
+      D("ADDED ROM 1\n");
+    }
     D("4BYTES ROMLO: $%02X $%02X $%02X $%02X\n",
       c64_->mem_->kCARTRomLo[0],
       c64_->mem_->kCARTRomLo[1],
@@ -297,7 +315,10 @@ NOCHIP:;
     // );
 
     /* TODO: Fix jump address per cart */
-    c64_->cpu_->pc(chips[0].addr);
+    if (n_chips > 0) {
+      D("JUMP ADDRESS: $%04X\n",chips[0].addr);
+      c64_->cpu_->pc(chips[0].addr);
+    }
 
     // D("4BYTES: $%02X $%02X $%02X $%02X\n",
     //   c64_->memory()->kCARTRomLo[0],
