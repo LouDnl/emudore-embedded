@@ -56,11 +56,15 @@ class Loader
     uint16_t start_addr;
 
     uint16_t pl_loadaddr;
+    uint16_t pl_lastloadaddr;
     uint16_t pl_initaddr;
     uint16_t pl_playaddr;
+    uint16_t pl_dataoffset;
     uint16_t pl_datalength;
     uint8_t *pl_databuffer;
     uint32_t pl_sidspeed;
+    uint8_t pl_start_page;
+    uint8_t pl_max_pages;
     int pl_songs;
     int pl_song_number;
     int pl_sidflags;
@@ -83,6 +87,7 @@ class Loader
     void load_Psidplayer(uint16_t play, uint16_t init, uint16_t load, uint16_t length, int songno);
     void print_sid_info(); /* TODO: Print on C64 screen */
     uint16_t read_short_le();
+    uint16_t find_free_page();
   public:
     Loader();
     ~Loader(){};
@@ -97,12 +102,16 @@ class Loader
     bool handle_file();
     bool emulate();
 
+    int psid_set_cbm80(uint16_t vec, uint16_t addr);
+    void psid_init_driver(void);
+    void pre_load_sid();
     bool isrsid() { return pl_isrsid; };
 
     /* Startup arguments */
     uint16_t init_addr = 0x0; /* Zero as signal it hasn't been changed */
     bool autorun = true;
-    bool basic_run = false; /* TODO: Add startup argument for this */
+    bool basic_run = false;
+    bool normal_start = false;
     bool lowercase = false;
 
     bool iscart = false; /* For binary (.bin) cart files */
@@ -113,10 +122,16 @@ class Loader
     bool cia2rwlog = false;
     bool sidrwlog = false;
     bool iorwlog = false;
+    bool vicrwlog = false;
     bool plarwlog = false;
     bool cartrwlog = false;
 
     char *filename;
+    int subtune;
+
+    uint16_t playerstart;
+    uint8_t p_hi;
+    uint8_t p_lo;
 
     /* constants */
     static const uint16_t kBasicPrgStart = 0x0801;
