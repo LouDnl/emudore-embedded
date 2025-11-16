@@ -73,6 +73,7 @@ class Memory
     bool logcrtrw   = false; /* $8000 ~ $9fff  */
     bool logsidrw   = false; /* $d400 ~ $d4ff - sidadapter */
     bool logsidiorw = false; /* $d400 ~ $d4ff - memory */
+    bool logvicrw   = false; /* $d400 ~ $d4ff - memory */
 
   public:
     Memory(C64 * c64);
@@ -113,6 +114,7 @@ class Memory
         case 5: logcrtrw    = true; break;
         case 6: logsidrw    = true; break; /* logs from SID class */
         case 7: logsidiorw  = true; break; /* logs from SID class */
+        case 8: logvicrw    = true; break;
         default: break; } };
     void unsetlogrw(int logid) {
       switch(logid)
@@ -124,6 +126,7 @@ class Memory
         case 5: logcrtrw    = false; break;
         case 6: logsidrw    = false; break;
         case 7: logsidiorw  = false; break;
+        case 8: logvicrw    = false; break;
         default: break; } };
     bool getlogrw(int logid) {
       switch(logid)
@@ -135,6 +138,7 @@ class Memory
         case 5: return logcrtrw;
         case 6: return logsidrw;
         case 7: return logsidiorw;
+        case 8: return logvicrw;
         default: return false; } };
 
     /* constants */

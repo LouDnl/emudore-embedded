@@ -104,6 +104,7 @@ void Memory::write_byte(uint16_t addr, uint8_t v)
   else if (page >= kAddrVicFirstPage
         && page <= kAddrVicLastPage)
   {
+    if(logvicrw){D("[VIC W] $%04X:%02X\n",addr,v);};
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->vic_en()) {
       c64_->vic_->write_register(addr&0x7f,v); /* VIC-II write */
     } else {
@@ -255,6 +256,7 @@ uint8_t Memory::read_byte(uint16_t addr)
   {
     if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kIO && c64_->vic_en()) {
       retval = c64_->vic_->read_register(addr&0x7f);
+      if (logvicrw) {D("[VIC R] $%04X:%02X\n",addr,retval);};
     } else if(c64_->pla_->memory_banks(PLA::kBankChargen) == PLA::kROM) {
       #if DESKTOP
       retval = mem_rom_[addr]; /* Read from ROM */
@@ -485,6 +487,7 @@ uint8_t Memory::vic_read_byte(uint16_t addr)
   } else {
     v = read_byte_no_io(vic_addr);
   }
+  if (logvicrw) {D("[VIC RR] $%04X:%02X\n",addr,v);};
   return v;
 }
 
