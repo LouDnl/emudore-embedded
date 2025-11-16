@@ -154,13 +154,18 @@ bool Vic::emulate()
       c64_->sid_->sid_flush();
       cycles=0;
     } */
-    frame_c_+=rstr; /* Add raster cycles to frame cycle count */
+    frame_c_+=rstr; /* Add raster cycles to frame cycle counter */
     frame_c=(frame_c_/kRefrehRate); /* Divide frame cycle count by refreshrate */
     prev_rstr = rstr;
     vic_cpu_clock = c64_->cpu_->cycles();
     // printf("cpu: %u frame_c_ %d frame_c %d(%d) next_raster_at_ %d diff %d rstr %d\n",
     //       c64_->cpu_->cycles(),frame_c_,frame_c,prev_frame_c_,next_raster_at_,(next_raster_at_-prev_next_raster_at_),rstr);
-    // if(prev_frame_c_ != frame_c) c64_->sid_->sid_flush(); /* FLUSH */
+    if(prev_frame_c_ != frame_c) {
+      frame_c = prev_frame_c_ = 0;
+      frame_c_ -= kRefrehRate;
+      c64_->sid_->reset_cycles(); /* FLUSH */
+      // c64_->sid_->sid_flush(); /* FLUSH */
+    }
     prev_frame_c_ = frame_c;
   }
   return true;

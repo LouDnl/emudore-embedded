@@ -71,6 +71,7 @@ class Sid
     ~Sid();
 
     void reset(void);
+    void reset_cycles(void) {sid_read_cycles =  sid_write_cycles = 0; };
 
     unsigned int sid_delay();
     void sid_flush(void);
