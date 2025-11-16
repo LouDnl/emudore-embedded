@@ -64,8 +64,12 @@ class PLA
     /* Debug logging */
     bool logplabank  = false;
 
+    /* default bank setup is m31 0x1F */
+    uint8_t default_bankmode;
+
   public:
     PLA(C64 * c64); /* Setup memory on init */
+    PLA(C64 * c64, uint8_t banksetup); /* Setup memory with custom intializer on init */
     ~PLA();
 
     /** Bank Switching Zones
@@ -88,6 +92,9 @@ class PLA
       kBankRam2    = 4, /* RAM or unmapped */
       kBankChargen = 5, /* RAM, Character ROM, I/O registers and Color RAM */
       kBankKernal  = 6, /* RAM, Kernal ROM or cartridge ROM */
+    };
+    const char * BankModeNames[5] = {
+      "kROM","kRAM","kIO","kCLO","kCHI"
     };
 
     /* Bank Switching Bit ID's */

@@ -31,10 +31,36 @@ PLA::PLA(C64 * c64) :
 {
   havecart = c64_->havecart;
   logplabank = c64_->bankswlog;
+  default_bankmode = (kLORAM|kHIRAM|kCHARGEN|kGAME|kEXROM);
 
   /* configure memory layout */
   if (!havecart) { /* default mode 31, all bits high */
-    setup_memory_banks(kLORAM|kHIRAM|kCHARGEN|kGAME|kEXROM);
+    // setup_memory_banks(kLORAM|kHIRAM|kCHARGEN|kGAME|kEXROM);
+    setup_memory_banks(default_bankmode);
+  } else { /* cart depends on cart type */
+    if (c64_->cart_->cartactive) {
+      setup_memory_banks(c64_->cart_->banksetup);
+    } else {
+      /* Fallback settings */
+      setup_memory_banks(kLORAM|kHIRAM|kCHARGEN);
+    }
+  }
+  /* configure data directional bits to default boot setting */
+  c64_->memory()->write_byte_no_io(Memory::kAddrDataDirection, data_direction_default);
+
+  D("[EMU] PLA initialized.\n");
+}
+
+PLA::PLA(C64 * c64, uint8_t banksetup) :
+  c64_(c64),
+  default_bankmode(banksetup)
+{
+  havecart = c64_->havecart;
+  logplabank = c64_->bankswlog;
+
+  /* configure memory layout */
+  if (!havecart) { /* default mode 31, all bits high */
+    setup_memory_banks(default_bankmode);
   } else { /* cart depends on cart type */
     if (c64_->cart_->cartactive) {
       setup_memory_banks(c64_->cart_->banksetup);
@@ -371,7 +397,7 @@ void PLA::emulate(void)
 /* Debug functions */
 void PLA::logbanksetup(void)
 {
-  D("Rm Rm Ct Bc Rm Cn Kl\n%2X %2X %2X %2X %2X %2X %2X\n",
+  D("     Ram      Ram     Cart    Basic      Ram  Chargen   Kernal\n%8X %8X %8X %8X %8X %8X %8X\n",
     memory_banks(kBankRam0),
     memory_banks(kBankRam1),
     memory_banks(kBankCart),
@@ -379,5 +405,14 @@ void PLA::logbanksetup(void)
     memory_banks(kBankRam2),
     memory_banks(kBankChargen),
     memory_banks(kBankKernal)
+  );
+  D("%8s %8s %8s %8s %8s %8s %8s\n",
+    BankModeNames[memory_banks(kBankRam0)],
+    BankModeNames[memory_banks(kBankRam1)],
+    BankModeNames[memory_banks(kBankCart)],
+    BankModeNames[memory_banks(kBankBasic)],
+    BankModeNames[memory_banks(kBankRam2)],
+    BankModeNames[memory_banks(kBankChargen)],
+    BankModeNames[memory_banks(kBankKernal)]
   );
 }
