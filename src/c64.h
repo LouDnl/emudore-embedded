@@ -106,6 +106,8 @@ class C64
     bool acia = false;
 
     static bool log_timings;
+    static bool is_cynthcart;
+    static bool is_rsid;
 
     #if EMBEDDED
     /* Binary pointers */

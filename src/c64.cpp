@@ -28,6 +28,9 @@
 #endif
 
 bool C64::log_timings = false;
+bool C64::is_cynthcart = false;
+bool C64::is_rsid = false;
+
 
 C64::C64(
   bool sdl,
