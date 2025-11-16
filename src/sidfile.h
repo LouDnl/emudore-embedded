@@ -209,6 +209,8 @@ public:
     uint16_t GetLoadAddress();
     uint16_t GetInitAddress();
     uint16_t GetPlayAddress();
+    uint16_t GetStartPage();
+    uint16_t GetMaxPages();
 };
 
 #endif /* _SIDFILE_H_ */

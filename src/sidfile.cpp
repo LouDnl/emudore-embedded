@@ -433,3 +433,13 @@ uint16_t SidFile::GetPlayAddress()
 {
     return playAddr;
 }
+
+uint16_t SidFile::GetStartPage()
+{
+    return startPage;
+}
+
+uint16_t SidFile::GetMaxPages()
+{
+    return pageLength;
+}
