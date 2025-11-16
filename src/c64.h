@@ -89,14 +89,13 @@ class C64
     Cart *cart_;
     Sid *sid_;
 
-  #if DESKTOP
+
   private:
     std::function<bool()> callback_;
-  #if DEBUGGER_SUPPORT
+  #if DESKTOP && DEBUGGER_SUPPORT
     Debugger *debugger_;
   #endif
   public:
-  #endif /* DESKTOP */
     bool nosdl = false;
     bool isbinary = false;
     bool havecart = false; /* Specific for CRT files */
@@ -126,9 +125,8 @@ class C64
     bool is_looping(void){return runloop;};
     bool disable_looping(void){runloop=false;return runloop;};
 
-    #if DESKTOP
     void callback(std::function<bool()> cb){callback_ = cb;};
-    #endif
+
     Cpu * cpu(){return cpu_;};
     PLA * pla(){return pla_;};
     Memory * memory(){return mem_;};

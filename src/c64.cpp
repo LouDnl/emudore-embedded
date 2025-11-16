@@ -134,7 +134,7 @@ void C64::start()
     #if DESKTOP
     if (log_timings) BT->MeasurementStart();
     /* callback executes _before_ first emulation run */
-    if(callback_ && cpu_->pc() == 0xa65c) callback_();
+    if(callback_ && cpu_->pc() == 0xa65c) {callback_(); /* cpu_->idf(false); cpu_->irq(); */}
     if (log_timings) BT->MeasurementEnd();
     if (log_timings) _cb = BT->MeasurementResult();
     #endif
@@ -186,7 +186,7 @@ unsigned int C64::emulate()
 {
   if (runloop) {
     #if DESKTOP
-    if(callback_) callback_();
+    if(callback_ && cpu_->pc() == 0xa65c) { callback_(); }
     #endif
     /* Cart */
     #if EMBEDDED
@@ -259,9 +259,7 @@ unsigned int  C64::emulate_specified(
 )
 {
   if (runloop) {
-    #if DESKTOP
-    if(callback_) callback_();
-    #endif
+    if(callback_ && cpu_->pc() == 0xa65c) { callback_(); }
     /* Cart */
     if (cart) cart_->emulate();
     /* CPU */
