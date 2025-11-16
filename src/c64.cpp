@@ -31,6 +31,52 @@ bool C64::log_timings = false;
 bool C64::is_cynthcart = false;
 bool C64::is_rsid = false;
 
+C64::C64( /* BUG: DO NOT USE, DOES NOT WORK PROPERLY!! */
+  bool c_cia1, bool c_cia2, bool c_vic, bool c_io, bool c_cart,
+  uint8_t c_banksetup
+  ) :
+  e_cia1(c_cia1),
+  e_cia2(c_cia2),
+  e_vic(c_vic),
+  e_io(c_io),
+  e_cart(c_cart),
+  banksetup(c_banksetup) /* Default is 0x1F m31 */
+{
+  nosdl = false;
+  isbinary = false;
+  havecart = false;
+  bankswlog = false;
+  acia = false;
+
+  /* create and init C64 */
+  /* init cpu */
+  cpu_  = new Cpu(this);
+  /* init memory & DMA */
+  mem_  = new Memory(this);
+  /* init cart slot */
+  if (e_cart) cart_ = new Cart(this);
+  /* init PLA */
+  pla_  = new PLA(this);
+  /* init cia1 */
+  if (e_cia1) cia1_ = new Cia1(this);
+  /* init cia2 */
+  if (e_cia2) cia2_ = new Cia2(this);
+  /* init vic-ii */
+  if (e_vic) vic_  = new Vic(this);
+  /* init SID */
+  sid_  = new Sid(this);
+  /* init io */
+  if (e_io) io_   = new IO(this,nosdl);
+
+  /* Resets needed before start */
+  cpu_->reset();
+  if (e_cia1) cia1_->reset();
+  if (e_cia2) cia2_->reset();
+
+  runloop = true;
+
+}
+
 
 C64::C64(
   bool sdl,
@@ -57,6 +103,7 @@ C64::C64(
   binary_(p_)
   #endif
 {
+  e_cia1 = e_cia2 = e_vic = e_io = e_cart = true;
   /* create and init C64 */
   /* init cpu */
   cpu_  = new Cpu(this);
@@ -97,11 +144,12 @@ C64::~C64()
   runloop = false;
   delete cpu_;
   delete mem_;
-  delete cia1_;
-  delete cia2_;
-  delete vic_;
+  if (cia1_ != nullptr) delete cia1_;
+  if (cia2_ != nullptr) delete cia2_;
+  if (vic_ != nullptr) delete vic_;
   delete sid_;
-  delete io_;
+  if (io_ != nullptr) delete io_;
+  if (cart_ != nullptr) delete cart_;
   delete pla_;
   #if DEBUGGER_SUPPORT
   delete debugger_;

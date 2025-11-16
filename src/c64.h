@@ -66,6 +66,9 @@ class C64
 {
   private:
     bool runloop;
+    bool e_cia1; bool e_cia2;
+    bool e_vic; bool e_io; bool e_cart;
+    uint8_t banksetup;
   public: /* Public so subclasses can access them */
     C64(
       bool sdl, bool bin, bool cart,
@@ -77,6 +80,13 @@ class C64
       uint8_t * k_, uint8_t * p_
     #endif
     );
+
+    C64(
+      /* Constructor variables */
+      bool c_cia1, bool c_cia2, bool c_vic, bool c_io, bool c_cart,
+      uint8_t c_banksetup
+    );
+
     ~C64();
 
     Cpu *cpu_;
@@ -89,6 +99,11 @@ class C64
     Cart *cart_;
     Sid *sid_;
 
+    bool cia1_en(){ return e_cia1; };
+    bool cia2_en(){ return e_cia2; };
+    bool vic_en(){ return e_vic; };
+    bool io_en(){ return e_io; };
+    bool cart_en(){ return e_cart; };
 
   private:
     std::function<bool()> callback_;
