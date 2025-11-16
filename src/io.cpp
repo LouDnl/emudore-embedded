@@ -540,7 +540,9 @@ void IO::vsync()
   /* Cast microseconds duration to unsigned short */
   std::uint16_t cycles = duration_cast< cast >(ttw).count();
   /* delay no cycles */
-  cycled_delay_operation(cycles);
+  if (C64::is_rsid) {
+    cycled_delay_operation(cycles);  // TODO: DIFFERENTIATE BETWEEN CYNTHCART AND SIDS AND THEN BETWEEN PSID AND RSID!
+  }
   #endif /* EMBEDDED */
   prev_frame_was_at_ = std::chrono::high_resolution_clock::now();
 }
