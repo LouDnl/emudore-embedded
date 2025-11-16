@@ -41,7 +41,7 @@ extern "C" void reset_sid(void);
 
 #if DESKTOP && !USBSID_DRIVER
 #define NANO 1000000000L
-static double us_CPUcycleDuration               = NANO / (float)cycles_per_sec;          /* CPU cycle duration in nanoseconds */
+static double us_CPUcycleDuration = NANO / (float)cycles_per_sec;  /* CPU cycle duration in nanoseconds */
 #endif
 
 unsigned int Sid::sid_main_clk = 0;
@@ -64,6 +64,9 @@ Sid::Sid(C64 * c64) :
     usbsid->USBSID_SetClockRate(USBSID_NS::PAL, true);
     us_ = true;
   }
+#endif
+#if DESKTOP
+  srand(time(NULL));
 #endif
   sid_main_clk = sid_flush_clk = sid_delay_clk = sid_write_clk = sid_read_clk = 0;
   sid_read_cycles = sid_write_cycles = 0;
@@ -127,12 +130,23 @@ void Sid::sid_flush()
     // printf("SID Flush called @ %u cycles (cycles >= 0xFFFF), last was at %u, diff %u, main clock %u\n",
     //   now, sid_flush_clk, cycles, sid_main_clk);
     cycles -= 0xFFFF;
-  }
-  if (int(cycles - (sid_write_cycles+sid_read_cycles)) > 0) {
-    #if DESKTOP && !USBSID_DRIVER
-    wait_ns(cycles - (sid_write_cycles+sid_read_cycles));
+    #if DESKTOP && USBSID_DRIVER
+    usbsid->USBSID_WaitForCycle(0xFFFF);
+    #elif EMBEDDED
+    if (C64::is_rsid) { cycled_delay_operation(0xFFFF); }
+    #else
+    wait_ns(0xFFFF);
     #endif
   }
+  // if (int(cycles - (sid_write_cycles+sid_read_cycles)) > 0) {
+    #if DESKTOP && USBSID_DRIVER
+    usbsid->USBSID_WaitForCycle(cycles);
+    #elif EMBEDDED
+    if (C64::is_rsid) { cycled_delay_operation(cycles); }
+    #else
+    wait_ns(cycles);// - (sid_write_cycles+sid_read_cycles));
+    #endif
+  // }
   sid_main_clk = sid_delay_clk = sid_flush_clk = now;
   sid_read_cycles = sid_write_cycles = 0;
   return;
@@ -148,7 +162,11 @@ unsigned int Sid::sid_delay()
     /* printf("SID delay called @ %u cycles (cycles > 0xFFFF), last was at %u, diff %u, main clock %u\n",
       now, sid_delay_clk, cycles, sid_main_clk); */
     cycles -= 0xFFFF;
-    #if DESKTOP && !USBSID_DRIVER
+    #if DESKTOP && USBSID_DRIVER
+    usbsid->USBSID_WaitForCycle(0xFFFF);
+    #elif EMBEDDED
+    if (C64::is_rsid) { cycled_delay_operation(0xFFFF); }
+    #else
     wait_ns(0xFFFF);
     #endif
   }
@@ -162,11 +180,20 @@ uint8_t Sid::read_register(uint8_t r, uint8_t sidno)
   r = ((sidno*0x20) | r);
   unsigned int cycles = sid_delay();
   #if DESKTOP
-  v = c64_->mem_->read_byte_no_io(r);  /* No hardware SID reading */
+  if (r>=0x1B||r<=0x1C) {
+    // if (c64_->mem_->read_byte_no_io(r) == 0) {
+      v = (uint8_t)(rand()&0xFF);
+    // } else {
+      // v = c64_->mem_->read_byte_no_io(r);
+    // }
+  } else {
+    v = c64_->mem_->read_byte_no_io(r);  /* No hardware SID reading */
+  }
   #elif EMBEDDED
+  if (C64::is_rsid) { cycled_delay_operation(cycles); }
   v = cycled_read_operation(r,0);  /* no delay cycles */
-  #else
-  wait_ns(cycles);
+  // #else
+  /* wait_ns(cycles); */
   #endif
   if (c64_->mem_->getlogrw(6)) {
     D("[RD%d] $%02X:%02X C:%u RDC:%u\n", sidno, r, v, cycles, sid_read_cycles);
@@ -183,11 +210,17 @@ void Sid::write_register(uint8_t r, uint8_t v, uint8_t sidno)
   unsigned int cycles = sid_delay();
   #if DESKTOP && USBSID_DRIVER
   if (us_) {
-    // usbsid->USBSID_WaitForCycle(cycles);
+    // if (!C64::is_rsid && c64_->io_->nosdl || C64::is_rsid)
+    if(C64::is_rsid || c64_->io_->nosdl) {
+      usbsid->USBSID_WaitForCycle(cycles);
+    }
     usbsid->USBSID_WriteRingCycled(r, v, cycles);
   }
   #elif EMBEDDED
-  cycled_write_operation(r,v,0);  /* no delay cycles */
+  // TODO: DIFFERENTIATE BETWEEN CYNTHCART AND SIDS AND THEN BETWEEN PSID AND RSID!
+  if (C64::C64::is_cynthcart) { cycled_delay_operation(0); }
+  else if (C64::is_rsid) { cycled_delay_operation(cycles); cycled_write_operation(r,v,cycles); }
+  else { cycled_write_operation(r,v,0);}  /* no delay cycles needed, gets written when called! */
   #else
   wait_ns(cycles);
   #endif
