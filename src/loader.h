@@ -87,7 +87,14 @@ class Loader
     void load_Psidplayer(uint16_t play, uint16_t init, uint16_t load, uint16_t length, int songno);
     void print_sid_info(); /* TODO: Print on C64 screen */
     uint16_t read_short_le();
-    uint16_t find_free_page();
+    void find_free_page();
+
+    const unsigned int NUM_SCREEN_PAGES = 4;
+    const unsigned int NUM_MINDRV_PAGES = 2; // driver without screen display
+    const unsigned int NUM_EXTDRV_PAGES = 5; // driver with screen display
+    const unsigned int NUM_CHAR_PAGES = 4; // size of charset in pages
+    const unsigned int MAX_PAGES = 256;
+    const int SIDTUNE_COMPATIBILITY_R64   = 0x02; // File is Real C64 only
   public:
     Loader();
     ~Loader(){};
@@ -104,6 +111,9 @@ class Loader
 
     int psid_set_cbm80(uint16_t vec, uint16_t addr);
     void psid_init_driver(void);
+    uint8_t iomap(uint_least16_t addr);
+    uint_least8_t findDriverSpace(const bool* pages, uint_least8_t scr,
+                        uint_least8_t chars, uint_least8_t size);
     void pre_load_sid();
     bool isrsid() { return pl_isrsid; };
 
@@ -132,6 +142,12 @@ class Loader
     uint16_t playerstart;
     uint8_t p_hi;
     uint8_t p_lo;
+
+    uint_least8_t m_driverPage; // startpage of driver, 0 means no driver
+    uint_least8_t m_screenPage; // startpage of screen, 0 means no screen
+    uint_least8_t m_charPage; // startpage of chars, 0 means no chars
+    uint_least8_t m_stilPage; // startpage of stil, 0 means no stil
+    uint_least8_t m_songlengthsPage; // startpage of song length data, 0 means no song lengths
 
     /* constants */
     static const uint16_t kBasicPrgStart = 0x0801;

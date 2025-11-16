@@ -187,11 +187,12 @@ int main(int argc, char **argv)
       if (!sidfile) {
         /* Process arguments and handle file loading callback */
         c64->callback(loader_cb);
-      } else if (loader->isrsid()) {
+      // } else if (loader->isrsid()) {
       //   c64->emulate(); /* run single emulation cycle */
-        loader->emulate();
+      //   loader->emulate();
       } else {
-        c64->callback(loader_cb);
+        loader->emulate();
+        // c64->callback(loader_cb);
       }
     } else {
       /* Only process arguments */
@@ -207,7 +208,8 @@ int main(int argc, char **argv)
     em_cpu  = true;  /* always true */
     em_cia1 = true;  /* always true, breaks any type of play otherwise */
     em_cia2 = (C64::is_rsid ? true : false);
-    em_vic  = (C64::is_rsid ? true : nosdl ? false : true); /* always true for RSID DESKTOP! */
+    /* ISSUE: NEW DRIVER DOESNT WORK WITHOUT VIC!! */
+    em_vic  = true; //(C64::is_rsid ? true : nosdl ? false : true); /* always true for RSID DESKTOP! */
     em_io   = (nosdl ? false : true); /* based on -cli */
     em_cart = false; /* always false */
     printf("START: %d %d %d %d %d %d\n",em_cpu, em_cia1, em_cia2, em_vic, em_io, em_cart);

@@ -211,16 +211,17 @@ void Sid::write_register(uint8_t r, uint8_t v, uint8_t sidno)
   #if DESKTOP && USBSID_DRIVER
   if (us_) {
     // if (!C64::is_rsid && c64_->io_->nosdl || C64::is_rsid)
-    if(C64::is_rsid || c64_->io_->nosdl) {
-      usbsid->USBSID_WaitForCycle(cycles);
-    }
+    // NOTE: DISABLED< DOESNT SEEM NEEDED WITH NEW DRIVER
+    // if(C64::is_rsid || c64_->io_->nosdl) {
+      // usbsid->USBSID_WaitForCycle(cycles);
+    // }
     usbsid->USBSID_WriteRingCycled(r, v, cycles);
   }
   #elif EMBEDDED
   // TODO: DIFFERENTIATE BETWEEN CYNTHCART AND SIDS AND THEN BETWEEN PSID AND RSID!
-  if (C64::C64::is_cynthcart) { cycled_delay_operation(0); }
-  else if (C64::is_rsid) { cycled_delay_operation(cycles); cycled_write_operation(r,v,cycles); }
-  else { cycled_write_operation(r,v,0);}  /* no delay cycles needed, gets written when called! */
+  if (C64::C64::is_cynthcart) { cycled_write_operation(r,v,0); } /* no delay cycles needed, gets written when called! */
+  // else (C64::is_rsid) { cycled_delay_operation(cycles); cycled_write_operation(r,v,cycles); }
+  else { cycled_write_operation(r,v,0); } // TODO: TEST!
   #else
   wait_ns(cycles);
   #endif
